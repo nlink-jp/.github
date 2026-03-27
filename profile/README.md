@@ -51,11 +51,11 @@ Pipe-friendly tools for data transformation and processing.
 | [rex](https://github.com/nlink-jp/rex) | Go | Extract fields from text using named regex capture groups — outputs JSON |
 | [sdate](https://github.com/nlink-jp/sdate) | Go | Calculate timestamps using Splunk-like relative time modifiers (e.g., `-1d@d`) |
 
-### lite-series — Lightweight local tools
+### lite-series — Lightweight LLM workflow tools
 
-Small, dependency-light tools for local file and data processing.
+Local-first CLI tools for LLM interaction and retrieval-augmented generation.
 
 | Tool | Description |
 |------|-------------|
-| [lite-eml](https://github.com/nlink-jp/lite-eml) | Parse and extract content from .eml files |
-| [lite-msg](https://github.com/nlink-jp/lite-msg) | Parse and extract content from .msg files |
+| [lite-llm](https://github.com/nlink-jp/lite-llm) | CLI client for OpenAI-compatible LLM APIs — stream completions from stdin or files |
+| [lite-rag](https://github.com/nlink-jp/lite-rag) | RAG CLI for Markdown docs using DuckDB — index and query local knowledge bases |
