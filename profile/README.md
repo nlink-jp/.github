@@ -22,9 +22,9 @@ Small, dependency-light tools for local file and data processing.
 | Tool | Description |
 |------|-------------|
 | [lite-eml](https://github.com/nlink-jp/lite-eml) | Parse and extract content from .eml files |
-| [lite-switch](https://github.com/nlink-jp/lite-switch) | ... |
-| [lite-rag](https://github.com/nlink-jp/lite-rag) | ... |
-| [lite-llm](https://github.com/nlink-jp/lite-llm) | ... |
+| [lite-switch](https://github.com/nlink-jp/lite-switch) | Natural language classifier for shell pipelines via LLM |
+| [lite-rag](https://github.com/nlink-jp/lite-rag) | CLI-based RAG tool for Markdown documents using a local LLM |
+| [lite-llm](https://github.com/nlink-jp/lite-llm) | Lightweight CLI for OpenAI-compatible LLM APIs — batch mode, structured output |
 | [lite-msg](https://github.com/nlink-jp/lite-msg) | Parse and extract content from .msg files |
 
 ## Conventions
