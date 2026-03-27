@@ -16,6 +16,16 @@ Authenticate as the human user, not a bot.
 | [splunk-cli](https://github.com/nlink-jp/splunk-cli) | Splunk | CLI client for the Splunk REST API — run searches, poll jobs, fetch results |
 | [confl-cli](https://github.com/nlink-jp/confl-cli) | Confluence | Confluence Cloud CLI — list, search, read, export |
 
+### chatops-series — ChatOps workflow tools
+
+Pipe-friendly Slack tools for ChatOps automation and monitoring.
+
+| Tool | Description |
+|------|-------------|
+| [scat](https://github.com/nlink-jp/scat) | General-purpose content poster — send text, files, and Block Kit messages to Slack from stdin or files |
+| [stail](https://github.com/nlink-jp/stail) | Read-only Slack CLI — stream channel messages in real time (`tail -f`) or export history to JSON |
+| [slack-router](https://github.com/nlink-jp/slack-router) | Slack Slash Command daemon — routes commands to local shell scripts via Socket Mode |
+
 ### util-series — General-purpose data utilities
 
 Pipe-friendly tools for data transformation and processing.
