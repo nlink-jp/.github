@@ -51,11 +51,14 @@ Pipe-friendly tools for data transformation and processing.
 | [rex](https://github.com/nlink-jp/rex) | Go | Extract fields from text using named regex capture groups — outputs JSON |
 | [sdate](https://github.com/nlink-jp/sdate) | Go | Calculate timestamps using Splunk-like relative time modifiers (e.g., `-1d@d`) |
 
-### lite-series — Lightweight LLM workflow tools
+### lite-series — Lightweight LLM and pipeline tools
 
-Local-first CLI tools for LLM interaction and retrieval-augmented generation.
+Small, local-first CLI tools for LLM interaction, retrieval, classification, and email parsing.
 
 | Tool | Description |
 |------|-------------|
-| [lite-llm](https://github.com/nlink-jp/lite-llm) | CLI client for OpenAI-compatible LLM APIs — stream completions from stdin or files |
+| [lite-eml](https://github.com/nlink-jp/lite-eml) | EML parser — extracts headers and body from .eml files as structured JSONL |
+| [lite-llm](https://github.com/nlink-jp/lite-llm) | CLI client for OpenAI-compatible LLM APIs — streaming, batch, structured output |
+| [lite-msg](https://github.com/nlink-jp/lite-msg) | Outlook MSG parser — extracts headers and body from .msg files as structured JSONL |
 | [lite-rag](https://github.com/nlink-jp/lite-rag) | RAG CLI for Markdown docs using DuckDB — index and query local knowledge bases |
+| [lite-switch](https://github.com/nlink-jp/lite-switch) | Natural language classifier for shell pipelines — routes stdin text to a matching tag via LLM |
