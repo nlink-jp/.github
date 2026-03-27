@@ -18,16 +18,17 @@ Authenticate as the human user, not a bot.
 
 ### util-series — General-purpose data utilities
 
-Pipe-friendly, single-binary tools for data transformation and processing.
+Pipe-friendly tools for data transformation and processing.
 
-| Tool | Description |
-|------|-------------|
-| [json-to-table](https://github.com/nlink-jp/json-to-table) | Format a JSON array into text, Markdown, HTML, CSV, PNG, or Slack Block Kit tables |
-| [rex](https://github.com/nlink-jp/rex) | Extract fields from text using named regex capture groups — outputs JSON |
-| [sdate](https://github.com/nlink-jp/sdate) | Calculate timestamps using Splunk-like relative time modifiers (e.g., `-1d@d`) |
-| [csv-to-json](https://github.com/nlink-jp/csv-to-json) | Convert CSV data to a JSON array |
-| [json-to-sqlite](https://github.com/nlink-jp/json-to-sqlite) | Load JSON data into SQLite with automatic schema inference |
-| [lookup](https://github.com/nlink-jp/lookup) | Enrich JSON/JSONL streams by matching fields against CSV/JSON data sources |
+| Tool | Lang | Description |
+|------|------|-------------|
+| [json-to-table](https://github.com/nlink-jp/json-to-table) | Go | Format a JSON array into text, Markdown, HTML, CSV, PNG, or Slack Block Kit tables |
+| [rex](https://github.com/nlink-jp/rex) | Go | Extract fields from text using named regex capture groups — outputs JSON |
+| [sdate](https://github.com/nlink-jp/sdate) | Go | Calculate timestamps using Splunk-like relative time modifiers (e.g., `-1d@d`) |
+| [csv-to-json](https://github.com/nlink-jp/csv-to-json) | Go | Convert CSV data to a JSON array |
+| [json-to-sqlite](https://github.com/nlink-jp/json-to-sqlite) | Go | Load JSON data into SQLite with automatic schema inference |
+| [lookup](https://github.com/nlink-jp/lookup) | Go | Enrich JSON/JSONL streams by matching fields against CSV/JSON data sources |
+| [pptx-to-markdown](https://github.com/nlink-jp/pptx-to-markdown) | Python | Convert `.pptx` presentations to structured Markdown for LLM analysis |
 
 ### lite-series — Lightweight local tools
 
