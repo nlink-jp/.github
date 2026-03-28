@@ -69,7 +69,15 @@ check_series() {
     echo "    $PASS tracked: no .claude/settings.local.json in git index"
   fi
 
-  # 5. Submodule pointers vs origin/main
+  # 5. CLAUDE.md exists
+  if [ -f "$dir/CLAUDE.md" ]; then
+    echo "    $PASS CLAUDE.md: present"
+  else
+    echo "    $FAIL CLAUDE.md: missing"
+    errors=$((errors + 1))
+  fi
+
+  # 6. Submodule pointers vs origin/main
   if [ ! -f "$dir/.gitmodules" ]; then
     return
   fi
