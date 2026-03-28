@@ -24,6 +24,13 @@ The sections below summarize the rules that are most commonly missed.
 - When behaviour changes, update `README.md` and `README.ja.md` in the same commit.
 - Stale documentation is a bug.
 
+### Never use `go build` directly — always use `make`
+
+- **`go build` drops the binary in the current directory**, polluting the working tree
+  and causing `untracked content` errors in the parent submodule.
+- Always use `make build` (outputs to `dist/`) or `make build-all`.
+- `go test ./...` is fine — it produces no stray binaries.
+
 ### Commits must be small and typed
 
 Format: `<type>: <short imperative description>`

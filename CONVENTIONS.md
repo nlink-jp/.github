@@ -55,6 +55,30 @@ these rules but must not contradict them.
 
 ---
 
+## Build Conventions
+
+### Always use `make`, never `go build` directly
+
+All builds must go through the Makefile. **Never run `go build` (or `go install`) directly
+in a project directory.**
+
+- `go build` without `-o dist/...` drops the binary in the current directory,
+  polluting the working tree and causing spurious `untracked content` in the parent
+  submodule.
+- The Makefile encodes the correct output path (`dist/`), LDFLAGS (`-X main.version`),
+  and `CGO_ENABLED=0` for all targets.
+
+| Task | Command |
+|------|---------|
+| Build for current platform | `make build` |
+| Build all platforms | `make build-all` |
+| Run tests | `make test` (or `go test ./...` — safe, no binary output) |
+| Verify build + tests | `make check` |
+
+> `go test ./...` is fine to run directly — it does not produce stray binaries.
+
+---
+
 ## Authentication
 
 Credentials must never be stored in source code. Supported mechanisms in priority order:
