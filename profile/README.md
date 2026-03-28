@@ -50,13 +50,11 @@ Works in progress. APIs, features, and interfaces may change without notice.
 
 ### lite-series — Lightweight LLM and pipeline tools
 
-Small, local-first CLI tools for LLM interaction, retrieval, classification, and email parsing.
+Small, local-first CLI tools for LLM interaction, retrieval, and classification.
 
 | Tool | Description |
 |------|-------------|
-| [lite-eml](https://github.com/nlink-jp/lite-eml) | EML parser — extracts headers and body from .eml files as structured JSONL |
 | [lite-llm](https://github.com/nlink-jp/lite-llm) | CLI client for OpenAI-compatible LLM APIs — streaming, batch, structured output |
-| [lite-msg](https://github.com/nlink-jp/lite-msg) | Outlook MSG parser — extracts headers and body from .msg files as structured JSONL |
 | [lite-rag](https://github.com/nlink-jp/lite-rag) | RAG CLI for Markdown docs using DuckDB — index and query local knowledge bases |
 | [lite-switch](https://github.com/nlink-jp/lite-switch) | Natural language classifier for shell pipelines — routes stdin text to a matching tag via LLM |
 
@@ -67,6 +65,8 @@ Pipe-friendly tools for data transformation and processing.
 | Tool | Lang | Description |
 |------|------|-------------|
 | [csv-to-json](https://github.com/nlink-jp/csv-to-json) | Go | Convert CSV data to a JSON array |
+| [eml-to-jsonl](https://github.com/nlink-jp/eml-to-jsonl) | Go | Parse .eml files and output structured JSONL — headers, body, attachments |
+| [msg-to-jsonl](https://github.com/nlink-jp/msg-to-jsonl) | Go | Parse Outlook .msg files and output structured JSONL — same schema as eml-to-jsonl |
 | [json-filter](https://github.com/nlink-jp/json-filter) | Go | Extract, validate, prettify, and repair JSON from arbitrary text streams |
 | [json-to-sqlite](https://github.com/nlink-jp/json-to-sqlite) | Go | Load JSON data into SQLite with automatic schema inference |
 | [jstats](https://github.com/nlink-jp/jstats) | Go | SPL-style stats aggregations for JSON streams — count, avg, p95, stdev, values, and more |
