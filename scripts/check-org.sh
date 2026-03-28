@@ -13,6 +13,7 @@ SERIES=(
   chatops-series
   cybersecurity-series
   util-series
+  lab-series
   lite-series
 )
 
