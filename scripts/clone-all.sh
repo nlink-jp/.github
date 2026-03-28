@@ -13,11 +13,12 @@ ORG="nlink-jp"
 BASE_URL="https://github.com/${ORG}"
 
 SERIES=(
-  cli-series
   chatops-series
+  cli-series
   cybersecurity-series
-  util-series
+  lab-series
   lite-series
+  util-series
 )
 
 DEST="${1:-$(pwd)}"
