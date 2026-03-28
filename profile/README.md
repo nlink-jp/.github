@@ -36,6 +36,29 @@ AI-augmented tools for threat intelligence, product risk assessment, and inciden
 | [ioc-collector](https://github.com/nlink-jp/ioc-collector) | Research security incidents from URLs or CVE IDs — extracts IoCs into Markdown and STIX 2.1 bundles |
 | [product-research](https://github.com/nlink-jp/product-research) | Research products and services — outputs ToS, privacy, and data security analysis as structured reports |
 
+### lab-series — Experimental projects
+
+Works in progress. APIs, features, and interfaces may change without notice.
+
+| Tool | Lang | Description |
+|------|------|-------------|
+| [mail-analyzer](https://github.com/nlink-jp/mail-analyzer) | Go | Mail analysis tool |
+| [magi-system](https://github.com/nlink-jp/magi-system) | Python | Multi-agent discussion system with 3 AI personas (MELCHIOR / BALTHASAR / CASPER) |
+| [sai](https://github.com/nlink-jp/sai) | Python | Context-aware Slack bot with RAG memory and natural language command execution |
+| [slack-monitor](https://github.com/nlink-jp/slack-monitor) | Python | Real-time Slack channel summarizer with local/cloud LLM and Textual TUI |
+
+### lite-series — Lightweight LLM and pipeline tools
+
+Small, local-first CLI tools for LLM interaction, retrieval, classification, and email parsing.
+
+| Tool | Description |
+|------|-------------|
+| [lite-eml](https://github.com/nlink-jp/lite-eml) | EML parser — extracts headers and body from .eml files as structured JSONL |
+| [lite-llm](https://github.com/nlink-jp/lite-llm) | CLI client for OpenAI-compatible LLM APIs — streaming, batch, structured output |
+| [lite-msg](https://github.com/nlink-jp/lite-msg) | Outlook MSG parser — extracts headers and body from .msg files as structured JSONL |
+| [lite-rag](https://github.com/nlink-jp/lite-rag) | RAG CLI for Markdown docs using DuckDB — index and query local knowledge bases |
+| [lite-switch](https://github.com/nlink-jp/lite-switch) | Natural language classifier for shell pipelines — routes stdin text to a matching tag via LLM |
+
 ### util-series — General-purpose data utilities
 
 Pipe-friendly tools for data transformation and processing.
@@ -51,15 +74,3 @@ Pipe-friendly tools for data transformation and processing.
 | [pptx-to-markdown](https://github.com/nlink-jp/pptx-to-markdown) | Python | Convert `.pptx` presentations to structured Markdown for LLM analysis |
 | [rex](https://github.com/nlink-jp/rex) | Go | Extract fields from text using named regex capture groups — outputs JSON |
 | [sdate](https://github.com/nlink-jp/sdate) | Go | Calculate timestamps using Splunk-like relative time modifiers (e.g., `-1d@d`) |
-
-### lite-series — Lightweight LLM and pipeline tools
-
-Small, local-first CLI tools for LLM interaction, retrieval, classification, and email parsing.
-
-| Tool | Description |
-|------|-------------|
-| [lite-eml](https://github.com/nlink-jp/lite-eml) | EML parser — extracts headers and body from .eml files as structured JSONL |
-| [lite-llm](https://github.com/nlink-jp/lite-llm) | CLI client for OpenAI-compatible LLM APIs — streaming, batch, structured output |
-| [lite-msg](https://github.com/nlink-jp/lite-msg) | Outlook MSG parser — extracts headers and body from .msg files as structured JSONL |
-| [lite-rag](https://github.com/nlink-jp/lite-rag) | RAG CLI for Markdown docs using DuckDB — index and query local knowledge bases |
-| [lite-switch](https://github.com/nlink-jp/lite-switch) | Natural language classifier for shell pipelines — routes stdin text to a matching tag via LLM |
