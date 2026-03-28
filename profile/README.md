@@ -25,6 +25,7 @@ Pipe-friendly Slack tools for ChatOps automation and monitoring.
 | [scat](https://github.com/nlink-jp/scat) | General-purpose content poster — send text, files, and Block Kit messages to Slack from stdin or files |
 | [slack-router](https://github.com/nlink-jp/slack-router) | Slack Slash Command daemon — routes commands to local shell scripts via Socket Mode |
 | [stail](https://github.com/nlink-jp/stail) | Read-only Slack CLI — stream channel messages in real time (`tail -f`) or export history to JSON |
+| [swrite](https://github.com/nlink-jp/swrite) | Bot-oriented Slack poster — post text, Block Kit, and files from shell pipelines; server mode for Docker/Kubernetes |
 
 ### cybersecurity-series — Cybersecurity workflow tools
 
