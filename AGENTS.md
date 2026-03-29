@@ -46,7 +46,7 @@ tool repositories as git submodules.
 
 | Series | Umbrella repo | Tools |
 |--------|---------------|-------|
-| cli-series | nlink-jp/cli-series | scli, confl-cli, splunk-cli |
+| cli-series | nlink-jp/cli-series | scli, confl-cli, splunk-cli, gem-cli |
 | chatops-series | nlink-jp/chatops-series | swrite, scat, stail, slack-router, md-to-slack |
 | cybersecurity-series | nlink-jp/cybersecurity-series | ioc-collector, product-research, ai-ir, news-collector |
 | lab-series | nlink-jp/lab-series | sai, slack-monitor, magi-system, mail-analyzer, llm-othello, log-analyzer |
