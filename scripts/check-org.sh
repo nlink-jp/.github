@@ -77,7 +77,46 @@ check_series() {
     errors=$((errors + 1))
   fi
 
-  # 6. Submodule pointers vs origin/main
+  # 6. Submodule build conventions
+  if [ -f "$dir/.gitmodules" ]; then
+    while IFS= read -r subpath; do
+      subpath="${subpath#        }"
+      subdir="$dir/$subpath"
+      name=$(basename "$subpath")
+      makefile="$subdir/Makefile"
+      gitignore="$subdir/.gitignore"
+
+      if [ -f "$makefile" ]; then
+        # Check: make build must output to dist/, not root or bin/
+        if grep -qE '^\s*go build .* -o \$\(BINARY\)' "$makefile" 2>/dev/null || \
+           grep -qE '^\s*go build .* -o \./[a-z]' "$makefile" 2>/dev/null; then
+          echo "    $FAIL $name: make build outputs to project root (must use dist/)"
+          errors=$((errors + 1))
+        elif grep -qE '^\s*go build .* -o bin/' "$makefile" 2>/dev/null || \
+             grep -qE '-o \$\(BIN_DIR\)/' "$makefile" 2>/dev/null; then
+          echo "    $FAIL $name: make build outputs to bin/ (must use dist/)"
+          errors=$((errors + 1))
+        fi
+      fi
+
+      if [ -f "$gitignore" ]; then
+        # Check: bare binary name in .gitignore (no leading /)
+        if grep -qxF "$name" "$gitignore" 2>/dev/null; then
+          echo "    $FAIL $name: .gitignore has bare '$name' (may exclude cmd/$name/)"
+          errors=$((errors + 1))
+        fi
+        # Check: dist/ must be excluded
+        if [ -f "$makefile" ] && grep -q 'dist/' "$makefile" 2>/dev/null; then
+          if ! grep -qE '^dist/?$' "$gitignore" 2>/dev/null; then
+            echo "    $FAIL $name: .gitignore missing 'dist/'"
+            errors=$((errors + 1))
+          fi
+        fi
+      fi
+    done < <(git -C "$dir" submodule foreach --quiet 'echo "        $displaypath"')
+  fi
+
+  # 7. Submodule pointers vs origin/main
   if [ ! -f "$dir/.gitmodules" ]; then
     return
   fi

@@ -77,6 +77,67 @@ in a project directory.**
 
 > `go test ./...` is fine to run directly — it does not produce stray binaries.
 
+### Build output directory
+
+All build targets must output to `dist/`:
+
+| Target | Output |
+|--------|--------|
+| `make build` | `dist/<binary>` |
+| `make build-all` | `dist/<binary>-<os>-<arch>` |
+| `make clean` | `rm -rf dist/` |
+
+**Prohibited patterns:**
+
+- Output to project root (`go build -o <binary> .`) — pollutes the working tree
+  and causes `.gitignore` confusion.
+- Output to `bin/` — non-standard for this organization. Use `dist/` exclusively.
+- Using separate variables for `build` and `build-all` output dirs (`BIN_DIR` vs `DIST_DIR`).
+
+### `.gitignore` rules for build artifacts
+
+1. **Always include `dist/`** in `.gitignore`.
+2. **Never include bare binary names** (e.g. `my-tool`) — without a leading `/`,
+   git treats it as a pattern matching any path, which silently excludes
+   `cmd/my-tool/` or other source directories with the same name.
+3. **Do not include `/my-tool` or `bin/`** — if `make build` outputs to `dist/`,
+   these patterns are unnecessary and become stale traps.
+
+**Rule of thumb:** If `dist/` is in `.gitignore`, no other build artifact
+patterns should be needed.
+
+### `main.go` placement
+
+`main.go` must be at the **project root**, not inside `cmd/<name>/`.
+All projects in this organization follow this convention.
+
+```
+my-tool/
+  main.go          ← entry point (package main)
+  cmd/             ← cobra commands (package cmd)
+    root.go
+    ...
+  internal/        ← private packages
+```
+
+Placing `main.go` inside `cmd/<name>/` creates a risk: if `.gitignore` excludes
+the binary name without a leading `/`, the entire `cmd/<name>/` directory becomes
+invisible to git — a **silent code-loss** scenario.
+
+### AGENTS.md accuracy
+
+Each project's `AGENTS.md` must describe **that specific project**.
+When creating a new project by copying from an existing one, always update:
+
+- The title and description
+- Build output paths
+- Key structure listing
+- Module path
+- Environment variable names
+
+Stale or copied-from-another-project `AGENTS.md` files mislead both human
+developers and AI agents.
+
 ---
 
 ## Authentication
