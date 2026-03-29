@@ -1,0 +1,98 @@
+#!/usr/bin/env bash
+# pre-commit hook — nlink-jp organization
+#
+# Blocks commits that contain likely secrets or environment-specific values.
+# Install: cp .github/hooks/pre-commit .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit
+# Or:      make setup (if the project Makefile includes a setup target)
+#
+# To bypass in exceptional cases: git commit --no-verify
+# (This should be rare and documented.)
+
+set -euo pipefail
+
+RED='\033[0;31m'
+YELLOW='\033[0;33m'
+NC='\033[0m' # No Color
+
+STAGED_DIFF=$(git diff --cached --diff-filter=ACM -U0)
+
+if [ -z "$STAGED_DIFF" ]; then
+  exit 0
+fi
+
+errors=0
+
+# ── 1. Service account emails ──
+if echo "$STAGED_DIFF" | grep -qE '\.iam\.gserviceaccount\.com'; then
+  echo -e "${RED}BLOCKED:${NC} GCP service account email detected in staged files."
+  echo "$STAGED_DIFF" | grep --color=always '\.iam\.gserviceaccount\.com' | head -5
+  echo ""
+  errors=$((errors + 1))
+fi
+
+# ── 2. Slack tokens ──
+if echo "$STAGED_DIFF" | grep -qE 'xoxb-[0-9]{10,}|xoxp-[0-9]{10,}|xoxe\.xoxp-|xapp-'; then
+  echo -e "${RED}BLOCKED:${NC} Slack token detected in staged files."
+  echo "$STAGED_DIFF" | grep --color=always -E 'xoxb-|xoxp-|xoxe\.|xapp-' | head -5
+  echo ""
+  errors=$((errors + 1))
+fi
+
+# ── 3. Anthropic / OpenAI API keys ──
+if echo "$STAGED_DIFF" | grep -qE 'sk-ant-[a-zA-Z0-9]|sk-[a-zA-Z0-9]{20,}'; then
+  echo -e "${RED}BLOCKED:${NC} API key (Anthropic/OpenAI) detected in staged files."
+  echo "$STAGED_DIFF" | grep --color=always -E 'sk-ant-|sk-[a-zA-Z0-9]{20,}' | head -5
+  echo ""
+  errors=$((errors + 1))
+fi
+
+# ── 4. AWS access keys ──
+if echo "$STAGED_DIFF" | grep -qE 'AKIA[A-Z0-9]{16}'; then
+  echo -e "${RED}BLOCKED:${NC} AWS access key detected in staged files."
+  echo "$STAGED_DIFF" | grep --color=always 'AKIA[A-Z0-9]' | head -5
+  echo ""
+  errors=$((errors + 1))
+fi
+
+# ── 5. Google API keys ──
+if echo "$STAGED_DIFF" | grep -qE 'AIza[A-Za-z0-9_-]{35}'; then
+  echo -e "${RED}BLOCKED:${NC} Google API key detected in staged files."
+  echo "$STAGED_DIFF" | grep --color=always 'AIza' | head -5
+  echo ""
+  errors=$((errors + 1))
+fi
+
+# ── 6. GCP project numbers (bare 12-digit numbers in config-like files) ──
+# Only check yaml/json/toml files to avoid false positives
+STAGED_CONFIG=$(git diff --cached --diff-filter=ACM -U0 -- '*.yaml' '*.yml' '*.json' '*.toml' '*.env')
+if [ -n "$STAGED_CONFIG" ]; then
+  if echo "$STAGED_CONFIG" | grep -qE 'project.*[0-9]{12}|[0-9]{12}.*project'; then
+    echo -e "${YELLOW}WARNING:${NC} Possible GCP project number in config file."
+    echo "$STAGED_CONFIG" | grep --color=always -E '[0-9]{12}' | head -5
+    echo "  If this is a legitimate value (not a secret), commit with: git commit --no-verify"
+    echo ""
+    # Warning only, not blocking
+  fi
+fi
+
+# ── 7. Private keys ──
+if echo "$STAGED_DIFF" | grep -q -- '-----BEGIN.*PRIVATE KEY'; then
+  echo -e "${RED}BLOCKED:${NC} Private key detected in staged files."
+  errors=$((errors + 1))
+fi
+
+# ── 8. .env files should not be committed ──
+STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM)
+if echo "$STAGED_FILES" | grep -qE '^\.env$|/\.env$|\.env\.[^e]'; then
+  echo -e "${RED}BLOCKED:${NC} .env file staged for commit."
+  echo "$STAGED_FILES" | grep --color=always '\.env'
+  echo ""
+  errors=$((errors + 1))
+fi
+
+if [ "$errors" -gt 0 ]; then
+  echo -e "${RED}Commit blocked: $errors secret pattern(s) detected.${NC}"
+  echo "Review staged changes with: git diff --cached"
+  echo "To bypass (exceptional cases only): git commit --no-verify"
+  exit 1
+fi
