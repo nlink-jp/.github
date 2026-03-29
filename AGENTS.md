@@ -47,11 +47,11 @@ tool repositories as git submodules.
 | Series | Umbrella repo | Tools |
 |--------|---------------|-------|
 | cli-series | nlink-jp/cli-series | scli, confl-cli, splunk-cli |
-| chatops-series | nlink-jp/chatops-series | scat, stail, slack-router, md-to-slack |
-| cybersecurity-series | nlink-jp/cybersecurity-series | ioc-collector, product-research, ai-ir |
+| chatops-series | nlink-jp/chatops-series | swrite, scat, stail, slack-router, md-to-slack |
+| cybersecurity-series | nlink-jp/cybersecurity-series | ioc-collector, product-research, ai-ir, news-collector |
 | lab-series | nlink-jp/lab-series | sai, slack-monitor, magi-system, mail-analyzer, llm-othello, log-analyzer |
 | lite-series | nlink-jp/lite-series | lite-llm, lite-rag, lite-switch, lite-eml, lite-msg |
-| util-series | nlink-jp/util-series | json-to-table, rex, sdate, csv-to-json, json-to-sqlite, lookup, pptx-to-markdown, json-filter, markdown-viewer, jstats, jviz |
+| util-series | nlink-jp/util-series | json-to-table, rex, sdate, csv-to-json, json-to-sqlite, lookup, pptx-to-markdown, json-filter, markdown-viewer, jstats, jviz, eml-to-jsonl, msg-to-jsonl |
 
 **After releasing a submodule project, always update the umbrella pointer:**
 

@@ -25,7 +25,7 @@ Pipe-friendly Slack tools for ChatOps automation and monitoring.
 | [scat](https://github.com/nlink-jp/scat) | General-purpose content poster — send text, files, and Block Kit messages to Slack from stdin or files |
 | [slack-router](https://github.com/nlink-jp/slack-router) | Slack Slash Command daemon — routes commands to local shell scripts via Socket Mode |
 | [stail](https://github.com/nlink-jp/stail) | Read-only Slack CLI — stream channel messages in real time (`tail -f`) or export history to JSON |
-| [swrite](https://github.com/nlink-jp/swrite) | Bot-oriented Slack poster — post text, Block Kit, and files from shell pipelines; server mode for Docker/Kubernetes |
+| [swrite](https://github.com/nlink-jp/swrite) | Bot-oriented Slack poster — post text, Block Kit, attachments, and files from shell pipelines; unfurl control; server mode for Docker/Kubernetes |
 
 ### cybersecurity-series — Cybersecurity workflow tools
 
@@ -35,6 +35,7 @@ AI-augmented tools for threat intelligence, product risk assessment, and inciden
 |------|-------------|
 | [ai-ir](https://github.com/nlink-jp/ai-ir) | AI-powered incident response — analyzes Slack IR exports to generate summaries, activity reports, and reusable tactics |
 | [ioc-collector](https://github.com/nlink-jp/ioc-collector) | Research security incidents from URLs or CVE IDs — extracts IoCs into Markdown and STIX 2.1 bundles |
+| [news-collector](https://github.com/nlink-jp/news-collector) | News collection agent — collects, tags, summarizes, translates, and delivers curated news digests via Gemini + Slack |
 | [product-research](https://github.com/nlink-jp/product-research) | Research products and services — outputs ToS, privacy, and data security analysis as structured reports |
 
 ### lab-series — Experimental projects
