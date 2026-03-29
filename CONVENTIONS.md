@@ -9,6 +9,159 @@ these rules but must not contradict them.
 
 ---
 
+## Starting a New Project
+
+A new project must go through three phases before writing production code:
+**Plan → Scaffold → Develop**. Skipping the planning phase leads to rework,
+inconsistent structure, and integration issues that are expensive to fix later.
+
+### Phase 1: Planning
+
+Before any code is written, produce and get sign-off on the following:
+
+1. **Problem statement** — What problem does this tool solve? Who is the user?
+   One paragraph is enough. If the scope cannot be explained concisely, it is
+   too broad.
+
+2. **Functional specification** — Define the tool's interface:
+   - Commands and flags (CLI tools) or API surface (libraries)
+   - Input/output formats (stdin/stdout, files, JSON schema)
+   - Configuration method (config file, env vars, flags)
+   - External dependencies (APIs, services, credentials)
+
+3. **Design decisions** — Document non-obvious choices:
+   - Why this language/framework?
+   - What existing tools does it complement? (e.g. swrite works with stail and slack-router)
+   - What is explicitly out of scope?
+
+4. **Development plan** — Break the work into phases with milestones:
+   - Phase 1: core functionality + tests
+   - Phase 2: additional features
+   - Phase 3: documentation, polish, release
+   - Identify which phases can be reviewed independently.
+
+5. **Required API scopes / permissions** — For tools that integrate with
+   external services (Slack, Splunk, Google Cloud, etc.), enumerate all required
+   OAuth scopes, API permissions, or IAM roles **at design time**. Discovering
+   a missing scope at runtime is a preventable error.
+
+The planning artifacts can be lightweight (a GitHub issue, a markdown file in
+`docs/design/`, or a conversation summary) — the format matters less than the
+content.
+
+### Phase 2: Scaffolding
+
+Create the repository with the correct structure **before** writing business
+logic. This ensures org conventions are embedded from the start, not patched
+in later.
+
+#### Go project scaffold
+
+```
+<tool-name>/
+├── main.go                  ← package main, calls cmd.Execute()
+├── cmd/
+│   └── root.go              ← cobra root command
+├── internal/                ← private packages
+├── Makefile                 ← see template below
+├── .gitignore               ← see template below
+├── go.mod
+├── README.md
+├── README.ja.md
+├── CHANGELOG.md
+├── LICENSE
+└── CLAUDE.md                ← project-specific rules for AI agents
+```
+
+#### Python project scaffold (uv)
+
+```
+<tool-name>/
+├── <module_name>.py         ← or <package>/ directory
+├── pyproject.toml           ← with [project.scripts] entry point
+├── uv.lock
+├── .python-version
+├── .gitignore
+├── README.md
+├── README.ja.md
+├── CHANGELOG.md
+├── LICENSE
+└── CLAUDE.md
+```
+
+#### Makefile template (Go)
+
+```makefile
+BINARY  := <tool-name>
+VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
+LDFLAGS := -ldflags "-X main.version=$(VERSION)"
+DIST_DIR := dist
+
+.PHONY: build build-all test clean
+
+build:
+	@mkdir -p $(DIST_DIR)
+	go build $(LDFLAGS) -o $(DIST_DIR)/$(BINARY) .
+
+build-all:
+	@mkdir -p $(DIST_DIR)
+	CGO_ENABLED=0 GOOS=linux   GOARCH=amd64 go build $(LDFLAGS) -o $(DIST_DIR)/$(BINARY)-linux-amd64   .
+	CGO_ENABLED=0 GOOS=linux   GOARCH=arm64 go build $(LDFLAGS) -o $(DIST_DIR)/$(BINARY)-linux-arm64   .
+	CGO_ENABLED=0 GOOS=darwin  GOARCH=amd64 go build $(LDFLAGS) -o $(DIST_DIR)/$(BINARY)-darwin-amd64  .
+	CGO_ENABLED=0 GOOS=darwin  GOARCH=arm64 go build $(LDFLAGS) -o $(DIST_DIR)/$(BINARY)-darwin-arm64  .
+	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build $(LDFLAGS) -o $(DIST_DIR)/$(BINARY)-windows-amd64.exe .
+
+test:
+	go test ./...
+
+clean:
+	rm -rf $(DIST_DIR)
+```
+
+#### `.gitignore` template (Go)
+
+```gitignore
+# Build artifacts
+dist/
+
+# Go
+*.test
+*.out
+
+# Credentials
+.env
+
+# macOS
+.DS_Store
+
+# Editor
+.idea/
+.vscode/
+*.swp
+*.swo
+```
+
+#### Scaffold checklist
+
+- [ ] `main.go` is at the project root (not `cmd/<name>/`)
+- [ ] `Makefile` `build` target outputs to `dist/`
+- [ ] `.gitignore` contains `dist/` and nothing else for build artifacts
+- [ ] `go.mod` module path is `github.com/nlink-jp/<tool-name>`
+- [ ] `README.md` and `README.ja.md` created with at least description and installation
+- [ ] `CHANGELOG.md` created with `## [0.1.0]` section
+- [ ] `CLAUDE.md` created with project-specific context
+- [ ] Repository is **public** (not private) unless there is a specific reason
+- [ ] Repository added as submodule to the appropriate series umbrella repo
+- [ ] `check-org.sh` passes after submodule addition
+
+### Phase 3: Development
+
+Only after planning is complete and the scaffold passes `check-org.sh`, begin
+writing production code. Follow the [Development Policy](#development-policy)
+below for all implementation work.
+
+---
+
 ## Development Policy
 
 ### Security first

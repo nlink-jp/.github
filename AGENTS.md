@@ -65,6 +65,22 @@ git push
 
 ---
 
+## Starting a new project
+
+**Never jump straight to coding.** New projects must follow three phases:
+
+1. **Plan** — Problem statement, functional spec (commands/flags/I/O),
+   design decisions, development plan with phases, required API scopes.
+   Get sign-off before writing code.
+2. **Scaffold** — Create repo with correct structure (`main.go` at root,
+   `Makefile` outputting to `dist/`, `.gitignore` with `dist/`). Run
+   `check-org.sh` to verify. See CONVENTIONS.md for templates.
+3. **Develop** — Write code following the development policy below.
+
+Full details and templates: [`CONVENTIONS.md` → Starting a New Project](CONVENTIONS.md#starting-a-new-project)
+
+---
+
 ## Release checklist (summary)
 
 1. Update `CHANGELOG.md`
