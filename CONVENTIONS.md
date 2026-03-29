@@ -45,6 +45,21 @@ Before any code is written, produce and get sign-off on the following:
    OAuth scopes, API permissions, or IAM roles **at design time**. Discovering
    a missing scope at runtime is a preventable error.
 
+6. **Series placement** — Decide which umbrella series the project belongs to.
+   Every project must belong to exactly one series:
+
+   | Series | Scope |
+   |--------|-------|
+   | cli-series | Interactive CLI clients for external services (user-authenticated) |
+   | chatops-series | Slack ChatOps automation and monitoring tools (bot-authenticated) |
+   | cybersecurity-series | AI-augmented security tools (threat intel, IR, risk assessment) |
+   | lab-series | Experimental projects under active development |
+   | lite-series | Local-first LLM interaction and pipeline tools |
+   | util-series | Pipe-friendly data transformation and processing CLIs |
+
+   If none of the existing series is a good fit, discuss whether a new series
+   is warranted before creating one.
+
 The planning artifacts can be lightweight (a GitHub issue, a markdown file in
 `docs/design/`, or a conversation summary) — the format matters less than the
 content.
@@ -70,7 +85,8 @@ in later.
 ├── README.ja.md
 ├── CHANGELOG.md
 ├── LICENSE
-└── CLAUDE.md                ← project-specific rules for AI agents
+├── CLAUDE.md                ← project-specific rules for AI agents
+└── AGENTS.md                ← project summary, build commands, structure, gotchas
 ```
 
 #### Python project scaffold (uv)
@@ -86,7 +102,8 @@ in later.
 ├── README.ja.md
 ├── CHANGELOG.md
 ├── LICENSE
-└── CLAUDE.md
+├── CLAUDE.md
+└── AGENTS.md
 ```
 
 #### Makefile template (Go)
@@ -143,16 +160,31 @@ dist/
 
 #### Scaffold checklist
 
+**Repository structure:**
+
 - [ ] `main.go` is at the project root (not `cmd/<name>/`)
 - [ ] `Makefile` `build` target outputs to `dist/`
 - [ ] `.gitignore` contains `dist/` and nothing else for build artifacts
 - [ ] `go.mod` module path is `github.com/nlink-jp/<tool-name>`
+
+**Documentation:**
+
 - [ ] `README.md` and `README.ja.md` created with at least description and installation
 - [ ] `CHANGELOG.md` created with `## [0.1.0]` section
-- [ ] `CLAUDE.md` created with project-specific context
-- [ ] Repository is **public** (not private) unless there is a specific reason
+- [ ] `CLAUDE.md` created with project-specific rules for AI agents
+- [ ] `AGENTS.md` created with: project summary, build/test commands, key directory
+      structure, gotchas, and module path — must describe **this** project
+      (never copy another project's `AGENTS.md` without updating all fields)
+
+**Organization integration:**
+
+- [ ] Repository created under `nlink-jp` organization
+- [ ] Repository is **public** (not private) unless there is a documented reason
 - [ ] Repository added as submodule to the appropriate series umbrella repo
-- [ ] `check-org.sh` passes after submodule addition
+- [ ] Series umbrella `.gitmodules` entry uses `https://github.com/nlink-jp/<tool-name>.git`
+- [ ] Umbrella repo submodule pointer committed and pushed
+- [ ] `nlink-jp/.github/profile/README.md` updated if the tool is user-facing
+- [ ] `check-org.sh` passes after all integration steps
 
 ### Phase 3: Development
 
