@@ -60,6 +60,11 @@ Before any code is written, produce and get sign-off on the following:
    If none of the existing series is a good fit, discuss whether a new series
    is warranted before creating one.
 
+7. **External platform constraints** — If the tool integrates with external
+   platforms (Slack, AWS, GCP, etc.), investigate their API limitations,
+   rate limits, and UI rendering constraints **before** implementing.
+   Discovering a platform limitation during development leads to rework.
+
 The planning artifacts can be lightweight (a GitHub issue, a markdown file in
 `docs/design/`, or a conversation summary) — the format matters less than the
 content.
@@ -381,10 +386,11 @@ Version bumps:
 
 ## Working with Submodules
 
-Both `lite-series` and `cli-series` manage projects as git submodules.
-Submodule checkouts are in **detached HEAD** state by default.
-Making commits in detached HEAD state produces orphaned commits that are lost
-when you switch to a branch.
+All series (cli-series, chatops-series, cybersecurity-series, lab-series,
+lite-series, util-series) manage projects as git submodules. Submodule
+checkouts are in **detached HEAD** state by default. Making commits in
+detached HEAD state produces orphaned commits that are lost when you
+switch to a branch.
 
 **Always check out the main branch before making any changes inside a submodule:**
 
@@ -394,6 +400,11 @@ git checkout main
 git pull
 # make changes, commit, push as normal
 ```
+
+> **Common mistake:** forgetting `git checkout main` before editing leads
+> to commits on detached HEAD. The commit exists in reflog but is not on
+> any branch and `git push origin main` reports "Everything up-to-date".
+> Recovery: `git checkout main && git cherry-pick <commit-hash>`.
 
 **After releasing a submodule project, update the umbrella pointer:**
 
@@ -406,3 +417,29 @@ git push
 ```
 
 Skipping the pointer update leaves the umbrella repo pointing at a stale commit.
+Run `check-org.sh` after the update to verify.
+
+---
+
+## Release Checklist
+
+Before tagging a release, verify every item:
+
+**Pre-release gates:**
+
+- [ ] All tests pass (`make test` / `go test ./...` / `uv run pytest`)
+- [ ] README.md and README.ja.md reflect current features and flags
+- [ ] CHANGELOG.md has a dated entry for this version
+- [ ] If inside a submodule: on `main` branch (not detached HEAD)
+
+**Release steps:**
+
+1. Commit `chore: release vX.Y.Z`
+2. Tag: `git tag vX.Y.Z && git push origin main --tags`
+3. `gh release create` (no assets yet)
+4. Build all platforms (`make build-all`)
+5. Zip each binary + README.md
+6. Upload zips one by one (`gh release upload`)
+7. Update umbrella submodule pointer
+8. Update `nlink-jp/.github/profile/README.md` if new tool
+9. Run `check-org.sh` to verify all green

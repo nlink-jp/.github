@@ -83,15 +83,24 @@ Full details and templates: [`CONVENTIONS.md` → Starting a New Project](CONVEN
 
 ## Release checklist (summary)
 
-1. Update `CHANGELOG.md`
-2. Commit with `chore: release vX.Y.Z`
-3. Tag: `git tag vX.Y.Z && git push origin main --tags`
-4. `gh release create` (no assets yet)
-5. Build all 5 platforms: `linux/amd64`, `linux/arm64`, `darwin/amd64`, `darwin/arm64`, `windows/amd64`
-6. Zip each binary with `README.md`
-7. Upload zip files one by one (`gh release upload`)
-8. Update umbrella submodule pointer
-9. Update org profile README (`nlink-jp/.github/profile/README.md`) if new tool
+**Pre-release gates (must pass before tagging):**
+
+1. All tests pass (`make test` or `go test ./...` or `uv run pytest`)
+2. README.md and README.ja.md are up to date with current features
+3. CHANGELOG.md has an entry for this version
+4. If inside a submodule: confirm you are on `main` branch (not detached HEAD)
+
+**Release steps:**
+
+1. Commit with `chore: release vX.Y.Z`
+2. Tag: `git tag vX.Y.Z && git push origin main --tags`
+3. `gh release create` (no assets yet)
+4. Build all 5 platforms: `linux/amd64`, `linux/arm64`, `darwin/amd64`, `darwin/arm64`, `windows/amd64`
+5. Zip each binary with `README.md`
+6. Upload zip files one by one (`gh release upload`)
+7. Update umbrella submodule pointer
+8. Update org profile README (`nlink-jp/.github/profile/README.md`) if new tool
+9. Run `check-org.sh` to verify
 
 Full release process: see [`CONVENTIONS.md`](CONVENTIONS.md) and the
 [release process memory](../memory/) if available.
