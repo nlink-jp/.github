@@ -107,7 +107,7 @@ check_series() {
         fi
         # Check: dist/ must be excluded
         if [ -f "$makefile" ] && grep -q 'dist/' "$makefile" 2>/dev/null; then
-          if ! grep -qE '^dist/?$' "$gitignore" 2>/dev/null; then
+          if ! grep -qE '^/?dist/?$' "$gitignore" 2>/dev/null; then
             echo "    $FAIL $name: .gitignore missing 'dist/'"
             errors=$((errors + 1))
           fi
