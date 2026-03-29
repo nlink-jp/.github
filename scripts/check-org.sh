@@ -116,7 +116,27 @@ check_series() {
     done < <(git -C "$dir" submodule foreach --quiet 'echo "        $displaypath"')
   fi
 
-  # 7. .gitmodules must use HTTPS URLs (not SSH)
+  # 7. Scan for likely secrets in tracked files
+  if [ -f "$dir/.gitmodules" ]; then
+    while IFS= read -r subpath; do
+      subpath="${subpath#        }"
+      subdir="$dir/$subpath"
+      name=$(basename "$subpath")
+
+      # Scan tracked files for common secret patterns
+      secret_hits=$(git -C "$subdir" grep -lE \
+        '\.iam\.gserviceaccount\.com|xoxb-[0-9]|xoxp-[0-9]|sk-ant-|AKIA[A-Z0-9]{16}' \
+        HEAD -- '*.yaml' '*.yml' '*.json' '*.toml' '*.env' '*.sh' 2>/dev/null \
+        | grep -v 'example\|template\|test\|README\|CHANGELOG\|\.md$' || true)
+      if [ -n "$secret_hits" ]; then
+        echo "    $FAIL $name: possible secrets in tracked files:"
+        echo "$secret_hits" | sed 's/^/            /'
+        errors=$((errors + 1))
+      fi
+    done < <(git -C "$dir" submodule foreach --quiet 'echo "        $displaypath"')
+  fi
+
+  # 8. .gitmodules must use HTTPS URLs (not SSH)
   if [ -f "$dir/.gitmodules" ]; then
     if grep -q 'git@github.com' "$dir/.gitmodules" 2>/dev/null; then
       echo "    $FAIL .gitmodules: SSH URLs found (must use https://github.com/)"
@@ -125,7 +145,7 @@ check_series() {
     fi
   fi
 
-  # 8. Submodule pointers vs origin/main
+  # 9. Submodule pointers vs origin/main
   if [ ! -f "$dir/.gitmodules" ]; then
     return
   fi

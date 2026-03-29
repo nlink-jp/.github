@@ -351,6 +351,90 @@ Warning: config file <path> has permissions <octal>; expected 0600.
 
 ## Security
 
+### Principle
+
+Security is the **highest priority** — above features, above deadlines,
+above convenience. A security violation in a public repository is
+**irreversible** (git history is cached, forked, and indexed). Prevention
+is the only acceptable strategy.
+
+### Never commit environment-specific values to public repositories
+
+The following must **never** appear in committed files:
+
+- **GCP project IDs, project numbers** (e.g. `my-project-123456`)
+- **Service account emails** (e.g. `sa@project.iam.gserviceaccount.com`)
+- **API keys, tokens, passwords** (e.g. `xoxb-...`, `sk-...`, `AIza...`)
+- **Bucket names, database connection strings** that reveal infrastructure
+- **IP addresses, internal hostnames, account IDs**
+
+**How to handle deployment configuration:**
+
+1. Committed files use **placeholder values only** (`PROJECT_ID`, `BUCKET_NAME`,
+   `SA_EMAIL`). These serve as templates.
+2. Local overrides use the `.local.*` suffix (e.g. `cloudrunjob.local.yaml`)
+   and are **excluded by `.gitignore`**.
+3. Runtime values are injected via **environment variables** or
+   **Secret Manager** — never baked into images or committed to source.
+
+```
+deploy/
+  cloudrunjob.yaml         ← template with placeholders (committed)
+  cloudrunjob.local.yaml   ← real values (gitignored, never committed)
+  topics.toml              ← non-sensitive config (committed)
+```
+
+**`.gitignore` must include:**
+
+```gitignore
+# Local deployment overrides (contain environment-specific values)
+deploy/*.local.*
+*.local.yaml
+*.local.toml
+*.local.json
+```
+
+### Pre-commit secret detection
+
+Every repository should detect accidentally committed secrets **before
+they reach the remote**. Use one or more of:
+
+1. **Pattern-based `.gitignore`**: exclude `*.local.*`, `.env`, `config.toml`
+2. **Pre-commit hook**: scan staged files for patterns matching project IDs,
+   tokens, or service account emails
+3. **CI-level scanning**: run `gitleaks`, `truffleHog`, or equivalent in CI
+
+Example pre-commit hook pattern (add to `.git/hooks/pre-commit`):
+
+```bash
+#!/bin/bash
+# Block commits containing likely secrets
+PATTERNS='xoxb-|xoxp-|sk-ant-|AIza|\.iam\.gserviceaccount\.com|AKIA[A-Z0-9]'
+if git diff --cached --diff-filter=ACM | grep -qE "$PATTERNS"; then
+  echo "ERROR: Possible secret detected in staged files."
+  echo "Review with: git diff --cached | grep -E '$PATTERNS'"
+  exit 1
+fi
+```
+
+### Incident response for accidental secret exposure
+
+If secrets or environment-specific values are pushed to a public repository:
+
+1. **Immediately rotate** all exposed credentials (tokens, keys, passwords)
+2. **Rewrite git history** using `git-filter-repo --replace-text` to remove
+   the values from all commits, then `git push --force`
+3. **Update submodule pointers** in all umbrella repositories (hashes change)
+4. **Document the incident**: what was exposed, for how long, what was rotated
+5. **Add the pattern** to pre-commit hooks to prevent recurrence
+
+> History rewriting removes values from the repository, but cached copies
+> may persist in GitHub's CDN, forks, or search engine caches for days.
+> Credential rotation is therefore **mandatory** regardless of how quickly
+> the history is rewritten.
+
+### Additional security requirements
+
 - Config files with credentials must check permissions on load (see [Authentication](#authentication)).
 - Tools that transmit credentials over unencrypted HTTP must warn on stderr.
 - Dependencies must be kept up to date; run `govulncheck` (Go) or `uv audit` (Python)

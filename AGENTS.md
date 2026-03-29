@@ -31,6 +31,21 @@ The sections below summarize the rules that are most commonly missed.
 - Always use `make build` (outputs to `dist/`) or `make build-all`.
 - `go test ./...` is fine — it produces no stray binaries.
 
+### Never commit secrets or environment-specific values
+
+This is the **highest priority rule**. All repositories are public.
+
+- **Never commit**: project IDs, SA emails, API tokens, bucket names,
+  account IDs, IP addresses, internal hostnames
+- **Deployment config**: use placeholder values only (`PROJECT_ID`,
+  `SA_EMAIL`, `BUCKET_NAME`). Local overrides use `.local.*` suffix
+  (gitignored).
+- **Before every commit**: mentally verify "does this diff contain
+  any value that identifies my infrastructure?"
+- **If exposed**: rotate credentials immediately, then rewrite history.
+
+Full details: [`CONVENTIONS.md` → Security](CONVENTIONS.md#security)
+
 ### Commits must be small and typed
 
 Format: `<type>: <short imperative description>`
