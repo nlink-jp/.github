@@ -116,7 +116,16 @@ check_series() {
     done < <(git -C "$dir" submodule foreach --quiet 'echo "        $displaypath"')
   fi
 
-  # 7. Submodule pointers vs origin/main
+  # 7. .gitmodules must use HTTPS URLs (not SSH)
+  if [ -f "$dir/.gitmodules" ]; then
+    if grep -q 'git@github.com' "$dir/.gitmodules" 2>/dev/null; then
+      echo "    $FAIL .gitmodules: SSH URLs found (must use https://github.com/)"
+      grep 'git@' "$dir/.gitmodules" | sed 's/^/        /'
+      errors=$((errors + 1))
+    fi
+  fi
+
+  # 8. Submodule pointers vs origin/main
   if [ ! -f "$dir/.gitmodules" ]; then
     return
   fi
