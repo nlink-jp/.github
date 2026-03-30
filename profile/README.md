@@ -36,6 +36,7 @@ AI-augmented tools for threat intelligence, product risk assessment, and inciden
 |------|-------------|
 | [ai-ir](https://github.com/nlink-jp/ai-ir) | AI-powered incident response — analyzes Slack IR exports to generate summaries, activity reports, and reusable tactics |
 | [ioc-collector](https://github.com/nlink-jp/ioc-collector) | Research security incidents from URLs or CVE IDs — extracts IoCs into Markdown and STIX 2.1 bundles |
+| [ir-tracker](https://github.com/nlink-jp/ir-tracker) | Live IR tracker — continuous ingestion, segmented analysis, and timeline visualization for ongoing incidents via Gemini |
 | [news-collector](https://github.com/nlink-jp/news-collector) | News collection agent — collects, tags, summarizes, translates, and delivers curated news digests via Gemini + Slack |
 | [product-research](https://github.com/nlink-jp/product-research) | Research products and services — outputs ToS, privacy, and data security analysis as structured reports |
 
