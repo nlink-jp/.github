@@ -48,6 +48,7 @@ Works in progress. APIs, features, and interfaces may change without notice.
 |------|------|-------------|
 | [mail-analyzer](https://github.com/nlink-jp/mail-analyzer) | Go | Mail analysis tool |
 | [magi-system](https://github.com/nlink-jp/magi-system) | Python | Multi-agent discussion system with 3 AI personas (MELCHIOR / BALTHASAR / CASPER) |
+| [magi-system2](https://github.com/nlink-jp/magi-system2) | Python | Multi-persona AI discussion — dynamic persona generation, dual memory, adaptive facilitation via Gemini |
 | [llm-othello](https://github.com/nlink-jp/llm-othello) | Go | Browser-based Othello against a local LLM — server-side move generation via OpenAI-compatible API |
 | [sai](https://github.com/nlink-jp/sai) | Python | Context-aware Slack bot with RAG memory and natural language command execution |
 | [slack-monitor](https://github.com/nlink-jp/slack-monitor) | Python | Real-time Slack channel summarizer with local/cloud LLM and Textual TUI |
