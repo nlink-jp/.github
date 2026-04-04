@@ -85,3 +85,4 @@ Pipe-friendly tools for data transformation and processing.
 | [rex](https://github.com/nlink-jp/rex) | Go | Extract fields from text using named regex capture groups — outputs JSON |
 | [sdate](https://github.com/nlink-jp/sdate) | Go | Calculate timestamps using Splunk-like relative time modifiers (e.g., `-1d@d`) |
 | [cclaude](https://github.com/nlink-jp/cclaude) | Bash | Containerized Claude Code — run Claude Code in an isolated container with project isolation |
+| [mcp-guardian](https://github.com/nlink-jp/mcp-guardian) | Go | MCP governance proxy — zero-dependency single binary for tool call auditing, constraint learning, and loop detection |
