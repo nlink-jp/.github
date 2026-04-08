@@ -39,6 +39,7 @@ AI-augmented tools for threat intelligence, product risk assessment, and inciden
 | [ioc-collector](https://github.com/nlink-jp/ioc-collector) | Research security incidents from URLs or CVE IDs — extracts IoCs into Markdown and STIX 2.1 bundles |
 | [ir-timeline](https://github.com/nlink-jp/ir-timeline) | IR timeline recorder — single-binary, browser-based tool for tracking IR events with text, images, tags, and time deltas |
 | [ir-tracker](https://github.com/nlink-jp/ir-tracker) | Live IR tracker — continuous ingestion, segmented analysis, and timeline visualization for ongoing incidents via Gemini |
+| [mail-triage](https://github.com/nlink-jp/mail-triage) | GCS-based email triage — classifies eml/msg files with Gemini LLM and posts results to Slack via Cloud Run Jobs |
 | [news-collector](https://github.com/nlink-jp/news-collector) | News collection agent — collects, tags, summarizes, translates, and delivers curated news digests via Gemini + Slack |
 | [product-research](https://github.com/nlink-jp/product-research) | Research products and services — outputs ToS, privacy, and data security analysis as structured reports |
 
