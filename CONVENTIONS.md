@@ -466,15 +466,22 @@ above convenience. A security violation in a public repository is
 **irreversible** (git history is cached, forked, and indexed). Prevention
 is the only acceptable strategy.
 
-### Never commit environment-specific values to public repositories
+### Never commit protected information to public repositories
 
 The following must **never** appear in committed files:
 
+- **Personal information (PII)** — real names, email addresses, usernames,
+  employee IDs, or any data that identifies a specific individual. Use
+  generic placeholders (`nlink-jp maintainers`, `user@example.com`) instead.
 - **GCP project IDs, project numbers** (e.g. `my-project-123456`)
 - **Service account emails** (e.g. `sa@project.iam.gserviceaccount.com`)
 - **API keys, tokens, passwords** (e.g. `xoxb-...`, `sk-...`, `AIza...`)
 - **Bucket names, database connection strings** that reveal infrastructure
 - **IP addresses, internal hostnames, account IDs**
+
+This applies to all committed content: source code, documentation, ADRs,
+commit messages, PR descriptions, and configuration templates. Content from
+external sources (emails, tickets, logs) must be sanitized before inclusion.
 
 **How to handle deployment configuration:**
 
