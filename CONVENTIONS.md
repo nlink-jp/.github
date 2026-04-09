@@ -98,11 +98,17 @@ in later.
 
 ```
 <tool-name>/
-├── <module_name>.py         ← or <package>/ directory
+├── src/
+│   └── <package_name>/      ← source package (underscore, not hyphen)
+│       ├── __init__.py
+│       └── ...
+├── tests/                   ← pytest test directory
+│   └── test_*.py
 ├── pyproject.toml           ← with [project.scripts] entry point
 ├── uv.lock
 ├── .python-version
-├── .gitignore
+├── Makefile                 ← see template below
+├── .gitignore               ← see template below
 ├── README.md
 ├── README.ja.md
 ├── CHANGELOG.md
@@ -163,14 +169,87 @@ dist/
 *.swo
 ```
 
+#### Makefile template (Python)
+
+```makefile
+.PHONY: test lint format build clean
+
+test:
+	uv run pytest tests/ -v
+
+lint:
+	uv run ruff check src/ tests/
+	uv run ruff format --check src/ tests/
+
+format:
+	uv run ruff check --fix src/ tests/
+	uv run ruff format src/ tests/
+
+build:
+	uv build --out-dir dist/
+
+clean:
+	rm -rf dist/ .pytest_cache .ruff_cache
+```
+
+#### `.gitignore` template (Python)
+
+```gitignore
+# Build artifacts
+dist/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+
+# Virtual environment
+.venv/
+
+# Test / lint cache
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Credentials
+.env
+.env.*
+
+# Local deployment overrides
+*.local.yaml
+*.local.toml
+*.local.json
+
+# macOS
+.DS_Store
+
+# Editor
+.idea/
+.vscode/
+*.swp
+*.swo
+```
+
 #### Scaffold checklist
 
-**Repository structure:**
+**Repository structure (Go):**
 
 - [ ] `main.go` is at the project root (not `cmd/<name>/`)
 - [ ] `Makefile` `build` target outputs to `dist/`
 - [ ] `.gitignore` contains `dist/` and nothing else for build artifacts
 - [ ] `go.mod` module path is `github.com/nlink-jp/<tool-name>`
+
+**Repository structure (Python):**
+
+- [ ] Source code is in `src/<package_name>/` layout
+- [ ] `tests/` directory exists with at least one test file
+- [ ] `Makefile` has `test`, `lint`, `build`, `clean` targets
+- [ ] `pyproject.toml` has `[project.scripts]` entry point
+- [ ] `.python-version` specifies the minimum Python version
+- [ ] `.gitignore` contains `dist/` and standard Python exclusions
 
 **Documentation:**
 
@@ -299,7 +378,6 @@ patterns should be needed.
 ### `main.go` placement
 
 `main.go` must be at the **project root**, not inside `cmd/<name>/`.
-All projects in this organization follow this convention.
 
 ```
 my-tool/
@@ -313,6 +391,28 @@ my-tool/
 Placing `main.go` inside `cmd/<name>/` creates a risk: if `.gitignore` excludes
 the binary name without a leading `/`, the entire `cmd/<name>/` directory becomes
 invisible to git — a **silent code-loss** scenario.
+
+### Multi-binary Go projects
+
+Some projects legitimately need multiple entry points (e.g. a main CLI and an
+evaluation tool). In this case, use `cmd/` subdirectories:
+
+```
+my-tool/
+  main.go              ← primary entry point (always at root)
+  cmd/
+    root.go
+    eval/
+      main.go          ← secondary entry point
+```
+
+**Rules for multi-binary projects:**
+
+- The **primary** entry point must still be `main.go` at the project root.
+- Secondary entry points may live under `cmd/<subcommand>/main.go`.
+- `Makefile` must have explicit build targets for each binary, all outputting
+  to `dist/`.
+- Document the multi-binary structure in `AGENTS.md`.
 
 ### AGENTS.md accuracy
 
@@ -527,3 +627,33 @@ Before tagging a release, verify every item:
 7. Update umbrella submodule pointer
 8. Update `nlink-jp/.github/profile/README.md` if new tool
 9. Run `check-org.sh` to verify all green
+
+---
+
+## `check-org.sh` — Organization Health Check
+
+`check-org.sh` is the automated compliance verifier for all series repositories.
+It lives at `.github/scripts/check-org.sh` and should be run after releases,
+submodule updates, and scaffold creation.
+
+**Usage:**
+
+```bash
+.github/scripts/check-org.sh [DEST_DIR]
+```
+
+**What it checks (per series):**
+
+| # | Check | What it catches |
+|---|-------|-----------------|
+| 1 | Remote sync | Local HEAD diverged from `origin/main` |
+| 2 | Clean working tree | Uncommitted or untracked files |
+| 3 | `.gitignore` coverage | Missing `.claude/settings.local.json` exclusion |
+| 4 | No tracked secrets config | `.claude/settings.local.json` in git index |
+| 5 | `CLAUDE.md` presence | Missing series-level `CLAUDE.md` |
+| 6 | Build conventions | `make build` outputting to root or `bin/` instead of `dist/`; bare binary names in `.gitignore`; missing `dist/` in `.gitignore` |
+| 7 | Secret scanning | Tracked files containing likely secrets (service accounts, tokens, API keys) |
+| 8 | HTTPS URLs | `.gitmodules` using SSH instead of HTTPS |
+| 9 | Submodule pointers | Recorded commit differs from `origin/main` of submodule |
+
+**Exit code:** `0` if all checks pass, `1` if any check fails.
