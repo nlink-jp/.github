@@ -7,6 +7,14 @@ Every project must follow these conventions from the start.
 Series-level and project-level `CONVENTIONS.md` / `CLAUDE.md` files may extend
 these rules but must not contradict them.
 
+## Architecture Decision Records (ADR)
+
+Organization-wide technical decisions are recorded in [`adr/`](adr/).
+
+| ADR | Status | Summary |
+|-----|--------|---------|
+| [001](adr/001-gemini3-migration.md) | Accepted | Gemini 2.5 → 3 migration plan (defer until GA) |
+
 ---
 
 ## Starting a New Project
