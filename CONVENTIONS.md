@@ -94,6 +94,9 @@ in later.
 ├── Makefile                 ← see template below
 ├── .gitignore               ← see template below
 ├── go.mod
+├── docs/
+│   ├── en/                  ← English docs (no language suffix)
+│   └── ja/                  ← Japanese docs (*.ja.md suffix)
 ├── README.md
 ├── README.ja.md
 ├── CHANGELOG.md
@@ -117,6 +120,9 @@ in later.
 ├── .python-version
 ├── Makefile                 ← see template below
 ├── .gitignore               ← see template below
+├── docs/
+│   ├── en/                  ← English docs (no language suffix)
+│   └── ja/                  ← Japanese docs (*.ja.md suffix)
 ├── README.md
 ├── README.ja.md
 ├── CHANGELOG.md
@@ -320,8 +326,20 @@ below for all implementation work.
 - Documentation drift is a bug.
 - When behaviour changes, update `README.md`, `docs/`, and any affected translations
   in the same commit or PR.
-- Japanese translations (`README.ja.md`, `docs/ja/`) must be kept in sync with every
-  English change.
+- Japanese translations must be kept in sync with every English change.
+
+### Documentation structure
+
+Project root:
+- `README.md` — English (canonical, displayed by GitHub)
+- `README.ja.md` — Japanese (root-level special case, `.ja.md` suffix)
+
+Additional documents (design docs, RFP, reference manuals, evaluation guides):
+- `docs/en/*.md` — English, **no language suffix**
+- `docs/ja/*.ja.md` — Japanese, **`.ja.md` suffix**
+
+Do NOT duplicate root READMEs into `docs/en/` or `docs/ja/`.
+Do NOT use a flat `docs/design/` directory — always separate by language.
 
 ### Make small commits
 
