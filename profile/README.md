@@ -61,6 +61,14 @@ Works in progress. APIs, features, and interfaces may change without notice.
 | [virtual-reviewer](https://github.com/nlink-jp/virtual-reviewer) | Python | AI-powered security review system — LLM expert models with full regulation context, no RAG, UNIX pipes |
 | [workflow-builder](https://github.com/nlink-jp/workflow-builder) | — | LLM-powered workflow builder — generates shell scripts from natural language using CLI tool registry (design phase) |
 
+### lib-series — Shared libraries
+
+Shared libraries for nlink-jp projects. Zero external dependencies where possible.
+
+| Library | Lang | Description |
+|---------|------|-------------|
+| [nlk](https://github.com/nlink-jp/nlk) | Go | Lightweight LLM utility toolkit — guard, jsonfix, backoff. Zero external dependencies |
+
 ### lite-series — Lightweight LLM and pipeline tools
 
 Small, local-first CLI tools for LLM interaction, retrieval, and classification.
