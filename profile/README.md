@@ -68,6 +68,7 @@ Shared libraries for nlink-jp projects. Zero external dependencies where possibl
 | Library | Lang | Description |
 |---------|------|-------------|
 | [nlk](https://github.com/nlink-jp/nlk) | Go | Lightweight LLM utility toolkit — guard, jsonfix, strip, backoff, validate. Zero external dependencies |
+| [nlk-py](https://github.com/nlink-jp/nlk-py) | Python | Python edition of nlk — same 5 modules, same API design. Zero external dependencies |
 
 ### lite-series — Lightweight LLM and pipeline tools
 
