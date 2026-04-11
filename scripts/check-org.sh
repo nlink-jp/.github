@@ -9,12 +9,13 @@
 set -euo pipefail
 
 SERIES=(
-  cli-series
   chatops-series
+  cli-series
   cybersecurity-series
-  util-series
   lab-series
   lite-series
+  skills-series
+  util-series
 )
 
 DEST="${1:-$(pwd)}"

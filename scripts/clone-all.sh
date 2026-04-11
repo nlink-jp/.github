@@ -18,6 +18,7 @@ SERIES=(
   cybersecurity-series
   lab-series
   lite-series
+  skills-series
   util-series
 )
 

@@ -71,6 +71,14 @@ Small, local-first CLI tools for LLM interaction, retrieval, and classification.
 | [lite-rag](https://github.com/nlink-jp/lite-rag) | RAG CLI for Markdown docs using DuckDB — index and query local knowledge bases |
 | [lite-switch](https://github.com/nlink-jp/lite-switch) | Natural language classifier for shell pipelines — routes stdin text to a matching tag via LLM |
 
+### skills-series — Claude Code Skills
+
+Claude Code Skills for development process automation.
+
+| Skill | Command | Description |
+|-------|---------|-------------|
+| [rfp](https://github.com/nlink-jp/skills-series) | `/rfp [tool-name]` | Interactive RFP facilitation — collects requirements through Q&A against CONVENTIONS.md Phase 1 and generates structured RFP documents |
+
 ### util-series — General-purpose data utilities
 
 Pipe-friendly tools for data transformation and processing.

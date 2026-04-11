@@ -15,11 +15,12 @@ HOOK_DIR="$(cd "$SCRIPT_DIR/../hooks" && pwd)"
 DEST="${1:-$(cd "$SCRIPT_DIR/../.." && pwd)}"
 
 SERIES=(
-  cli-series
   chatops-series
+  cli-series
   cybersecurity-series
   lab-series
   lite-series
+  skills-series
   util-series
 )
 
