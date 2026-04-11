@@ -272,6 +272,7 @@ htmlcov/
 
 - [ ] Repository created under `nlink-jp` organization
 - [ ] Repository is **public** (not private) unless there is a documented reason
+- [ ] Repository **About** configured: description and topics set (see [Repository About](#repository-about))
 - [ ] Repository added as submodule to the appropriate series umbrella repo
 - [ ] Series umbrella `.gitmodules` entry uses `https://github.com/nlink-jp/<tool-name>.git`
 - [ ] Umbrella repo submodule pointer committed and pushed
@@ -435,6 +436,36 @@ When creating a new project by copying from an existing one, always update:
 
 Stale or copied-from-another-project `AGENTS.md` files mislead both human
 developers and AI agents.
+
+---
+
+## Repository About
+
+Every repository must have its **About** metadata configured at creation time.
+This metadata is displayed on the GitHub repository page and used for search
+and discovery.
+
+**Required fields:**
+
+1. **Description** — A concise one-line summary of what the repository does.
+   Set via `gh repo edit --description "..."` or the GitHub web UI.
+
+2. **Topics** — Relevant keywords for discoverability.
+   Set via `gh repo edit --add-topic <topic>`.
+
+**Topic guidelines:**
+
+- Include the primary language(s): `golang`, `python`, `bash`
+- Include the problem domain: `cli`, `chatops`, `cybersecurity`, `llm`, etc.
+- Include key technologies or services: `slack`, `gemini`, `duckdb`, etc.
+- Use lowercase, hyphen-separated words (GitHub enforces this)
+- Keep the total count reasonable (3–8 topics)
+
+**When to update:**
+
+- At repository creation (part of the scaffold checklist)
+- When the project scope, language, or key dependencies change significantly
+- When adding major new features that warrant additional topics
 
 ---
 
