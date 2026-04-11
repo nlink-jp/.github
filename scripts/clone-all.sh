@@ -17,6 +17,7 @@ SERIES=(
   cli-series
   cybersecurity-series
   lab-series
+  lib-series
   lite-series
   skills-series
   util-series
