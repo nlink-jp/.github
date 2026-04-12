@@ -114,6 +114,7 @@ Pipe-friendly tools for data transformation and processing.
 | [mcp-guardian](https://github.com/nlink-jp/mcp-guardian) | Go | MCP governance proxy — transparent auditing, OAuth2 auto-discovery, and tool masking for MCP servers |
 | [msg-to-jsonl](https://github.com/nlink-jp/msg-to-jsonl) | Go | Parse Outlook .msg files and output structured JSONL — same schema as eml-to-jsonl |
 | [pptx-to-markdown](https://github.com/nlink-jp/pptx-to-markdown) | Python | Convert `.pptx` presentations to structured Markdown for LLM analysis |
+| [quick-translate](https://github.com/nlink-jp/quick-translate) | Swift | macOS menu-bar-resident translation tool — local LLM via OpenAI-compatible API |
 | [rex](https://github.com/nlink-jp/rex) | Go | Extract fields from text using named regex capture groups — outputs JSON |
 | [sdate](https://github.com/nlink-jp/sdate) | Go | Calculate timestamps using Splunk-like relative time modifiers (e.g., `-1d@d`) |
 | [webhook-relay](https://github.com/nlink-jp/webhook-relay) | Go | Authenticated webhook receiver — writes payloads to GCS via Cloud Run Service with VPC isolation |
