@@ -83,6 +83,55 @@ Create the repository with the correct structure **before** writing business
 logic. This ensures org conventions are embedded from the start, not patched
 in later.
 
+#### Working directory: `_wip/`
+
+New projects must be developed in the organization root `_wip/` directory,
+**not** directly inside an umbrella series directory.
+
+```
+nlink-jp/                    ← organization root (workspace)
+├── _wip/
+│   └── <tool-name>/         ← develop here until ready for integration
+├── util-series/
+├── cli-series/
+└── ...
+```
+
+**Why:** Adding a submodule to an umbrella repo requires the target path to be
+empty. If you develop directly inside `util-series/<tool-name>/`, you must
+`rm -rf` the working copy before running `git submodule add` — risking loss of
+uncommitted work. Developing in `_wip/` eliminates this dangerous step entirely.
+
+**Workflow:**
+
+1. Create the project directory under `_wip/`:
+   ```bash
+   mkdir -p _wip/<tool-name>
+   cd _wip/<tool-name>
+   git init
+   ```
+2. Scaffold and develop following the conventions below.
+3. When the project is ready for integration, create the remote repository and
+   push:
+   ```bash
+   gh repo create nlink-jp/<tool-name> --public --source=. --push
+   ```
+4. Add the project as a submodule in the appropriate umbrella repo:
+   ```bash
+   cd <umbrella-series>/
+   git submodule add https://github.com/nlink-jp/<tool-name>.git
+   git commit -m "chore: add <tool-name> submodule"
+   git push
+   ```
+   This clones a fresh copy from the remote — no file conflicts.
+5. Remove the `_wip/` working copy after confirming the submodule works:
+   ```bash
+   rm -rf _wip/<tool-name>
+   ```
+
+> **Rule:** Never develop new projects directly inside an umbrella series
+> directory. Always use `_wip/` as the staging area.
+
 #### Go project scaffold
 
 ```
@@ -276,12 +325,15 @@ htmlcov/
 
 **Organization integration:**
 
+- [ ] Project developed in `_wip/<tool-name>/`, **not** inside an umbrella series directory
 - [ ] Repository created under `nlink-jp` organization
 - [ ] Repository is **public** (not private) unless there is a documented reason
 - [ ] Repository **About** configured: description and topics set (see [Repository About](#repository-about))
+- [ ] Repository pushed from `_wip/` to remote before submodule integration
 - [ ] Repository added as submodule to the appropriate series umbrella repo
 - [ ] Series umbrella `.gitmodules` entry uses `https://github.com/nlink-jp/<tool-name>.git`
 - [ ] Umbrella repo submodule pointer committed and pushed
+- [ ] `_wip/<tool-name>/` removed after submodule integration confirmed
 - [ ] `nlink-jp/.github/profile/README.md` updated if the tool is user-facing
 - [ ] `check-org.sh` passes after all integration steps
 
