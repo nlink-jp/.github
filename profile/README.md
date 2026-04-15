@@ -13,6 +13,7 @@ Authenticate as the human user, not a bot.
 |------|---------|-------------|
 | [confl-cli](https://github.com/nlink-jp/confl-cli) | Confluence | Confluence Cloud CLI — list, search, read, export |
 | [gem-cli](https://github.com/nlink-jp/gem-cli) | Gemini | Gemini CLI client — multimodal prompts, streaming, grounding, structured output via Vertex AI |
+| [llm-cli](https://github.com/nlink-jp/llm-cli) | Local LLM | CLI client for local LLMs (LM Studio, Ollama) — streaming, batch, multi-image VLM, structured output |
 | [scli](https://github.com/nlink-jp/scli) | Slack | Terminal Slack client — channels, messages, DMs, search |
 | [splunk-cli](https://github.com/nlink-jp/splunk-cli) | Splunk | CLI client for the Splunk REST API — run searches, poll jobs, fetch results |
 
