@@ -80,7 +80,7 @@ Small, local-first CLI tools for LLM interaction, retrieval, and classification.
 
 | Tool | Description |
 |------|-------------|
-| [lite-llm](https://github.com/nlink-jp/lite-llm) | CLI client for OpenAI-compatible LLM APIs — streaming, batch, structured output |
+| [lite-llm](https://github.com/nlink-jp/lite-llm) | ~~CLI client for OpenAI-compatible LLM APIs~~ **Archived** — superseded by [llm-cli](https://github.com/nlink-jp/llm-cli) |
 | [lite-rag](https://github.com/nlink-jp/lite-rag) | RAG CLI for Markdown docs using DuckDB — index and query local knowledge bases |
 | [lite-switch](https://github.com/nlink-jp/lite-switch) | Natural language classifier for shell pipelines — routes stdin text to a matching tag via LLM |
 
