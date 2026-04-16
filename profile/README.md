@@ -37,6 +37,7 @@ AI-augmented tools for threat intelligence, product risk assessment, and inciden
 |------|-------------|
 | [ai-ir](https://github.com/nlink-jp/ai-ir) | AI-powered incident response — analyzes Slack IR exports to generate summaries, activity reports, and reusable tactics |
 | [ai-ir2](https://github.com/nlink-jp/ai-ir2) | Next-gen IR analysis — one-stop Gemini pipeline producing Markdown, self-contained HTML, and knowledge documents |
+| [cti-primer](https://github.com/nlink-jp/cti-primer) | Local-first CTI PIR generation — converts business context into Priority Intelligence Requirements using local LLMs or dictionary-only mode |
 | [ioc-collector](https://github.com/nlink-jp/ioc-collector) | Research security incidents from URLs or CVE IDs — extracts IoCs into Markdown and STIX 2.1 bundles |
 | [ir-timeline](https://github.com/nlink-jp/ir-timeline) | IR timeline recorder — single-binary, browser-based tool for tracking IR events with text, images, tags, and time deltas |
 | [ir-tracker](https://github.com/nlink-jp/ir-tracker) | Live IR tracker — continuous ingestion, segmented analysis, and timeline visualization for ongoing incidents via Gemini |
