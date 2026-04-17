@@ -57,15 +57,15 @@ Launch LM Studio and download a model.
 2. Enter the desired model name in the search bar at the top of the screen
 3. Select the model and click "Download"
 
-**Recommended models:**
+**Recommended model:**
 
-| Model name | Size | VRAM estimate | Use case |
-|-----------|------|--------------|----------|
-| `qwen3-8b` | ~5 GB | 8 GB | General purpose (recommended starting point) |
-| `qwen3-14b` | ~9 GB | 12 GB | Higher quality |
-| `qwen3-30b-a3b` | ~18 GB | 24 GB | High-precision analysis |
+| Model name | Size | VRAM estimate | Notes |
+|-----------|------|--------------|-------|
+| `google/gemma-3-27b-it` | ~18 GB | 20-24 GB | **nlink-jp standard model. Verified.** |
 
-> If this is your first time, start with **qwen3-8b**. Type `qwen3-8b` in the search bar to see candidates.
+> nlink-jp tools are developed and tested with **gemma-3-27b-it** (Gemma 3 27B Instruct, MoE with effective 4B parameter activation) as the standard model. Other models may work but have not been verified.
+>
+> Type `gemma-3-27b-it` in the search bar and select a GGUF quantized version (e.g., Q4_K_M). If VRAM is insufficient, LM Studio will automatically use hybrid CPU/GPU execution.
 
 ### Step 3: Start the API Server
 
