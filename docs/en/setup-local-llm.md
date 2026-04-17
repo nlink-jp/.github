@@ -61,11 +61,11 @@ Launch LM Studio and download a model.
 
 | Model name | Size | VRAM estimate | Notes |
 |-----------|------|--------------|-------|
-| `google/gemma-3-27b-it` | ~18 GB | 20-24 GB | **nlink-jp standard model. Verified.** |
+| `google/gemma-4-27b-it` | ~18 GB | 20-24 GB | **nlink-jp standard model. Verified.** |
 
-> nlink-jp tools are developed and tested with **gemma-3-27b-it** (Gemma 3 27B Instruct, MoE with effective 4B parameter activation) as the standard model. Other models may work but have not been verified.
+> nlink-jp tools are developed and tested with **gemma-4-27b-it** (Gemma 4 27B Instruct, MoE with effective 4B parameter activation) as the standard model. Other models may work but have not been verified.
 >
-> Type `gemma-3-27b-it` in the search bar and select a GGUF quantized version (e.g., Q4_K_M). If VRAM is insufficient, LM Studio will automatically use hybrid CPU/GPU execution.
+> Type `gemma-4-27b-it` in the search bar and select a GGUF quantized version (e.g., Q4_K_M). If VRAM is insufficient, LM Studio will automatically use hybrid CPU/GPU execution.
 
 ### Step 3: Start the API Server
 
