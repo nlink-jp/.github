@@ -631,7 +631,23 @@ if git diff --cached --diff-filter=ACM | grep -qE "$PATTERNS"; then
   echo "Review with: git diff --cached | grep -E '$PATTERNS'"
   exit 1
 fi
+# Block go.mod local replace directives (leaks local paths)
+if git diff --cached --diff-filter=ACM -- '*/go.mod' 'go.mod' | grep -qE '^\+.*replace.*=>.*/(Users|home)/'; then
+  echo "ERROR: go.mod contains local replace directive (leaks local paths)."
+  echo "Use a published version instead of a local path."
+  exit 1
+fi
 ```
+
+### go.mod local replace directives
+
+**Never commit `replace` directives with local filesystem paths** to public
+repositories. A line like `replace foo => /Users/alice/src/foo` leaks the
+username, OS, and directory structure.
+
+- Use published module versions (e.g., `github.com/nlink-jp/nlk v0.5.1`)
+- If a local replace is needed during development, remove it before committing
+- `check-org.sh` (check 8) scans for this automatically
 
 ### Incident response for accidental secret exposure
 
@@ -769,7 +785,8 @@ submodule updates, and scaffold creation.
 | 5 | `CLAUDE.md` presence | Missing series-level `CLAUDE.md` |
 | 6 | Build conventions | `make build` outputting to root or `bin/` instead of `dist/`; bare binary names in `.gitignore`; missing `dist/` in `.gitignore` |
 | 7 | Secret scanning | Tracked files containing likely secrets (service accounts, tokens, API keys) |
-| 8 | HTTPS URLs | `.gitmodules` using SSH instead of HTTPS |
-| 9 | Submodule pointers | Recorded commit differs from `origin/main` of submodule |
+| 8 | go.mod local replace | `replace` directives with local filesystem paths (leaks username/directory structure) |
+| 9 | HTTPS URLs | `.gitmodules` using SSH instead of HTTPS |
+| 10 | Submodule pointers | Recorded commit differs from `origin/main` of submodule |
 
 **Exit code:** `0` if all checks pass, `1` if any check fails.

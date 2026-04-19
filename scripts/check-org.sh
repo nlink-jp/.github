@@ -138,7 +138,26 @@ check_series() {
     done < <(git -C "$dir" submodule foreach --quiet 'echo "        $displaypath"')
   fi
 
-  # 8. .gitmodules must use HTTPS URLs (not SSH)
+  # 8. go.mod must not contain local replace directives (leaks local paths)
+  if [ -f "$dir/.gitmodules" ]; then
+    while IFS= read -r subpath; do
+      subpath="${subpath#        }"
+      subdir="$dir/$subpath"
+      name=$(basename "$subpath")
+
+      replace_hits=$(git -C "$subdir" grep -n 'replace.*=>.*/' \
+        HEAD -- 'go.mod' '**/go.mod' 2>/dev/null \
+        | grep -v '// local-dev-only' || true)
+      if [ -n "$replace_hits" ]; then
+        echo "    $FAIL $name: go.mod contains local replace (leaks local paths):"
+        echo "$replace_hits" | sed 's/^/            /'
+        errors=$((errors + 1))
+      fi
+    done < <(git -C "$dir" submodule foreach --quiet 'echo "        $displaypath"')
+  fi
+
+  # 9. .gitmodules must use HTTPS URLs (not SSH)
+  #    (was check 8 before go.mod replace check was added)
   if [ -f "$dir/.gitmodules" ]; then
     if grep -q 'git@github.com' "$dir/.gitmodules" 2>/dev/null; then
       echo "    $FAIL .gitmodules: SSH URLs found (must use https://github.com/)"
@@ -147,7 +166,7 @@ check_series() {
     fi
   fi
 
-  # 9. Submodule pointers vs origin/main
+  # 10. Submodule pointers vs origin/main
   if [ ! -f "$dir/.gitmodules" ]; then
     return
   fi
