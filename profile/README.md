@@ -117,6 +117,7 @@ Pipe-friendly tools for data transformation and processing.
 |------|------|-------------|
 | [cclaude](https://github.com/nlink-jp/cclaude) | Bash | Containerized Claude Code — run Claude Code in an isolated container with project isolation |
 | [csv-to-json](https://github.com/nlink-jp/csv-to-json) | Go | Convert CSV data to a JSON array |
+| [data-agent](https://github.com/nlink-jp/data-agent) | Go/React | Data analysis desktop GUI — interactive chat, plan-driven SQL + sliding window analysis, per-case DuckDB, dual LLM backend |
 | [data-analyzer](https://github.com/nlink-jp/data-analyzer) | Go | Large-scale JSON/JSONL data analysis using local LLMs — sliding window + progressive summarization |
 | [eml-to-jsonl](https://github.com/nlink-jp/eml-to-jsonl) | Go | Parse .eml files and output structured JSONL — headers, body, attachments |
 | [gem-image](https://github.com/nlink-jp/gem-image) | Go | Image generation and editing CLI — text-to-image and image editing via Vertex AI Gemini 2.5 Flash |
