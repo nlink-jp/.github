@@ -39,7 +39,6 @@ Pipe-friendly Slack tools for ChatOps automation and monitoring.
 |------|-------------|
 | [md-to-slack](https://github.com/nlink-jp/md-to-slack) | Markdown → Slack Block Kit JSON filter — pipe into `scat` to post formatted messages |
 | [scat](https://github.com/nlink-jp/scat) | General-purpose content poster — send text, files, and Block Kit messages to Slack from stdin or files |
-| [slack-personal-agent](https://github.com/nlink-jp/slack-personal-agent) | Personal Slack knowledge agent — multi-workspace monitoring, 3-tier channel-scoped RAG, MITL proxy response |
 | [slack-router](https://github.com/nlink-jp/slack-router) | Slack Slash Command daemon — routes commands to local shell scripts via Socket Mode |
 | [stail](https://github.com/nlink-jp/stail) | Read-only Slack CLI — stream channel messages in real time (`tail -f`) or export history to JSON |
 | [swrite](https://github.com/nlink-jp/swrite) | Bot-oriented Slack poster — post text, Block Kit, attachments, and files from shell pipelines; unfurl control; server mode for Docker/Kubernetes |
