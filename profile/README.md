@@ -141,5 +141,5 @@ Pipe-friendly tools for data transformation and processing.
 | [rex](https://github.com/nlink-jp/rex) | Go | Extract fields from text using named regex capture groups — outputs JSON |
 | [sdate](https://github.com/nlink-jp/sdate) | Go | Calculate timestamps using Splunk-like relative time modifiers (e.g., `-1d@d`) |
 | [shell-agent](https://github.com/nlink-jp/shell-agent) | Go/Swift | macOS LLM chat & agent — MCP support, shell script Tool Calling with MITL, Hot/Warm/Cold memory, multimodal |
-| [shell-agent-v2](https://github.com/nlink-jp/shell-agent-v2) | Go | macOS chat & agent with interactive data analysis — session-scoped DuckDB, hybrid LLM (Local + Vertex AI), global Findings |
+| [shell-agent-v2](https://github.com/nlink-jp/shell-agent-v2) | Go | macOS chat & agent with interactive data analysis — session-scoped DuckDB, hybrid LLM (Local + Vertex AI), per-session container sandbox (shell + Python), global Findings |
 | [webhook-relay](https://github.com/nlink-jp/webhook-relay) | Go | Authenticated webhook receiver — writes payloads to GCS via Cloud Run Service with VPC isolation |
