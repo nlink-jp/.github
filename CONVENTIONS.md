@@ -509,6 +509,213 @@ developers and AI agents.
 
 ---
 
+## Code Signing and Notarization (macOS)
+
+### Principle
+
+Public macOS release zips must be **Developer ID signed and Apple-notarized**.
+
+End users should be able to download → unzip → run a release binary without
+any of the Gatekeeper bypass rituals (right-click → Open, `xattr -d
+com.apple.quarantine`, manual re-codesign). Local users (incl. the
+maintainer) running these binaries from Dropbox-synced or other
+FileProvider-managed paths must not be SIGKILL'd by macOS's
+ad-hoc-signed + `com.apple.provenance` distrust policy.
+
+This applies to every public Go CLI project. Wails / Swift / Tauri
+`.app` bundles follow a related but distinct pipeline (see §Wails / GUI
+apps below).
+
+### Architecture
+
+Two scripts, both committed to each project's `scripts/` directory:
+
+| Script | Role | Skips when |
+|---|---|---|
+| `scripts/codesign-darwin.sh <binary> [identity]` | Signs darwin Mach-O with Hardened Runtime + Apple timestamp | Non-Darwin host, file not Mach-O, no matching identity in keychain |
+| `scripts/notarize-darwin.sh <zip> [profile]` | Submits zip to Apple notary, waits for verdict | Non-Darwin host, no keychain profile present |
+
+Both scripts skip gracefully when credentials are unavailable, so
+contributors without an Apple Developer Program account, and CI
+environments without injected credentials, can still build — they just
+get ad-hoc-signed un-notarized output with a one-line warning instead
+of a hard failure.
+
+Canonical source: `templates/codesign-darwin.sh` and
+`templates/notarize-darwin.sh` in `nlink-jp/.github`. Each project
+copies these into its own `scripts/` directory verbatim. Updates to the
+templates propagate by re-copy (no submodule).
+
+### One-time machine setup
+
+Required only on machines that actually sign + notarize releases:
+
+1. **Apple Developer Program** membership ($99/year, individual or
+   organization). The team must include the developer (or be the
+   developer themselves for individual programs).
+
+2. **Developer ID Application** certificate in the local keychain:
+
+   ```
+   Xcode → Settings → Accounts → Apple ID → Manage Certificates → +
+       → Developer ID Application
+   ```
+
+   Verify:
+
+   ```sh
+   security find-identity -v -p codesigning
+   # 1) <hash> "Developer ID Application: <name> (<TEAM_ID>)"
+   ```
+
+3. **App Store Connect API key (Team Key)** stored in the keychain
+   under a generic profile name (`nlink-jp-notary` by convention):
+
+   - https://appstoreconnect.apple.com/access/integrations/api →
+     **Team Keys** tab → **+** → Access: **Developer** (minimum)
+   - Download `.p8` to `~/Library/Keys/AuthKey_<KEY_ID>.p8`
+     (one-time download; if lost, revoke and create a new key)
+   - Copy the **Key ID** and the **Issuer ID** (shown at the top of
+     the Team Keys page; Individual Keys do not expose an Issuer ID
+     and cannot be used with notarytool's `--issuer` flow)
+   - Store credentials in keychain:
+
+     ```sh
+     xcrun notarytool store-credentials nlink-jp-notary \
+         --key   ~/Library/Keys/AuthKey_<KEY_ID>.p8 \
+         --key-id <KEY_ID>
+     # prompts interactively for Issuer ID — keeps it out of shell history
+     ```
+
+   - Verify:
+
+     ```sh
+     xcrun notarytool history --keychain-profile nlink-jp-notary
+     # No submission history.  (success — credentials authenticated)
+     ```
+
+### Per-project Makefile integration
+
+In each Go CLI project's `Makefile`:
+
+```makefile
+# Defaults: match a generic Developer ID Application cert and a generic
+# keychain profile name. No personal identifier, team ID, or credential
+# lands in the committed Makefile.
+CODESIGN_IDENTITY ?= Developer ID Application
+NOTARY_PROFILE    ?= nlink-jp-notary
+
+build:
+	@mkdir -p dist
+	go build $(GOFLAGS) -o dist/$(BINARY) .
+	@scripts/codesign-darwin.sh dist/$(BINARY) "$(CODESIGN_IDENTITY)"
+
+build-all:
+	... cross-compile lines ...
+	@scripts/codesign-darwin.sh dist/$(BINARY)-darwin-amd64 "$(CODESIGN_IDENTITY)"
+	@scripts/codesign-darwin.sh dist/$(BINARY)-darwin-arm64 "$(CODESIGN_IDENTITY)"
+
+package: build-all
+	@cd dist && for f in $(BINARY)-*; do \
+		case "$$f" in *.zip) continue ;; esac; \
+		name=$${f%%.exe}; \
+		cp ../README.md .; \
+		zip -j "$${name}-$(VERSION).zip" "$$f" README.md; \
+		rm -f README.md; \
+	done
+	@scripts/notarize-darwin.sh dist/$(BINARY)-darwin-amd64-$(VERSION).zip "$(NOTARY_PROFILE)"
+	@scripts/notarize-darwin.sh dist/$(BINARY)-darwin-arm64-$(VERSION).zip "$(NOTARY_PROFILE)"
+```
+
+Copy the two scripts verbatim from `nlink-jp/.github/templates/`:
+
+```sh
+cp ~/works/nlink-jp/.github/templates/codesign-darwin.sh scripts/
+cp ~/works/nlink-jp/.github/templates/notarize-darwin.sh scripts/
+chmod +x scripts/codesign-darwin.sh scripts/notarize-darwin.sh
+```
+
+### What does NOT go in the repo
+
+- The signing identity name (`Developer ID Application: <name>
+  (<TEAM_ID>)`) — Makefile uses the generic `Developer ID
+  Application` prefix; the keychain auto-matches by certificate
+  type. The maintainer's real name (PII) stays out of source.
+- The Team ID — it appears in signed binaries by design, but
+  committing it serves no purpose.
+- The App Store Connect API key (`.p8`), Key ID, or Issuer ID —
+  these stay in the local keychain (via `store-credentials`) and
+  in `~/Library/Keys/` (outside any repo).
+
+The committed Makefile and scripts contain only generic identifiers
+(`Developer ID Application`, `nlink-jp-notary`) that other developers
+or future team members can override locally.
+
+### Verifying a release
+
+After `make package`, before uploading:
+
+```sh
+# Signature present + Developer ID issuer
+codesign -dv dist/<binary>-darwin-arm64
+
+# Notarization ticket attached (Apple-side online check)
+spctl --assess --type install \
+      --context context:primary-signature \
+      dist/<binary>-darwin-arm64
+```
+
+For the notarytool submission log on a specific submission:
+
+```sh
+xcrun notarytool log <submission-id> --keychain-profile nlink-jp-notary
+```
+
+### Why no stapling for CLI binaries
+
+`stapler staple` only works on app bundles, `.dmg`, and `.pkg`.
+Bare CLI binaries inside a zip cannot be stapled. Instead, the
+notarization ticket lives on Apple's servers and macOS checks it
+**online** the first time the binary is launched on a given
+machine. This is the standard Apple-supported pattern for CLI
+distributables. Offline first-launch on a fresh machine shows a
+brief verification dialog; once cached, subsequent launches are
+instant.
+
+### Wails / GUI apps
+
+Wails (`shell-agent-v2`, `data-agent`, `csv-editor`,
+`mail-analyzer-gui`) and other `.app` bundle projects require a
+distinct pipeline:
+
+- `codesign --deep` over the bundle
+- An entitlements `.plist` (typically allowing JIT, dyld vars,
+  etc. as required by the framework)
+- After notarize: `stapler staple <bundle>.app` (works for
+  bundles, unlike bare CLI)
+- Distribute as `.dmg` or zipped `.app`
+
+A reference template will be added to `templates/` once one Wails
+project completes the migration.
+
+### Why this matters
+
+- **Trust UX for end users** — public release binaries that
+  require manual Gatekeeper bypass tell every downloader "you're
+  running an unsigned binary." Notarized binaries are the
+  contemporary baseline for macOS distribution.
+- **Sync-friendly local execution** — recent macOS versions
+  SIGKILL ad-hoc-signed binaries that carry the
+  `com.apple.provenance` xattr (added by Dropbox / iCloud /
+  OneDrive FileProvider extensions). Developer ID signed
+  binaries are portable across the sync boundary; ad-hoc are not.
+- **Future-proofing** — Apple has tightened Gatekeeper's
+  treatment of ad-hoc signatures in successive macOS releases.
+  Developer ID + Notarization is the only path that's stable
+  across future tightening.
+
+---
+
 ## Repository About
 
 Every repository must have its **About** metadata configured at creation time.
@@ -747,14 +954,25 @@ Before tagging a release, verify every item:
 - [ ] README.md and README.ja.md reflect current features and flags
 - [ ] CHANGELOG.md has a dated entry for this version
 - [ ] If inside a submodule: on `main` branch (not detached HEAD)
+- [ ] For macOS public releases: Developer ID cert + `nlink-jp-notary`
+      keychain profile present on the build machine (see §Code Signing
+      and Notarization). Builds without them produce ad-hoc-signed
+      un-notarized zips that should NOT be published.
 
 **Release steps:**
 
 1. Commit `chore: release vX.Y.Z`
 2. Tag: `git tag vX.Y.Z && git push origin main --tags`
 3. `gh release create` (no assets yet)
-4. Build all platforms (`make build-all`)
-5. Zip each binary + README.md
+4. Build all platforms and notarize darwin builds in one shot:
+   `make clean && make package`
+   - darwin zips are signed with Developer ID and notarized by Apple
+   - linux/windows zips pass through (no signing applicable here)
+   - On a machine without credentials, the script falls back to
+     ad-hoc + un-notarized — do not proceed past this step in that
+     case
+5. Verify the darwin signature + notarization (see §Code Signing →
+   Verifying a release)
 6. Upload zips one by one (`gh release upload`)
 7. Update umbrella submodule pointer
 8. Update `nlink-jp/.github/profile/README.md` if new tool
