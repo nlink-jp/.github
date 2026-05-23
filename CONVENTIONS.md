@@ -684,19 +684,68 @@ instant.
 
 ### Wails / GUI apps
 
-Wails (`shell-agent-v2`, `data-agent`, `csv-editor`,
-`mail-analyzer-gui`) and other `.app` bundle projects require a
-distinct pipeline:
+`.app` bundle projects (Wails: `shell-agent-v2`, `data-agent`,
+`csv-editor`; Tauri: `mail-analyzer-gui`; Swift: `quick-translate`)
+use a distinct pipeline from CLI binaries because:
 
-- `codesign --deep` over the bundle
-- An entitlements `.plist` (typically allowing JIT, dyld vars,
-  etc. as required by the framework)
-- After notarize: `stapler staple <bundle>.app` (works for
-  bundles, unlike bare CLI)
-- Distribute as `.dmg` or zipped `.app`
+- The signature must cover the whole bundle (`--deep`), not just
+  the inner Mach-O executable.
+- Hardened Runtime breaks WebKit JIT, so embedded-WebView frameworks
+  (Wails / Tauri) need explicit JIT entitlements or the frontend
+  silently renders blank.
+- `.app` bundles **can** be stapled, so the notarization ticket
+  travels with the build and offline first-launch works without
+  any dialog (unlike CLI binaries — see previous section).
 
-A reference template will be added to `templates/` once one Wails
-project completes the migration.
+**Reference templates** in `templates/`:
+
+| File | Purpose |
+|---|---|
+| `codesign-darwin-app.sh` | Deep-sign an `.app` with Hardened Runtime + timestamp + entitlements. Skips gracefully without an identity. |
+| `notarize-darwin-app.sh` | Submit `.app` (wrapped in temp zip), wait, then `stapler staple` the bundle. |
+| `entitlements-wails.plist` | Minimal Wails entitlements: `allow-jit` + `allow-unsigned-executable-memory`. |
+
+**Per-project Makefile pattern** (mirrors the CLI pattern in the
+preceding section; runs after `wails build` produces `build/bin/<app>.app`):
+
+```makefile
+CODESIGN_IDENTITY ?= Developer ID Application
+NOTARY_PROFILE    ?= nlink-jp-notary
+ENTITLEMENTS      ?= scripts/entitlements.plist
+
+build:
+        wails build -ldflags "$(LDFLAGS)"
+        @scripts/codesign-darwin-app.sh build/bin/$(APP).app \
+                "$(CODESIGN_IDENTITY)" "$(ENTITLEMENTS)"
+        @mkdir -p dist && ditto build/bin/$(APP).app dist/$(APP).app
+
+package: build
+        @scripts/notarize-darwin-app.sh dist/$(APP).app "$(NOTARY_PROFILE)"
+        @cd dist && /usr/bin/ditto -c -k --keepParent \
+                $(APP).app $(APP)-$(VERSION)-darwin.zip
+```
+
+Notes:
+
+- **`ditto`, not `cp -r`**: bundle signatures are stored in extended
+  attributes; `cp -r` strips them and the launched binary aborts
+  with "SIGKILL (Code Signature Invalid)". Use `ditto` for any
+  bundle move/copy.
+- **Sign first, staple second**: notarize before stapling, and
+  staple the **same** `.app` file you ship. Stapling rewrites the
+  bundle's `_CodeSignature/` resources — never re-zip from a
+  different `.app` after stapling.
+- **Distribution format**: zipped `.app` via `ditto -c -k --keepParent`
+  is sufficient for nlink-jp's GitHub Releases. `.dmg` is only
+  necessary if a project needs a custom installer background or
+  Applications-folder drag layout.
+- **App-specific entitlements**: if a project needs more than the
+  base Wails entitlements (Apple Events, microphone, location, etc.),
+  copy `entitlements-wails.plist` into the project as
+  `scripts/entitlements.plist` and add the extra keys there.
+  Do **not** edit the template — every additional entitlement
+  weakens Hardened Runtime guarantees and should be a per-app
+  decision.
 
 ### Why this matters
 
