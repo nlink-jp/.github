@@ -118,7 +118,7 @@ Pipe-friendly tools for data transformation and processing.
 | [cclaude](https://github.com/nlink-jp/cclaude) | Bash | Containerized Claude Code — run Claude Code in an isolated container with project isolation |
 | [csv-editor](https://github.com/nlink-jp/csv-editor) | Go/React | CSV/TSV editor GUI for macOS/Windows — UTF-8 (BOM optional)/Shift_JIS/CP932 with auto-detect, virtual scroll for 100k+ rows, IME-safe edit, sort, find/replace, TSV clipboard with shape-mismatch confirmation |
 | [csv-to-json](https://github.com/nlink-jp/csv-to-json) | Go | Convert CSV data to a JSON array |
-| [data-agent](https://github.com/nlink-jp/data-agent) | Go/React | Data analysis desktop GUI — interactive chat, plan-driven SQL + sliding window analysis, per-case DuckDB, dual LLM backend |
+| [data-agent](https://github.com/nlink-jp/data-agent) | Go/React | ~~Data analysis desktop GUI — interactive chat, plan-driven SQL + sliding window analysis, per-case DuckDB, dual LLM backend~~ **Archived** — superseded by [shell-agent-v2](https://github.com/nlink-jp/shell-agent-v2) |
 | [data-analyzer](https://github.com/nlink-jp/data-analyzer) | Go | Large-scale JSON/JSONL data analysis using local LLMs — sliding window + progressive summarization |
 | [eml-to-jsonl](https://github.com/nlink-jp/eml-to-jsonl) | Go | Parse .eml files and output structured JSONL — headers, body, attachments |
 | [gem-image](https://github.com/nlink-jp/gem-image) | Go | Image generation and editing CLI — text-to-image and image editing via Vertex AI Gemini 2.5 Flash |
@@ -143,6 +143,6 @@ Pipe-friendly tools for data transformation and processing.
 | [quick-translate](https://github.com/nlink-jp/quick-translate) | Swift | macOS menu-bar-resident translation tool — local LLM via OpenAI-compatible API |
 | [rex](https://github.com/nlink-jp/rex) | Go | Extract fields from text using named regex capture groups — outputs JSON |
 | [sdate](https://github.com/nlink-jp/sdate) | Go | Calculate timestamps using Splunk-like relative time modifiers (e.g., `-1d@d`) |
-| [shell-agent](https://github.com/nlink-jp/shell-agent) | Go/Swift | macOS LLM chat & agent — MCP support, shell script Tool Calling with MITL, Hot/Warm/Cold memory, multimodal |
+| [shell-agent](https://github.com/nlink-jp/shell-agent) | Go/Swift | ~~macOS LLM chat & agent — MCP support, shell script Tool Calling with MITL, Hot/Warm/Cold memory, multimodal~~ **Archived** — superseded by [shell-agent-v2](https://github.com/nlink-jp/shell-agent-v2) |
 | [shell-agent-v2](https://github.com/nlink-jp/shell-agent-v2) | Go/React | Successor to shell-agent — Wails desktop app with interactive data analysis, session-scoped DuckDB, hybrid LLM (Local + Vertex AI), per-session container sandbox (shell + Python), global Findings, unified MITL across analysis/shell/sandbox/MCP |
 | [webhook-relay](https://github.com/nlink-jp/webhook-relay) | Go | Authenticated webhook receiver — writes payloads to GCS via Cloud Run Service with VPC isolation |
