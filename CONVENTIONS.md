@@ -180,6 +180,19 @@ uncommitted work. Developing in `_wip/` eliminates this dangerous step entirely.
 └── AGENTS.md
 ```
 
+#### GUI app scaffold
+
+For desktop `.app`-bundle projects (Wails, Tauri, Swift SPM), the
+shape is framework-specific — Wails keeps its Go source under
+`app/`, Tauri keeps the Rust crate under `src-tauri/`, Swift uses
+`Package.swift` at the project root. What's **shared across all
+three** is the signing wiring: a `scripts/` directory at the project
+root holding the codesign and notarize scripts, and a `Makefile`
+that calls them. See the dedicated
+[**§Code Signing → Starting a new GUI app**](#starting-a-new-gui-app)
+section below for the step-by-step scaffolding, including
+framework-specific Makefile templates and reference projects.
+
 #### Makefile template (Go)
 
 ```makefile
@@ -313,6 +326,22 @@ htmlcov/
 - [ ] `pyproject.toml` has `[project.scripts]` entry point
 - [ ] `.python-version` specifies the minimum Python version
 - [ ] `.gitignore` contains `dist/` and standard Python exclusions
+
+**Repository structure (GUI `.app` projects):**
+
+- [ ] `scripts/codesign-darwin-app.sh` and `scripts/notarize-darwin-app.sh`
+      copied verbatim from `nlink-jp/.github/templates/` (executable bits set)
+- [ ] For WebKit-based frameworks (Wails / Tauri):
+      `scripts/entitlements.plist` copied from
+      `templates/entitlements-wails.plist` and **not** modified unless the
+      app needs additional entitlements
+- [ ] `Makefile` `package` target produces a stapled, distributable
+      bundle (zipped `.app` or `.dmg`)
+- [ ] `make package` passes `spctl --assess` with
+      `source=Notarized Developer ID` — the only release-gate that matters
+- [ ] README documents the signed/notarized state (see
+      [Starting a new GUI app](#starting-a-new-gui-app) step 6)
+- [ ] No `signingIdentity`, team ID, key ID, or `.p8` path in any committed file
 
 **Documentation:**
 
@@ -665,6 +694,25 @@ spctl --assess --type install \
       dist/<binary>-darwin-arm64
 ```
 
+For GUI `.app` bundles (Wails / Tauri / Swift), the verification
+sequence is slightly different — bundles support stapling, so you
+should confirm the ticket is embedded:
+
+```sh
+# Signature + Hardened Runtime + Developer ID issuer
+codesign -dvv dist/<App>.app
+
+# Embedded notarization ticket
+xcrun stapler validate dist/<App>.app
+
+# The only gate that matters: Gatekeeper accepts as notarized
+spctl --assess --type execute --verbose=4 dist/<App>.app
+# Expected: "<App>.app: accepted   source=Notarized Developer ID"
+
+# For .dmg (Tauri's output), use --type install instead
+spctl --assess --type install --verbose=4 dist/<App>.dmg
+```
+
 For the notarytool submission log on a specific submission:
 
 ```sh
@@ -682,17 +730,16 @@ distributables. Offline first-launch on a fresh machine shows a
 brief verification dialog; once cached, subsequent launches are
 instant.
 
-### Wails / GUI apps
+### GUI app (`.app`) signing
 
-`.app` bundle projects (Wails: `shell-agent-v2`, `data-agent`,
-`csv-editor`; Tauri: `mail-analyzer-gui`; Swift: `quick-translate`)
-use a distinct pipeline from CLI binaries because:
+`.app` bundle projects use a distinct pipeline from CLI binaries
+because:
 
 - The signature must cover the whole bundle (`--deep`), not just
   the inner Mach-O executable.
 - Hardened Runtime breaks WebKit JIT, so embedded-WebView frameworks
   (Wails / Tauri) need explicit JIT entitlements or the frontend
-  silently renders blank.
+  silently renders blank. Native Swift / AppKit apps do **not**.
 - `.app` bundles **can** be stapled, so the notarization ticket
   travels with the build and offline first-launch works without
   any dialog (unlike CLI binaries — see previous section).
@@ -701,51 +748,303 @@ use a distinct pipeline from CLI binaries because:
 
 | File | Purpose |
 |---|---|
-| `codesign-darwin-app.sh` | Deep-sign an `.app` with Hardened Runtime + timestamp + entitlements. Skips gracefully without an identity. |
+| `codesign-darwin-app.sh` | Deep-sign an `.app` with Hardened Runtime + timestamp + optional entitlements. Skips gracefully without an identity. |
 | `notarize-darwin-app.sh` | Submit `.app` (wrapped in temp zip), wait, then `stapler staple` the bundle. |
-| `entitlements-wails.plist` | Minimal Wails entitlements: `allow-jit` + `allow-unsigned-executable-memory`. |
+| `entitlements-wails.plist` | Minimal WebKit-JIT entitlements: `allow-jit` + `allow-unsigned-executable-memory`. Used by both Wails and Tauri. |
 
-**Per-project Makefile pattern** (mirrors the CLI pattern in the
-preceding section; runs after `wails build` produces `build/bin/<app>.app`):
+**Universal rules across all frameworks**:
+
+- **`ditto`, not `cp -r`**: bundle signatures are stored in
+  extended attributes; `cp -r` strips them and the launched binary
+  aborts with "SIGKILL (Code Signature Invalid)". Use `ditto` for
+  any bundle move/copy and `ditto -c -k --keepParent <app>.app
+  <out>.zip` for distribution zips.
+- **Sign first, staple second**: notarize before stapling, and
+  staple the **same** `.app` file you ship. Stapling rewrites
+  `_CodeSignature/` resources — never re-zip from a different
+  `.app` after stapling.
+- **Distribution format**: zipped `.app` is sufficient for
+  nlink-jp's GitHub Releases. `.dmg` is only required when the
+  project's release flow already produces one (e.g. Tauri's bundler).
+  Both `.app` and `.dmg` support `stapler staple`; CLI Mach-O
+  binaries do not.
+- **App-specific entitlements**: if a project needs more than the
+  base entitlements (Apple Events, microphone, location, etc.),
+  **copy** the template into the project as
+  `scripts/entitlements.plist` and add the extra keys there.
+  Do **not** edit the template in `templates/` — every additional
+  entitlement weakens Hardened Runtime guarantees and should be a
+  per-app decision.
+
+The next three subsections cover what's different per framework.
+
+#### Wails (Go + WebKit)
+
+Used by: `shell-agent-v2`, `csv-editor`. Pattern: `wails build`
+emits an ad-hoc-signed `.app` under `build/bin/`, then a post-build
+script applies Developer ID signing.
+
+Per-project layout:
+
+- `scripts/codesign-darwin-app.sh` — copied verbatim from
+  `templates/`
+- `scripts/notarize-darwin-app.sh` — copied verbatim from
+  `templates/`
+- `scripts/entitlements.plist` — copied from
+  `templates/entitlements-wails.plist`
+- `app/Makefile` — wires the scripts into `build` + `package`
+  targets (Wails projects keep main.go under `app/`)
+
+`app/Makefile`:
 
 ```makefile
+APP     := <app-name>
+VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
+LDFLAGS := -X 'main.version=$(VERSION)'
+
 CODESIGN_IDENTITY ?= Developer ID Application
 NOTARY_PROFILE    ?= nlink-jp-notary
-ENTITLEMENTS      ?= scripts/entitlements.plist
+ENTITLEMENTS      ?= ../scripts/entitlements.plist
+
+CODESIGN_SCRIPT := ../scripts/codesign-darwin-app.sh
+NOTARIZE_SCRIPT := ../scripts/notarize-darwin-app.sh
 
 build:
         wails build -ldflags "$(LDFLAGS)"
-        @scripts/codesign-darwin-app.sh build/bin/$(APP).app \
-                "$(CODESIGN_IDENTITY)" "$(ENTITLEMENTS)"
-        @mkdir -p dist && ditto build/bin/$(APP).app dist/$(APP).app
+        @$(CODESIGN_SCRIPT) build/bin/$(APP).app "$(CODESIGN_IDENTITY)" "$(ENTITLEMENTS)"
+        mkdir -p dist
+        rm -rf dist/$(APP).app
+        ditto build/bin/$(APP).app dist/$(APP).app
 
 package: build
-        @scripts/notarize-darwin-app.sh dist/$(APP).app "$(NOTARY_PROFILE)"
-        @cd dist && /usr/bin/ditto -c -k --keepParent \
+        @$(NOTARIZE_SCRIPT) dist/$(APP).app "$(NOTARY_PROFILE)"
+        cd dist && /usr/bin/ditto -c -k --keepParent \
                 $(APP).app $(APP)-$(VERSION)-darwin.zip
 ```
 
 Notes:
 
-- **`ditto`, not `cp -r`**: bundle signatures are stored in extended
-  attributes; `cp -r` strips them and the launched binary aborts
-  with "SIGKILL (Code Signature Invalid)". Use `ditto` for any
-  bundle move/copy.
-- **Sign first, staple second**: notarize before stapling, and
-  staple the **same** `.app` file you ship. Stapling rewrites the
-  bundle's `_CodeSignature/` resources — never re-zip from a
-  different `.app` after stapling.
-- **Distribution format**: zipped `.app` via `ditto -c -k --keepParent`
-  is sufficient for nlink-jp's GitHub Releases. `.dmg` is only
-  necessary if a project needs a custom installer background or
-  Applications-folder drag layout.
-- **App-specific entitlements**: if a project needs more than the
-  base Wails entitlements (Apple Events, microphone, location, etc.),
-  copy `entitlements-wails.plist` into the project as
-  `scripts/entitlements.plist` and add the extra keys there.
-  Do **not** edit the template — every additional entitlement
-  weakens Hardened Runtime guarantees and should be a per-app
-  decision.
+- The codesign script's 3rd arg points at the entitlements plist;
+  Wails apps **must** pass it or WebKit JIT is killed by Hardened
+  Runtime and the frontend silently renders blank.
+- Some Wails projects also build CGO-linked sub-binaries
+  (`go-duckdb`, etc.) — Wails's bundler picks those up and `--deep`
+  signing covers them automatically.
+
+#### Tauri (Rust + WebKit)
+
+Used by: `mail-analyzer-gui`. Pattern: `tauri build` does the
+codesign + bundle step **inline** when `APPLE_SIGNING_IDENTITY` is
+set in the environment; the post-build script only handles notarize
++ staple. Output is both `.app` and `.dmg`; nlink-jp ships the
+`.dmg` (Tauri's bundler produces it for free, and `.dmg` can be
+stapled directly).
+
+Per-project layout:
+
+- `scripts/entitlements.plist` — copied from
+  `templates/entitlements-wails.plist` (Tauri uses WKWebView too;
+  same JIT entitlements apply)
+- `src-tauri/tauri.conf.json` — adds
+  `bundle.macOS.entitlements: "../scripts/entitlements.plist"`
+  (path is relative to `src-tauri/`). Do **not** also set
+  `bundle.macOS.signingIdentity` — leave it unset so the
+  environment variable (below) is the single source of truth.
+- `Makefile` (at the project root, not under `src-tauri/`) — wraps
+  `npm run tauri build` with the env var and the notarize+staple step.
+
+`Makefile`:
+
+```makefile
+APP       := <app-name>
+VERSION   := $(shell node -p "require('./package.json').version")
+# Tauri names its DMG with Rust-triplet arch (aarch64 / x86_64),
+# not uname -m's `arm64` — convert with sed.
+ARCH      := $(shell uname -m | sed 's/^arm64$$/aarch64/')
+
+CODESIGN_IDENTITY ?= Developer ID Application
+NOTARY_PROFILE    ?= nlink-jp-notary
+
+DMG_PATH := src-tauri/target/release/bundle/dmg/$(APP)_$(VERSION)_$(ARCH).dmg
+
+build:
+        @if security find-identity -v -p codesigning 2>/dev/null \
+                | grep -q "$(CODESIGN_IDENTITY)"; then \
+                APPLE_SIGNING_IDENTITY="$(CODESIGN_IDENTITY)" npm run tauri build; \
+        else \
+                echo "[codesign] No '$(CODESIGN_IDENTITY)' identity; bundle keeps ad-hoc signature"; \
+                npm run tauri build; \
+        fi
+
+package: build
+        @if [ -f "$(DMG_PATH)" ] \
+                && security find-identity -v -p codesigning 2>/dev/null \
+                        | grep -q "$(CODESIGN_IDENTITY)" \
+                && xcrun notarytool history --keychain-profile "$(NOTARY_PROFILE)" \
+                        >/dev/null 2>&1; then \
+                xcrun notarytool submit "$(DMG_PATH)" \
+                        --keychain-profile "$(NOTARY_PROFILE)" --wait; \
+                xcrun stapler staple "$(DMG_PATH)"; \
+                xcrun stapler validate "$(DMG_PATH)"; \
+        fi
+```
+
+Tauri-specific traps to be aware of:
+
+- **`aarch64`, not `arm64`** in DMG filenames. Use the `sed`
+  conversion above.
+- **Tauri's built-in notarize is incompatible** with our
+  `nlink-jp-notary` keychain profile — it expects
+  `APPLE_ID + APPLE_PASSWORD + APPLE_TEAM_ID` or an API-key triple
+  in the environment. Leave those env vars unset so Tauri prints
+  "Warn skipping app notarization" and we handle it ourselves with
+  the same `xcrun notarytool` profile every other project uses.
+- **Re-running `make package` re-runs `tauri build`**, which
+  regenerates the `.dmg` and strips the staple. If you only need
+  to re-staple an already-notarized DMG, run the notarize block
+  by hand against the existing file — don't `make package` again.
+
+#### Native Swift / AppKit (Swift Package Manager)
+
+Used by: `quick-translate`. Pattern: `swift build -c release`
+produces a bare Mach-O binary; the Makefile manually assembles the
+`.app` bundle (`Contents/MacOS/`, `Contents/Info.plist`,
+`Contents/Resources/`) and signs at the end of the bundle step.
+
+Key differences from Wails / Tauri:
+
+- **No JIT entitlements needed.** Native Swift / AppKit does not
+  embed WebKit / JavaScriptCore, so Hardened Runtime alone is
+  sufficient. **Do not** copy `entitlements-wails.plist` into the
+  project. Call `codesign-darwin-app.sh` with the 3rd argument
+  empty; the script then omits `--entitlements` entirely.
+- **Manual bundle assembly.** Unlike Wails or Tauri, SPM does not
+  produce an `.app` — the Makefile copies the binary, the icon, and
+  a templated `Info.plist` into the bundle structure itself.
+- **No frontend pipeline.** Skip `npm install`, `vite build`, etc.
+
+`Info.plist` (at the project root) uses Makefile-substituted
+placeholders:
+
+```xml
+<key>CFBundleExecutable</key>       <string>${APP_NAME}</string>
+<key>CFBundleIdentifier</key>       <string>${BUNDLE_ID}</string>
+<key>CFBundleShortVersionString</key><string>${VERSION}</string>
+<key>CFBundleVersion</key>          <string>${VERSION}</string>
+```
+
+`Makefile`:
+
+```makefile
+APP_NAME   := <CamelCase-name>
+BUNDLE_ID  := jp.nlink.<kebab-name>
+VERSION    := $(shell git describe --tags --always --dirty 2>/dev/null || echo "0.1.0")
+BUILD_DIR  := .build/release
+DIST_DIR   := dist
+APP_BUNDLE := $(DIST_DIR)/$(APP_NAME).app
+
+CODESIGN_IDENTITY ?= Developer ID Application
+NOTARY_PROFILE    ?= nlink-jp-notary
+CODESIGN_SCRIPT   := scripts/codesign-darwin-app.sh
+NOTARIZE_SCRIPT   := scripts/notarize-darwin-app.sh
+
+build:
+        @mkdir -p $(DIST_DIR)
+        swift build -c release
+
+build-app: build
+        @rm -rf $(APP_BUNDLE)
+        @mkdir -p $(APP_BUNDLE)/Contents/MacOS
+        @mkdir -p $(APP_BUNDLE)/Contents/Resources
+        @cp $(BUILD_DIR)/$(APP_NAME) $(APP_BUNDLE)/Contents/MacOS/
+        @sed 's/$${VERSION}/$(VERSION)/g; s/$${BUNDLE_ID}/$(BUNDLE_ID)/g; \
+              s/$${APP_NAME}/$(APP_NAME)/g' Info.plist > $(APP_BUNDLE)/Contents/Info.plist
+        @cp icon.icns $(APP_BUNDLE)/Contents/Resources/icon.icns
+        @$(CODESIGN_SCRIPT) $(APP_BUNDLE) "$(CODESIGN_IDENTITY)"
+
+package: build-app
+        @$(NOTARIZE_SCRIPT) $(APP_BUNDLE) "$(NOTARY_PROFILE)"
+        @cd $(DIST_DIR) && /usr/bin/ditto -c -k --keepParent \
+                $(APP_NAME).app $(APP_NAME)-$(VERSION)-macos-arm64.zip
+```
+
+Notes:
+
+- The codesign call has only two arguments
+  (`$(APP_BUNDLE) "$(CODESIGN_IDENTITY)"`) — the entitlements arg is
+  omitted intentionally.
+- Non-sandboxed Swift apps can read/write files, talk to localhost
+  HTTP, and access the Keychain without any entitlements. Only add
+  entitlements if you genuinely need a sandbox-protected capability
+  (microphone, location, etc.).
+- If you need Apple Events / scripting access, that's a per-app
+  entitlement and a Hardened Runtime exception
+  (`com.apple.security.cs.disable-library-validation` etc.) — write
+  a project-local `scripts/entitlements.plist` and pass it as the
+  3rd arg to `codesign-darwin-app.sh`.
+
+### Starting a new GUI app
+
+When scaffolding a new `.app`-bundle project, the signing wiring is
+the same minimal sequence regardless of framework:
+
+1. **Pick the framework first** (Wails / Tauri / Swift SPM) — that
+   determines which subsection above applies and which entitlements
+   template (if any) to copy.
+2. **Copy the templates into `scripts/`** (project root, never under
+   `app/` or `src-tauri/`):
+
+   ```sh
+   mkdir -p scripts
+   cp ~/works/nlink-jp/.github/templates/codesign-darwin-app.sh scripts/
+   cp ~/works/nlink-jp/.github/templates/notarize-darwin-app.sh  scripts/
+   chmod +x scripts/codesign-darwin-app.sh scripts/notarize-darwin-app.sh
+   # WebKit-based frameworks only:
+   cp ~/works/nlink-jp/.github/templates/entitlements-wails.plist scripts/entitlements.plist
+   ```
+
+3. **Add the `Makefile`** (or `app/Makefile` for Wails) using the
+   template for the chosen framework above. Keep
+   `CODESIGN_IDENTITY ?= Developer ID Application` and
+   `NOTARY_PROFILE ?= nlink-jp-notary` as defaults — those are the
+   only sane org-wide values and they leak no personal info.
+4. **For Tauri**, also update `src-tauri/tauri.conf.json`:
+
+   ```json
+   "bundle": {
+     "macOS": {
+       "entitlements": "../scripts/entitlements.plist"
+     }
+   }
+   ```
+
+5. **Run `make package` once** and confirm
+   `spctl --assess --type execute <app>.app` (or `--type install
+   <app>.dmg`) returns `source=Notarized Developer ID`. That's the
+   only release gate that matters; the rest is cosmetic.
+6. **Document signing state in the README**. The convention text is
+   one of:
+
+   - `> macOS releases are **Developer ID signed and
+     Apple-notarized** (stapled). They launch without Gatekeeper
+     prompts and work offline.`
+   - For mixed-platform releases where Windows / Linux stay
+     unsigned, say so explicitly so users aren't surprised by
+     SmartScreen / no-signature warnings on the other OSes.
+
+7. **Do not commit any user-private values** — see "What does NOT
+   go in the repo" earlier in this section. The team ID, signing
+   identity name, and notary key ID belong in the developer's
+   keychain, never in the source tree.
+
+Reference projects (one per framework, look at these when in doubt):
+
+| Framework | Reference project |
+|---|---|
+| Wails | [shell-agent-v2](https://github.com/nlink-jp/shell-agent-v2) |
+| Tauri | [mail-analyzer-gui](https://github.com/nlink-jp/mail-analyzer-gui) |
+| Swift SPM | [quick-translate](https://github.com/nlink-jp/quick-translate) |
+| Go CLI (for contrast) | [splunk-cli](https://github.com/nlink-jp/splunk-cli) |
 
 ### Why this matters
 
@@ -1015,13 +1314,20 @@ Before tagging a release, verify every item:
 3. `gh release create` (no assets yet)
 4. Build all platforms and notarize darwin builds in one shot:
    `make clean && make package`
-   - darwin zips are signed with Developer ID and notarized by Apple
-   - linux/windows zips pass through (no signing applicable here)
+   - Go CLI projects: darwin zips are signed with Developer ID and
+     notarized by Apple; linux/windows zips pass through unsigned
+     (no platform signing applicable here)
+   - GUI projects (Wails / Tauri / Swift): the `.app` (or `.dmg`)
+     is deep-signed, notarized, and **stapled** so it works offline.
+     See §Code Signing → GUI app (`.app`) signing for framework
+     specifics
    - On a machine without credentials, the script falls back to
      ad-hoc + un-notarized — do not proceed past this step in that
      case
 5. Verify the darwin signature + notarization (see §Code Signing →
-   Verifying a release)
+   Verifying a release). For GUI bundles, `spctl --assess` must
+   return `source=Notarized Developer ID` — this is the only release
+   gate for GUI distribution
 6. Upload zips one by one (`gh release upload`)
 7. Update umbrella submodule pointer
 8. Update `nlink-jp/.github/profile/README.md` if new tool
