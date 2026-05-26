@@ -23,42 +23,42 @@ New to nlink-jp tools? Start here:
 Pipe-friendly, Unix-composable CLI clients for external services.
 Authenticate as the human user, not a bot.
 
-| Tool | Service | Description |
-|------|---------|-------------|
-| [confl-cli](https://github.com/nlink-jp/confl-cli) | Confluence | Confluence Cloud CLI — list, search, read, export |
-| [gem-cli](https://github.com/nlink-jp/gem-cli) | Gemini | Gemini CLI client — multimodal prompts, streaming, grounding, structured output via Vertex AI |
-| [llm-cli](https://github.com/nlink-jp/llm-cli) | Local LLM | CLI client for local LLMs (LM Studio, Ollama) — streaming, batch, multi-image VLM, structured output |
-| [scli](https://github.com/nlink-jp/scli) | Slack | Terminal Slack client — channels, messages, DMs, search |
-| [splunk-cli](https://github.com/nlink-jp/splunk-cli) | Splunk | CLI client for the Splunk REST API — run searches, poll jobs, fetch results |
+| Tool | Lang | Description |
+|------|------|-------------|
+| [confl-cli](https://github.com/nlink-jp/confl-cli) | Python | Confluence Cloud CLI — list, search, read, export |
+| [gem-cli](https://github.com/nlink-jp/gem-cli) | Go | Gemini CLI client — multimodal prompts, streaming, grounding, structured output via Vertex AI |
+| [llm-cli](https://github.com/nlink-jp/llm-cli) | Go | CLI client for local LLMs (LM Studio, Ollama) — streaming, batch, multi-image VLM, structured output |
+| [scli](https://github.com/nlink-jp/scli) | Go | Terminal Slack client — channels, messages, DMs, search |
+| [splunk-cli](https://github.com/nlink-jp/splunk-cli) | Go | CLI client for the Splunk REST API — run searches, poll jobs, fetch results |
 
 ### chatops-series — ChatOps workflow tools
 
 Pipe-friendly Slack tools for ChatOps automation and monitoring.
 
-| Tool | Description |
-|------|-------------|
-| [md-to-slack](https://github.com/nlink-jp/md-to-slack) | Markdown → Slack Block Kit JSON filter — pipe into `scat` to post formatted messages |
-| [scat](https://github.com/nlink-jp/scat) | General-purpose content poster — send text, files, and Block Kit messages to Slack from stdin or files |
-| [slack-router](https://github.com/nlink-jp/slack-router) | Slack Slash Command daemon — routes commands to local shell scripts via Socket Mode |
-| [stail](https://github.com/nlink-jp/stail) | Read-only Slack CLI — stream channel messages in real time (`tail -f`) or export history to JSON |
-| [swrite](https://github.com/nlink-jp/swrite) | Bot-oriented Slack poster — post text, Block Kit, attachments, and files from shell pipelines; unfurl control; server mode for Docker/Kubernetes |
+| Tool | Lang | Description |
+|------|------|-------------|
+| [md-to-slack](https://github.com/nlink-jp/md-to-slack) | Go | Markdown → Slack Block Kit JSON filter — pipe into `scat` to post formatted messages |
+| [scat](https://github.com/nlink-jp/scat) | Go | General-purpose content poster — send text, files, and Block Kit messages to Slack from stdin or files |
+| [slack-router](https://github.com/nlink-jp/slack-router) | Go | Slack Slash Command daemon — routes commands to local shell scripts via Socket Mode |
+| [stail](https://github.com/nlink-jp/stail) | Go | Read-only Slack CLI — stream channel messages in real time (`tail -f`) or export history to JSON |
+| [swrite](https://github.com/nlink-jp/swrite) | Go | Bot-oriented Slack poster — post text, Block Kit, attachments, and files from shell pipelines; unfurl control; server mode for Docker/Kubernetes |
 
 ### cybersecurity-series — Cybersecurity workflow tools
 
 AI-augmented tools for threat intelligence, product risk assessment, and incident response analysis.
 
-| Tool | Description |
-|------|-------------|
-| [ai-ir](https://github.com/nlink-jp/ai-ir) | AI-powered incident response — analyzes Slack IR exports to generate summaries, activity reports, and reusable tactics |
-| [ai-ir2](https://github.com/nlink-jp/ai-ir2) | Next-gen IR analysis — one-stop Gemini pipeline producing Markdown, self-contained HTML, and knowledge documents |
-| [cti-graph](https://github.com/nlink-jp/cti-graph) | Local-first attack graph analysis — STIX 2.1 ingestion, PIR-driven weighting, choke-point detection, FastAPI API |
-| [cti-primer](https://github.com/nlink-jp/cti-primer) | Local-first CTI PIR generation — converts business context into Priority Intelligence Requirements using local LLMs or dictionary-only mode |
-| [ioc-collector](https://github.com/nlink-jp/ioc-collector) | Research security incidents from URLs or CVE IDs — extracts IoCs into Markdown and STIX 2.1 bundles |
-| [ir-timeline](https://github.com/nlink-jp/ir-timeline) | IR timeline recorder — single-binary, browser-based tool for tracking IR events with text, images, tags, and time deltas |
-| [ir-tracker](https://github.com/nlink-jp/ir-tracker) | Live IR tracker — continuous ingestion, segmented analysis, and timeline visualization for ongoing incidents via Gemini |
-| [mail-triage](https://github.com/nlink-jp/mail-triage) | GCS-based email triage — classifies eml/msg files with Gemini LLM and posts results to Slack via Cloud Run Jobs |
-| [news-collector](https://github.com/nlink-jp/news-collector) | News collection agent — collects, tags, summarizes, translates, and delivers curated news digests via Gemini + Slack |
-| [product-research](https://github.com/nlink-jp/product-research) | Research products and services — outputs ToS, privacy, and data security analysis as structured reports |
+| Tool | Lang | Description |
+|------|------|-------------|
+| [ai-ir](https://github.com/nlink-jp/ai-ir) | Python | AI-powered incident response — analyzes Slack IR exports to generate summaries, activity reports, and reusable tactics |
+| [ai-ir2](https://github.com/nlink-jp/ai-ir2) | Python | Next-gen IR analysis — one-stop Gemini pipeline producing Markdown, self-contained HTML, and knowledge documents |
+| [cti-graph](https://github.com/nlink-jp/cti-graph) | Python | Local-first attack graph analysis — STIX 2.1 ingestion, PIR-driven weighting, choke-point detection, FastAPI API |
+| [cti-primer](https://github.com/nlink-jp/cti-primer) | Python | Local-first CTI PIR generation — converts business context into Priority Intelligence Requirements using local LLMs or dictionary-only mode |
+| [ioc-collector](https://github.com/nlink-jp/ioc-collector) | Python | Research security incidents from URLs or CVE IDs — extracts IoCs into Markdown and STIX 2.1 bundles |
+| [ir-timeline](https://github.com/nlink-jp/ir-timeline) | Go | IR timeline recorder — single-binary, browser-based tool for tracking IR events with text, images, tags, and time deltas |
+| [ir-tracker](https://github.com/nlink-jp/ir-tracker) | Python | Live IR tracker — continuous ingestion, segmented analysis, and timeline visualization for ongoing incidents via Gemini |
+| [mail-triage](https://github.com/nlink-jp/mail-triage) | Python | GCS-based email triage — classifies eml/msg files with Gemini LLM and posts results to Slack via Cloud Run Jobs |
+| [news-collector](https://github.com/nlink-jp/news-collector) | Python | News collection agent — collects, tags, summarizes, translates, and delivers curated news digests via Gemini + Slack |
+| [product-research](https://github.com/nlink-jp/product-research) | Python | Research products and services — outputs ToS, privacy, and data security analysis as structured reports |
 
 ### lab-series — Experimental projects
 
@@ -86,8 +86,8 @@ Works in progress. APIs, features, and interfaces may change without notice.
 
 Shared libraries for nlink-jp projects. Zero external dependencies where possible.
 
-| Library | Lang | Description |
-|---------|------|-------------|
+| Tool | Lang | Description |
+|------|------|-------------|
 | [nlk](https://github.com/nlink-jp/nlk) | Go | Lightweight LLM utility toolkit — guard, jsonfix, strip, backoff, validate. Zero external dependencies |
 | [nlk-py](https://github.com/nlink-jp/nlk-py) | Python | Python edition of nlk — same 5 modules, same API design. Zero external dependencies |
 
@@ -95,11 +95,11 @@ Shared libraries for nlink-jp projects. Zero external dependencies where possibl
 
 Small, local-first CLI tools for LLM interaction, retrieval, and classification.
 
-| Tool | Description |
-|------|-------------|
-| [lite-llm](https://github.com/nlink-jp/lite-llm) | ~~CLI client for OpenAI-compatible LLM APIs~~ **Archived** — superseded by [llm-cli](https://github.com/nlink-jp/llm-cli) |
-| [lite-rag](https://github.com/nlink-jp/lite-rag) | RAG CLI for Markdown docs using DuckDB — index and query local knowledge bases |
-| [lite-switch](https://github.com/nlink-jp/lite-switch) | Natural language classifier for shell pipelines — routes stdin text to a matching tag via LLM |
+| Tool | Lang | Description |
+|------|------|-------------|
+| [lite-llm](https://github.com/nlink-jp/lite-llm) | Go | ~~CLI client for OpenAI-compatible LLM APIs~~ **Archived** — superseded by [llm-cli](https://github.com/nlink-jp/llm-cli) |
+| [lite-rag](https://github.com/nlink-jp/lite-rag) | Go | RAG CLI for Markdown docs using DuckDB — index and query local knowledge bases |
+| [lite-switch](https://github.com/nlink-jp/lite-switch) | Go | Natural language classifier for shell pipelines — routes stdin text to a matching tag via LLM |
 
 ### skills-series — Claude Code Skills
 
