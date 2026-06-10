@@ -54,6 +54,7 @@ AI-augmented tools for threat intelligence, product risk assessment, and inciden
 | [cti-graph](https://github.com/nlink-jp/cti-graph) | Python | Local-first attack graph analysis — STIX 2.1 ingestion, PIR-driven weighting, choke-point detection, FastAPI API |
 | [cti-primer](https://github.com/nlink-jp/cti-primer) | Python | Local-first CTI PIR generation — converts business context into Priority Intelligence Requirements using local LLMs or dictionary-only mode |
 | [ioc-collector](https://github.com/nlink-jp/ioc-collector) | Python | Research security incidents from URLs or CVE IDs — extracts IoCs into Markdown and STIX 2.1 bundles |
+| [ir-hub](https://github.com/nlink-jp/ir-hub) | Go | IR lifecycle hub — resident Slack ChatOps bot that opens a channel per case, tracks the response with ACL-gated commands, and ingests messages for postmortems and knowledge reuse |
 | [ir-timeline](https://github.com/nlink-jp/ir-timeline) | Go | IR timeline recorder — single-binary, browser-based tool for tracking IR events with text, images, tags, and time deltas |
 | [ir-tracker](https://github.com/nlink-jp/ir-tracker) | Python | Live IR tracker — continuous ingestion, segmented analysis, and timeline visualization for ongoing incidents via Gemini |
 | [mail-triage](https://github.com/nlink-jp/mail-triage) | Python | GCS-based email triage — classifies eml/msg files with Gemini LLM and posts results to Slack via Cloud Run Jobs |
