@@ -118,6 +118,7 @@ Pipe-friendly tools for data transformation and processing.
 | Tool | Lang | Description |
 |------|------|-------------|
 | [ask-gemini-mcp](https://github.com/nlink-jp/ask-gemini-mcp) | Go | MCP server exposing `ask_gemini(prompt)` — forwards to Vertex AI Gemini for second-opinion consultations from AI coding agents, with structured errors and content-filter detection |
+| [ask-llm-mcp](https://github.com/nlink-jp/ask-llm-mcp) | Go | MCP server exposing `ask_llm(prompt)` — forwards to an OpenAI API-compatible endpoint (primary target: local LM Studio) for second-opinion consultations from AI coding agents, with optional Bearer auth, retry/backoff, and reasoning stripping |
 | [cclaude](https://github.com/nlink-jp/cclaude) | Bash | Containerized Claude Code — run Claude Code in an isolated container with project isolation |
 | [csv-editor](https://github.com/nlink-jp/csv-editor) | Go/React | CSV/TSV editor GUI for macOS/Windows — UTF-8 (BOM optional)/Shift_JIS/CP932 with auto-detect, virtual scroll for 100k+ rows, IME-safe edit, sort, find/replace, TSV clipboard with shape-mismatch confirmation |
 | [csv-to-json](https://github.com/nlink-jp/csv-to-json) | Go | Convert CSV data to a JSON array |
