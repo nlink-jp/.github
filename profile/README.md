@@ -134,6 +134,7 @@ Pipe-friendly tools for data transformation and processing.
 | [gem-search](https://github.com/nlink-jp/gem-search) | Go | Agentic web search — autonomous research via Vertex AI Gemini with Google Search Grounding, Markdown/JSON reports |
 | [gem-summary](https://github.com/nlink-jp/gem-summary) | Go | Single-call text summarisation CLI via Vertex AI Gemini — automatic chunked + parallel + merge fallback for over-context-window inputs, prompt-injection defended |
 | [gem-transcribe](https://github.com/nlink-jp/gem-transcribe) | Python | Audio transcription CLI built on Vertex AI Gemini — speaker name inference, multi-language output, structured JSON |
+| [image-forge](https://github.com/nlink-jp/image-forge) | Go | Local diffusion image-generation engine + model-management CLI for macOS (Apple Silicon) — SDXL/anime and general models via stable-diffusion.cpp (CGO/Metal, single binary); per-model gotchas (CLIP-skip/VAE/resolution) hidden behind profiles; txt2img/img2img/LoRA, GGUF quantization, resident serve mode |
 | [json-filter](https://github.com/nlink-jp/json-filter) | Go | Extract, validate, prettify, and repair JSON from arbitrary text streams |
 | [json-to-sqlite](https://github.com/nlink-jp/json-to-sqlite) | Go | Load JSON data into SQLite with automatic schema inference |
 | [json-to-table](https://github.com/nlink-jp/json-to-table) | Go | Format a JSON array into text, Markdown, HTML, CSV, PNG, or Slack Block Kit tables |
