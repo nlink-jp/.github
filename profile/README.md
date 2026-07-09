@@ -117,6 +117,8 @@ Pipe-friendly tools for data transformation and processing.
 
 | Tool | Lang | Description |
 |------|------|-------------|
+| [active-lens](https://github.com/nlink-jp/active-lens) | Go | Content-free Mac activity tracker — records only that input happened (idle/display/lock via CoreGraphics, no permissions) and classifies each moment operating/present/away; the `timeline` command derives a per-day work log (start/breaks/end). darwin/arm64 |
+| [active-lens-gui](https://github.com/nlink-jp/active-lens-gui) | Swift | macOS work-log menu-bar app — a native SwiftUI front-end over active-lens showing the current state + today's active time, with a calendar-style work timeline (day columns) and a per-day work log |
 | [ask-gemini-mcp](https://github.com/nlink-jp/ask-gemini-mcp) | Go | MCP server exposing `ask_gemini(prompt)` — forwards to Vertex AI Gemini for second-opinion consultations from AI coding agents, with structured errors and content-filter detection |
 | [ask-llm-mcp](https://github.com/nlink-jp/ask-llm-mcp) | Go | MCP server exposing `ask_llm(prompt)` — forwards to an OpenAI API-compatible endpoint (primary target: local LM Studio) for second-opinion consultations from AI coding agents, with optional Bearer auth, retry/backoff, and reasoning stripping |
 | [cclaude](https://github.com/nlink-jp/cclaude) | Bash | Containerized Claude Code — run Claude Code in an isolated container with project isolation |
