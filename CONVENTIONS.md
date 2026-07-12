@@ -1429,13 +1429,33 @@ hand-maintained instead.
 - `desc`: < 80 chars, no leading article, must not start with the tool name,
   write "command-line" not "command line", and casks omit "macOS"/"Mac".
 
-### Verifying the tap on a clean machine
+### Verifying a tap release (no VM required)
 
-Extract `.app` zips with `ditto -x -k` (not `unzip`, which mangles the seal).
-`spctl -a -t exec` rejects bare CLI binaries by design ("not an app") — verify
-those with `codesign --verify --strict` + a Developer ID authority. Casks keep
-the `com.apple.quarantine` xattr, so `spctl -a` is the real Gatekeeper test:
-`accepted, source=Notarized Developer ID`.
+Verification runs on the **local build machine** — a clean VM is an optional
+extra, never a per-release gate. The notarization ticket is stapled (`.app`) or
+checked online by Apple (CLI), so Gatekeeper's verdict does not depend on the
+signing keys being absent from the machine.
+
+- **GUI (`.app`)**: extract the shipped zip with `ditto -x -k` (not `unzip`,
+  which mangles the seal), then `xcrun stapler validate` and
+  `spctl -a -t exec -vv` → `accepted, source=Notarized Developer ID`.
+- **CLI**: `spctl -a -t exec` rejects bare binaries by design ("not an app"), so
+  check `codesign --verify --strict` + a Developer ID authority. To exercise the
+  online notarization check, tag a copy as if downloaded and run it:
+  ```sh
+  cp dist/<binary> /tmp/qtest
+  xattr -w com.apple.quarantine \
+    "0181;00000000;manual;00000000-0000-0000-0000-000000000000" /tmp/qtest
+  /tmp/qtest --version   # notarized → runs; un-notarized → Gatekeeper kills it
+  ```
+  (`brew install` strips quarantine, so this manual step is the formula
+  equivalent of the cask's quarantined-`.app` Gatekeeper test.)
+- **End-to-end after publishing**: `brew install nlink-jp/tap/<name>` (and
+  `brew test`), then `codesign --verify` the installed binary to confirm the
+  signature survived install.
+
+A clean VM with no signing keys is a stronger one-off proof — used once to
+validate the tap approach — but is **not** part of the routine release process.
 
 ### `check-org.sh` enforcement
 
