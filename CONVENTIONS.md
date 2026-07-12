@@ -1351,6 +1351,100 @@ Run `check-org.sh` after the update to verify.
 
 ---
 
+## Homebrew Tap Distribution
+
+nlink-jp's macOS tools are distributed through a Homebrew tap,
+[`nlink-jp/homebrew-tap`](https://github.com/nlink-jp/homebrew-tap) — Apple
+Silicon only, prebuilt binaries. Users install with:
+
+```sh
+brew tap nlink-jp/tap
+brew install nlink-jp/tap/<name>          # Go CLI (formula)
+brew install --cask nlink-jp/tap/<name>   # notarized GUI (cask)
+```
+
+### Principle: prebuilt, never source-built
+
+The tap installs the **already signed + notarized** `darwin-arm64` release zip
+as-is (`url` + `sha256` → `bin.install` / `app`). Building from source would
+strip the Developer ID signature; installing the notarized asset preserves it,
+so `spctl -a` reports `source=Notarized Developer ID` even on a clean machine.
+
+### Eligibility
+
+Only tools that ship a signed + notarized single macOS arm64 binary or `.app`:
+
+| Class | Distribution | Examples |
+|---|---|---|
+| Go CLI | formula | `gem-search`, `llm-cli`, MCP servers |
+| notarized GUI | cask | `csv-editor` (Wails), `*-gui` (Swift), `mail-analyzer-gui` (Tauri) |
+
+**Not eligible** (use their native channel): Python/uv tools (`uv tool install`),
+embedded firmware (M5Stack), pure-bash tools — they produce no signed single
+binary, so the tap's core value (notarization preservation) does not apply.
+
+### Distributed generation (`make brew`)
+
+Each eligible repo generates **its own** formula/cask at release time from the
+real build artifact — no central manifest, no cross-repo sweep, so the
+version/sha256 can never drift from what shipped. The generator is a vendored
+shell script, symmetric with the signing scripts.
+
+**Reference templates** in `templates/`:
+
+| File | Purpose |
+|---|---|
+| `gen-brew.sh` | Parse name/version from the release zip, compute sha256, render the formula/cask, write + commit + push into the local tap checkout. `--print` / `--no-push` supported. |
+| `formula.rb.tmpl` / `cask.rb.tmpl` | Formula (Go CLI) / cask (GUI) templates — arm64-only, prebuilt. |
+| `release-brew.mk` | Minimal Makefile hook (`include` + a few vars). Adds `make brew` / `make brew-print`; the `package` target is never modified. |
+
+**Per-project integration** — vendor the assets into `scripts/` and add the hook:
+
+```makefile
+# formula (Go CLI):
+BREW_KIND := formula
+BREW_DESC := One-line description of the tool
+include scripts/release-brew.mk
+
+# cask (notarized GUI): also set
+#   BREW_NAME := $(APP)              # if the repo uses APP, not BINARY
+#   BREW_APP  := $(APP).app
+#   BREW_BUNDLE_ID := com.example.name
+```
+
+Overrides for the uncommon cases: `BREW_REPO` (repo slug != tool name, e.g. the
+`markdown-viewer` repo ships `mdv`); `BREW_ZIP` (when `VERSION` lacks a leading
+`v`, e.g. Tauri's package.json version); `GEN_BREW := ../scripts/gen-brew.sh`
+(when the Makefile lives in `app/`). A repo whose release is a versioned-
+directory bundle (e.g. `slack-router`) does not fit the flat template and is
+hand-maintained instead.
+
+### Formula/cask conventions (from `brew audit` / `brew style`)
+
+- `url` **before** `version`; `version` declared explicitly (the uniform
+  `<name>-v<version>-darwin-arm64.zip` naming puts the version mid-string, where
+  Homebrew cannot auto-scan it).
+- `depends_on arch: :arm64`; formulae add `depends_on :macos`, casks use
+  `depends_on macos: :big_sur`.
+- `desc`: < 80 chars, no leading article, must not start with the tool name,
+  write "command-line" not "command line", and casks omit "macOS"/"Mac".
+
+### Verifying the tap on a clean machine
+
+Extract `.app` zips with `ditto -x -k` (not `unzip`, which mangles the seal).
+`spctl -a -t exec` rejects bare CLI binaries by design ("not an app") — verify
+those with `codesign --verify --strict` + a Developer ID authority. Casks keep
+the `com.apple.quarantine` xattr, so `spctl -a` is the real Gatekeeper test:
+`accepted, source=Notarized Developer ID`.
+
+### `check-org.sh` enforcement
+
+Check 10 verifies every repo's vendored `scripts/gen-brew.sh` (and the templates
++ `release-brew.mk` it carries) matches the canonical copy in
+`.github/templates/`. Re-vendor after changing a canonical template.
+
+---
+
 ## Release Checklist
 
 Before tagging a release, verify every item:
@@ -1391,9 +1485,13 @@ Before tagging a release, verify every item:
    return `source=Notarized Developer ID` — this is the only release
    gate for GUI distribution
 6. Upload zips one by one (`gh release upload`)
-7. Update umbrella submodule pointer
-8. Update `nlink-jp/.github/profile/README.md` if new tool
-9. Run `check-org.sh` to verify all green
+7. For tap-eligible tools (Go CLI → formula, notarized GUI `.app` → cask),
+   run `make brew` to generate this release's formula/cask from the built
+   darwin-arm64 zip and push it to `nlink-jp/homebrew-tap`
+   (see §Homebrew Tap Distribution)
+8. Update umbrella submodule pointer
+9. Update `nlink-jp/.github/profile/README.md` if new tool
+10. Run `check-org.sh` to verify all green
 
 ---
 
@@ -1422,10 +1520,11 @@ submodule updates, and scaffold creation.
 | 7 | Secret scanning | Tracked files containing likely secrets (service accounts, tokens, API keys) |
 | 8 | go.mod local replace | `replace` directives with local filesystem paths (leaks username/directory structure) |
 | 9 | HTTPS URLs | `.gitmodules` using SSH instead of HTTPS |
-| 10 | Submodule pointers | Recorded commit differs from `origin/main` of submodule |
-| 11 | Release archive naming *(planned)* | Latest release assets match `<name>-v<version>-<os>-<arch>.<ext>`; darwin is zip & arm64-only (no darwin-amd64, no `.dmg`/`.tar.gz` for darwin) |
+| 10 | Vendored tap-generation assets | A repo's vendored `scripts/gen-brew.sh` (or the formula/cask template or `release-brew.mk`) drifted from `.github/templates/` (see §Homebrew Tap Distribution) |
+| 11 | Submodule pointers | Recorded commit differs from `origin/main` of submodule |
+| 12 | Release archive naming *(planned)* | Latest release assets match `<name>-v<version>-<os>-<arch>.<ext>`; darwin is zip & arm64-only (no darwin-amd64, no `.dmg`/`.tar.gz` for darwin) |
 
 **Exit code:** `0` if all checks pass, `1` if any check fails.
 
-> Check 11 is documented here as the target; the `check-org.sh` script
-> implementation is a follow-up task (see §Release Archive Standard).
+> Check 12 is documented here as the target; that `check-org.sh` check is
+> a follow-up task (see §Release Archive Standard).
