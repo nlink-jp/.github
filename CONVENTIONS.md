@@ -211,7 +211,7 @@ build-all:
 	@mkdir -p $(DIST_DIR)
 	CGO_ENABLED=0 GOOS=linux   GOARCH=amd64 go build $(LDFLAGS) -o $(DIST_DIR)/$(BINARY)-linux-amd64   .
 	CGO_ENABLED=0 GOOS=linux   GOARCH=arm64 go build $(LDFLAGS) -o $(DIST_DIR)/$(BINARY)-linux-arm64   .
-	CGO_ENABLED=0 GOOS=darwin  GOARCH=amd64 go build $(LDFLAGS) -o $(DIST_DIR)/$(BINARY)-darwin-amd64  .
+	# darwin is arm64-only (no amd64, no universal — see §Release Archive Standard)
 	CGO_ENABLED=0 GOOS=darwin  GOARCH=arm64 go build $(LDFLAGS) -o $(DIST_DIR)/$(BINARY)-darwin-arm64  .
 	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build $(LDFLAGS) -o $(DIST_DIR)/$(BINARY)-windows-amd64.exe .
 
@@ -336,7 +336,8 @@ htmlcov/
       `templates/entitlements-wails.plist` and **not** modified unless the
       app needs additional entitlements
 - [ ] `Makefile` `package` target produces a stapled, distributable
-      bundle (zipped `.app` or `.dmg`)
+      bundle: a zipped `.app` named `<name>-v<version>-darwin-arm64.zip`
+      (no `.dmg` — see §Release Archive Standard)
 - [ ] `make package` passes `spctl --assess` with
       `source=Notarized Developer ID` — the only release-gate that matters
 - [ ] README documents the signed/notarized state (see
@@ -538,6 +539,58 @@ developers and AI agents.
 
 ---
 
+## Release Archive Standard
+
+Every repo that ships a built release archive (Go CLI, native GUI) uses one
+uniform archive convention across all platforms. Signing / notarization (next
+section) rides on top of this.
+
+**Applies to:** repos distributing built macOS / Linux / Windows archives. Not
+Python (uv), pure bash, embedded (M5Stack), or libraries — those use their
+native channels. Lab repos are exempt until they graduate to a notarized release.
+
+### Naming (all platforms)
+
+Every release asset is named:
+
+    <name>-v<version>-<os>-<arch>.<ext>
+
+| Token | Value |
+|---|---|
+| `<name>` | canonical name — the command name for a CLI (`mdv`), the repo name in kebab-case for a GUI (`image-forge-gui`) |
+| `<version>` | git tag with a single leading `v` (`v0.3.2`). If a build reads the version without the `v` (e.g. Tauri's `package.json`), the Makefile adds it. |
+| `<os>` / `<arch>` | `darwin` / `linux` / `windows` × `arm64` / `amd64` — arch is **always** explicit |
+| `<ext>` | `.zip` for darwin & windows; `.tar.gz` permitted for linux. **darwin never uses tar.gz or dmg.** |
+
+### Archive contents
+
+- **CLI archive:** the canonical binary named `<name>` (no os/arch/version suffix
+  inside the archive) + `README.md` + `LICENSE`. Extra license notices
+  (`FONTS_LICENSE`, etc.) are allowed when warranted.
+- **GUI archive:** the notarized + stapled `<Name>.app`, archived with
+  `ditto -c -k --keepParent` to preserve the bundle signature. Nothing else is
+  bundled — extra files would disturb the signed bundle; README/LICENSE live in
+  the repo and on the release page. The `.app`'s internal display name is not
+  normalized; only the archive name is.
+- **One archive per (os, arch).** No parallel `.dmg` beside the zip.
+
+### darwin architecture policy (effective 2026-07-12)
+
+- **darwin ships arm64 only.** darwin-amd64 (Intel) is discontinued and
+  **universal binaries are not produced** (wasted size).
+- Remove darwin-amd64 and universal (`lipo`) from each Makefile's `build-all` /
+  `package` / notarize steps. For GUI `.app`s, confirm the bundle is arm64-only
+  (`lipo -archs` / `file`), not universal.
+- **darwin only.** Linux / Windows keep their existing multi-arch matrix
+  (linux-amd64, linux-arm64, windows-amd64, …).
+
+Migration is progressive: bring each repo's Makefile into line, verify signing
+and notarization still pass, then cut a fresh release (a packaging / build-config
+version bump) so the published archive adopts the standard. Old tags are not
+re-cut.
+
+---
+
 ## Code Signing and Notarization (macOS)
 
 ### Principle
@@ -634,26 +687,36 @@ In each Go CLI project's `Makefile`:
 CODESIGN_IDENTITY ?= Developer ID Application
 NOTARY_PROFILE    ?= nlink-jp-notary
 
+# darwin ships arm64 only (no amd64, no universal). linux/windows keep their matrix.
+PLATFORMS := darwin/arm64 linux/amd64 linux/arm64 windows/amd64
+
 build:
 	@mkdir -p dist
 	go build $(GOFLAGS) -o dist/$(BINARY) .
 	@scripts/codesign-darwin.sh dist/$(BINARY) "$(CODESIGN_IDENTITY)"
 
 build-all:
-	... cross-compile lines ...
-	@scripts/codesign-darwin.sh dist/$(BINARY)-darwin-amd64 "$(CODESIGN_IDENTITY)"
-	@scripts/codesign-darwin.sh dist/$(BINARY)-darwin-arm64 "$(CODESIGN_IDENTITY)"
-
-package: build-all
-	@cd dist && for f in $(BINARY)-*; do \
-		case "$$f" in *.zip) continue ;; esac; \
-		name=$${f%%.exe}; \
-		cp ../README.md .; \
-		zip -j "$${name}-$(VERSION).zip" "$$f" README.md; \
-		rm -f README.md; \
+	@mkdir -p dist
+	@for p in $(PLATFORMS); do os=$${p%/*}; arch=$${p#*/}; \
+		ext=""; [ "$$os" = windows ] && ext=".exe"; \
+		GOOS=$$os GOARCH=$$arch go build $(GOFLAGS) -o dist/$(BINARY)-$$os-$$arch$$ext . ; \
 	done
-	@scripts/notarize-darwin.sh dist/$(BINARY)-darwin-amd64-$(VERSION).zip "$(NOTARY_PROFILE)"
-	@scripts/notarize-darwin.sh dist/$(BINARY)-darwin-arm64-$(VERSION).zip "$(NOTARY_PROFILE)"
+	@scripts/codesign-darwin.sh dist/$(BINARY)-darwin-arm64 "$(CODESIGN_IDENTITY)" "$(BINARY)"
+
+# Archive: <name>-v<version>-<os>-<arch>.<ext>  (darwin/windows = zip, linux = tar.gz)
+# The in-archive binary is the canonical <name>; README.md + LICENSE are bundled.
+package: build-all
+	@cd dist && for p in $(PLATFORMS); do os=$${p%/*}; arch=$${p#*/}; \
+		ext=""; [ "$$os" = windows ] && ext=".exe"; \
+		stage=_pkg; rm -rf $$stage; mkdir -p $$stage; \
+		cp "$(BINARY)-$$os-$$arch$$ext" "$$stage/$(BINARY)$$ext"; \
+		cp ../README.md ../LICENSE $$stage/; \
+		base="$(BINARY)-$(VERSION)-$$os-$$arch"; \
+		if [ "$$os" = linux ]; then ( cd $$stage && tar -czf "../$$base.tar.gz" * ); \
+		else ( cd $$stage && zip -q "../$$base.zip" * ); fi; \
+		rm -rf $$stage; \
+	done
+	@scripts/notarize-darwin.sh dist/$(BINARY)-$(VERSION)-darwin-arm64.zip "$(NOTARY_PROFILE)"
 ```
 
 Copy the two scripts verbatim from `nlink-jp/.github/templates/`:
@@ -708,9 +771,6 @@ xcrun stapler validate dist/<App>.app
 # The only gate that matters: Gatekeeper accepts as notarized
 spctl --assess --type execute --verbose=4 dist/<App>.app
 # Expected: "<App>.app: accepted   source=Notarized Developer ID"
-
-# For .dmg (Tauri's output), use --type install instead
-spctl --assess --type install --verbose=4 dist/<App>.dmg
 ```
 
 For the notarytool submission log on a specific submission:
@@ -763,11 +823,11 @@ because:
   staple the **same** `.app` file you ship. Stapling rewrites
   `_CodeSignature/` resources — never re-zip from a different
   `.app` after stapling.
-- **Distribution format**: zipped `.app` is sufficient for
-  nlink-jp's GitHub Releases. `.dmg` is only required when the
-  project's release flow already produces one (e.g. Tauri's bundler).
-  Both `.app` and `.dmg` support `stapler staple`; CLI Mach-O
-  binaries do not.
+- **Distribution format**: every GUI framework ships a zipped `.app`
+  (`ditto -c -k --keepParent`), named `<name>-v<version>-darwin-arm64.zip`
+  per §Release Archive Standard. **No `.dmg`** — Tauri is configured with
+  `--bundles app` so it never emits one. (`.app` and `.dmg` both support
+  `stapler staple`; CLI Mach-O binaries do not.)
 - **App-specific entitlements**: if a project needs more than the
   base entitlements (Apple Events, microphone, location, etc.),
   **copy** the template into the project as
@@ -819,7 +879,7 @@ build:
 package: build
         @$(NOTARIZE_SCRIPT) dist/$(APP).app "$(NOTARY_PROFILE)"
         cd dist && /usr/bin/ditto -c -k --keepParent \
-                $(APP).app $(APP)-$(VERSION)-darwin.zip
+                $(APP).app $(APP)-$(VERSION)-darwin-arm64.zip
 ```
 
 Notes:
@@ -833,12 +893,12 @@ Notes:
 
 #### Tauri (Rust + WebKit)
 
-Used by: `mail-analyzer-gui`. Pattern: `tauri build` does the
-codesign + bundle step **inline** when `APPLE_SIGNING_IDENTITY` is
-set in the environment; the post-build script only handles notarize
-+ staple. Output is both `.app` and `.dmg`; nlink-jp ships the
-`.dmg` (Tauri's bundler produces it for free, and `.dmg` can be
-stapled directly).
+Used by: `mail-analyzer-gui`. Pattern: `tauri build -- --bundles app`
+does the codesign + bundle step **inline** when `APPLE_SIGNING_IDENTITY`
+is set in the environment (restricting to the `app` bundle so no `.dmg`
+is produced); the post-build script then notarizes + staples the `.app`
+and `ditto`-zips it. **nlink-jp ships a zipped `.app`, not a `.dmg`**
+(see §Release Archive Standard).
 
 Per-project layout:
 
@@ -858,41 +918,37 @@ Per-project layout:
 ```makefile
 APP       := <app-name>
 VERSION   := $(shell node -p "require('./package.json').version")
-# Tauri names its DMG with Rust-triplet arch (aarch64 / x86_64),
-# not uname -m's `arm64` — convert with sed.
-ARCH      := $(shell uname -m | sed 's/^arm64$$/aarch64/')
-
 CODESIGN_IDENTITY ?= Developer ID Application
 NOTARY_PROFILE    ?= nlink-jp-notary
+NOTARIZE_SCRIPT   := scripts/notarize-darwin-app.sh
 
-DMG_PATH := src-tauri/target/release/bundle/dmg/$(APP)_$(VERSION)_$(ARCH).dmg
+# We ship a zipped .app, not a DMG — no Rust-triplet arch juggling needed.
+APP_PATH := src-tauri/target/release/bundle/macos/$(APP).app
 
 build:
         @if security find-identity -v -p codesigning 2>/dev/null \
                 | grep -q "$(CODESIGN_IDENTITY)"; then \
-                APPLE_SIGNING_IDENTITY="$(CODESIGN_IDENTITY)" npm run tauri build; \
+                APPLE_SIGNING_IDENTITY="$(CODESIGN_IDENTITY)" npm run tauri build -- --bundles app; \
         else \
                 echo "[codesign] No '$(CODESIGN_IDENTITY)' identity; bundle keeps ad-hoc signature"; \
-                npm run tauri build; \
+                npm run tauri build -- --bundles app; \
         fi
 
+# Ship a zipped .app (no DMG): notarize + staple the .app, then ditto-zip it
+# as <name>-v<version>-darwin-arm64.zip (the standard archive name).
 package: build
-        @if [ -f "$(DMG_PATH)" ] \
-                && security find-identity -v -p codesigning 2>/dev/null \
-                        | grep -q "$(CODESIGN_IDENTITY)" \
-                && xcrun notarytool history --keychain-profile "$(NOTARY_PROFILE)" \
-                        >/dev/null 2>&1; then \
-                xcrun notarytool submit "$(DMG_PATH)" \
-                        --keychain-profile "$(NOTARY_PROFILE)" --wait; \
-                xcrun stapler staple "$(DMG_PATH)"; \
-                xcrun stapler validate "$(DMG_PATH)"; \
-        fi
+        @$(NOTARIZE_SCRIPT) $(APP_PATH) "$(NOTARY_PROFILE)"
+        @mkdir -p dist
+        @cd $(dir $(APP_PATH)) && /usr/bin/ditto -c -k --keepParent \
+                $(APP).app "$(CURDIR)/dist/$(APP)-v$(VERSION)-darwin-arm64.zip"
 ```
 
 Tauri-specific traps to be aware of:
 
-- **`aarch64`, not `arm64`** in DMG filenames. Use the `sed`
-  conversion above.
+- **Ship the `.app`, not the `.dmg`.** `--bundles app` skips DMG
+  generation entirely, so the Rust-triplet `aarch64` filename quirk and
+  the `sed` arch conversion are gone — we name our own zip
+  `<name>-v<version>-darwin-arm64.zip`.
 - **Tauri's built-in notarize is incompatible** with our
   `nlink-jp-notary` keychain profile — it expects
   `APPLE_ID + APPLE_PASSWORD + APPLE_TEAM_ID` or an API-key triple
@@ -900,9 +956,11 @@ Tauri-specific traps to be aware of:
   "Warn skipping app notarization" and we handle it ourselves with
   the same `xcrun notarytool` profile every other project uses.
 - **Re-running `make package` re-runs `tauri build`**, which
-  regenerates the `.dmg` and strips the staple. If you only need
-  to re-staple an already-notarized DMG, run the notarize block
-  by hand against the existing file — don't `make package` again.
+  regenerates the `.app` and strips any staple. That is fine here —
+  `package` always re-notarizes + re-staples the freshly built `.app`
+  before zipping, so every run yields a correct archive.
+- **Confirm the bundle is arm64-only** (`lipo -archs` on the inner
+  Mach-O): universal slices waste space and are discontinued.
 
 #### Native Swift / AppKit (Swift Package Manager)
 
@@ -937,6 +995,7 @@ placeholders:
 
 ```makefile
 APP_NAME   := <CamelCase-name>
+NAME       := <kebab-name>          # repo/command name — used for the archive name
 BUNDLE_ID  := jp.nlink.<kebab-name>
 VERSION    := $(shell git describe --tags --always --dirty 2>/dev/null || echo "0.1.0")
 BUILD_DIR  := .build/release
@@ -965,7 +1024,7 @@ build-app: build
 package: build-app
         @$(NOTARIZE_SCRIPT) $(APP_BUNDLE) "$(NOTARY_PROFILE)"
         @cd $(DIST_DIR) && /usr/bin/ditto -c -k --keepParent \
-                $(APP_NAME).app $(APP_NAME)-$(VERSION)-macos-arm64.zip
+                $(APP_NAME).app $(NAME)-$(VERSION)-darwin-arm64.zip
 ```
 
 Notes:
@@ -1019,9 +1078,9 @@ the same minimal sequence regardless of framework:
    ```
 
 5. **Run `make package` once** and confirm
-   `spctl --assess --type execute <app>.app` (or `--type install
-   <app>.dmg`) returns `source=Notarized Developer ID`. That's the
-   only release gate that matters; the rest is cosmetic.
+   `spctl --assess --type execute <app>.app` returns
+   `source=Notarized Developer ID`. That's the only release gate that
+   matters; the rest is cosmetic.
 6. **Document signing state in the README**. The convention text is
    one of:
 
@@ -1306,6 +1365,9 @@ Before tagging a release, verify every item:
       keychain profile present on the build machine (see §Code Signing
       and Notarization). Builds without them produce ad-hoc-signed
       un-notarized zips that should NOT be published.
+- [ ] Release archives follow §Release Archive Standard: name
+      `<name>-v<version>-<os>-<arch>.<ext>`, canonical in-archive binary,
+      darwin is **arm64-only** zip (no darwin-amd64, no `.dmg`).
 
 **Release steps:**
 
@@ -1314,12 +1376,12 @@ Before tagging a release, verify every item:
 3. `gh release create` (no assets yet)
 4. Build all platforms and notarize darwin builds in one shot:
    `make clean && make package`
-   - Go CLI projects: darwin zips are signed with Developer ID and
-     notarized by Apple; linux/windows zips pass through unsigned
-     (no platform signing applicable here)
-   - GUI projects (Wails / Tauri / Swift): the `.app` (or `.dmg`)
-     is deep-signed, notarized, and **stapled** so it works offline.
-     See §Code Signing → GUI app (`.app`) signing for framework
+   - Go CLI projects: the darwin **arm64** zip is signed with Developer
+     ID and notarized by Apple (no darwin-amd64); linux `.tar.gz` /
+     windows `.zip` pass through unsigned (no platform signing applicable)
+   - GUI projects (Wails / Tauri / Swift): the `.app` is deep-signed,
+     notarized, and **stapled**, then shipped as a zipped `.app` (no
+     `.dmg`). See §Code Signing → GUI app (`.app`) signing for framework
      specifics
    - On a machine without credentials, the script falls back to
      ad-hoc + un-notarized — do not proceed past this step in that
@@ -1361,5 +1423,9 @@ submodule updates, and scaffold creation.
 | 8 | go.mod local replace | `replace` directives with local filesystem paths (leaks username/directory structure) |
 | 9 | HTTPS URLs | `.gitmodules` using SSH instead of HTTPS |
 | 10 | Submodule pointers | Recorded commit differs from `origin/main` of submodule |
+| 11 | Release archive naming *(planned)* | Latest release assets match `<name>-v<version>-<os>-<arch>.<ext>`; darwin is zip & arm64-only (no darwin-amd64, no `.dmg`/`.tar.gz` for darwin) |
 
 **Exit code:** `0` if all checks pass, `1` if any check fails.
+
+> Check 11 is documented here as the target; the `check-org.sh` script
+> implementation is a follow-up task (see §Release Archive Standard).
