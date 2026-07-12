@@ -166,7 +166,28 @@ check_series() {
     fi
   fi
 
-  # 10. Submodule pointers vs origin/main
+  # 10. Vendored Homebrew tap-generation assets match canonical
+  #     (.github/templates). Only the tap-generation files are checked; the
+  #     signing scripts (codesign/notarize) intentionally diverge in some GUI
+  #     repos, so they are not sync-checked here.
+  if [ -f "$dir/.gitmodules" ] && [ -d "$DEST/.github/templates" ]; then
+    tpl="$DEST/.github/templates"
+    while IFS= read -r subpath; do
+      subpath="${subpath#        }"
+      subdir="$dir/$subpath"
+      name=$(basename "$subpath")
+      for f in gen-brew.sh formula.rb.tmpl cask.rb.tmpl release-brew.mk; do
+        vend="$subdir/scripts/$f"
+        [ -f "$vend" ] || continue
+        if ! cmp -s "$vend" "$tpl/$f"; then
+          echo "    $FAIL $name: vendored scripts/$f drifted from .github/templates/$f"
+          errors=$((errors + 1))
+        fi
+      done
+    done < <(git -C "$dir" submodule foreach --quiet 'echo "        $displaypath"')
+  fi
+
+  # 11. Submodule pointers vs origin/main
   if [ ! -f "$dir/.gitmodules" ]; then
     return
   fi
