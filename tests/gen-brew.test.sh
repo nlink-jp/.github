@@ -66,6 +66,16 @@ out=$(BREW_KIND=formula BREW_DESC="x" BREW_TEMPLATES_DIR="$TPL_DIR" sh "$GEN" --
 contains "$out" 'class LlmCli < Formula'                                          'formula: multi-seg class name'
 contains "$out" 'bin.install "llm-cli"'                                           'formula: multi-seg bin.install'
 
+# ---- 2b. BREW_REPO: repo slug differs from tool/binary name ----------------
+MZIP="$TMP/mdv-v1.4.0-darwin-arm64.zip"
+mkzip "$MZIP" mdv
+out=$(BREW_KIND=formula BREW_DESC="Markdown viewer" BREW_REPO="markdown-viewer" \
+      BREW_TEMPLATES_DIR="$TPL_DIR" sh "$GEN" --print "$MZIP")
+contains "$out" 'class Mdv < Formula'                                             'brew_repo: class from asset name (mdv)'
+contains "$out" 'bin.install "mdv"'                                               'brew_repo: bin.install asset name'
+contains "$out" 'homepage "https://github.com/nlink-jp/markdown-viewer"'          'brew_repo: homepage uses repo slug'
+contains "$out" 'url "https://github.com/nlink-jp/markdown-viewer/releases/download/v1.4.0/mdv-v1.4.0-darwin-arm64.zip"' 'brew_repo: url = repo slug + asset name'
+
 # ---- 3. cask --print -------------------------------------------------------
 out=$(BREW_KIND=cask BREW_DESC="Viewer and editor for CSV and TSV files" \
       BREW_APP="csv-editor.app" BREW_BUNDLE_ID="com.wails.csv-editor" \
