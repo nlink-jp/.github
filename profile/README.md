@@ -16,6 +16,15 @@ New to nlink-jp tools? Start here:
 | [Python + uv Setup](https://github.com/nlink-jp/.github/blob/main/docs/ja/setup-python-uv.ja.md) | Python, uv package manager |
 | [Go Build Setup](https://github.com/nlink-jp/.github/blob/main/docs/ja/setup-go-build.ja.md) | Go, make, or pre-built binaries |
 
+> **macOS (Apple Silicon):** most Go CLIs and GUI apps install straight from our
+> Homebrew tap — Developer ID signed + Apple-notarized prebuilt binaries:
+> ```sh
+> brew tap nlink-jp/tap
+> brew install nlink-jp/tap/<name>          # CLI tools
+> brew install --cask nlink-jp/tap/<name>   # GUI apps
+> ```
+> See [nlink-jp/homebrew-tap](https://github.com/nlink-jp/homebrew-tap) for the full list.
+
 ## Projects
 
 ### cli-series — Service CLI clients
