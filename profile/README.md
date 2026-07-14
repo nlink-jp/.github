@@ -58,6 +58,7 @@ AI-augmented tools for threat intelligence, product risk assessment, and inciden
 
 | Tool | Lang | Description |
 |------|------|-------------|
+| [abuse-lookup](https://github.com/nlink-jp/abuse-lookup) | Go | Checks IP address reputation against the AbuseIPDB API (CLI + MCP) — abuse score, report history, usage type, and ISP, cached locally with a TTL; large `get_reports` pages are file-mediated to an agent-provided workspace. The online, reputation-focused sibling of asn-lookup |
 | [ai-ir](https://github.com/nlink-jp/ai-ir) | Python | AI-powered incident response — analyzes Slack IR exports to generate summaries, activity reports, and reusable tactics |
 | [ai-ir2](https://github.com/nlink-jp/ai-ir2) | Python | Next-gen IR analysis — one-stop Gemini pipeline producing Markdown, self-contained HTML, and knowledge documents |
 | [cti-graph](https://github.com/nlink-jp/cti-graph) | Python | Local-first attack graph analysis — STIX 2.1 ingestion, PIR-driven weighting, choke-point detection, FastAPI API |
