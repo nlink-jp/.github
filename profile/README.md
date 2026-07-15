@@ -70,6 +70,7 @@ AI-augmented tools for threat intelligence, product risk assessment, and inciden
 | [mail-triage](https://github.com/nlink-jp/mail-triage) | Python | GCS-based email triage — classifies eml/msg files with Gemini LLM and posts results to Slack via Cloud Run Jobs |
 | [news-collector](https://github.com/nlink-jp/news-collector) | Python | News collection agent — collects, tags, summarizes, translates, and delivers curated news digests via Gemini + Slack |
 | [product-research](https://github.com/nlink-jp/product-research) | Python | Research products and services — outputs ToS, privacy, and data security analysis as structured reports |
+| [tor-exit-lookup](https://github.com/nlink-jp/tor-exit-lookup) | Go | Reports whether an IP is a Tor Exit node (CLI + MCP) — offline membership lookup from a cached copy of the Tor Project's torbulkexitlist, enriched with exit-addresses metadata; no credentials. The offline sibling of asn-lookup and abuse-lookup |
 
 ### lab-series — Experimental projects
 
