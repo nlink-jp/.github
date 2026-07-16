@@ -72,6 +72,7 @@ AI-augmented tools for threat intelligence, product risk assessment, and inciden
 | [news-collector](https://github.com/nlink-jp/news-collector) | Python | News collection agent — collects, tags, summarizes, translates, and delivers curated news digests via Gemini + Slack |
 | [product-research](https://github.com/nlink-jp/product-research) | Python | Research products and services — outputs ToS, privacy, and data security analysis as structured reports |
 | [tor-exit-lookup](https://github.com/nlink-jp/tor-exit-lookup) | Go | Reports whether an IP is a Tor Exit node (CLI + MCP) — offline membership lookup from a cached copy of the Tor Project's torbulkexitlist, enriched with exit-addresses metadata; no credentials. The offline sibling of asn-lookup and abuse-lookup |
+| [whois-lookup](https://github.com/nlink-jp/whois-lookup) | Go | Looks up the registration data of a domain, IP, or AS number (CLI + MCP) — RDAP-first via the IANA bootstrap with a port 43 WHOIS fallback for RDAP-less ccTLDs (.jp), in-house IDN punycode, local TTL cache; no credentials. The registration-focused sibling of asn-lookup and abuse-lookup |
 
 ### lab-series — Experimental projects
 
