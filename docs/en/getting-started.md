@@ -39,7 +39,7 @@ requirements.
 | **Vertex AI (Gemini)** | [Vertex AI Setup](setup-vertex-ai.md) | gem-cli, gem-query, gem-search, gem-image, gem-rag, gem-summary, gem-transcribe, mail-analyzer, ai-ir2, meeting-note, news-collector, product-research, etc. |
 | **Local LLM (LM Studio / Ollama)** | [Local LLM Setup](setup-local-llm.md) | llm-cli, data-analyzer, lite-rag, lite-switch, mail-analyzer-local, quick-translate, cti-primer, magi-system, sai, slack-monitor, etc. |
 | **Slack / Confluence / Splunk API** | See each tool's README | scat, stail, swrite, slack-router, md-to-slack, scli, ir-hub / confl-cli / splunk-cli |
-| **Container runtime (Podman)** | Container steps in each README | data-toolbox-mcp, shell-agent-v2 (sandboxed execution) |
+| **Container runtime (Podman)** | Container steps in each README | data-toolbox-mcp, pcap-analyzer-mcp (analysis sandbox), shell-agent-v2 (sandboxed execution) |
 | **Cloud (GCP / AWS)** | Deployment steps in each README | webhook-relay, mail-triage, m5-data-receiver |
 | **macOS (Apple Silicon) only** | Homebrew cask or .dmg | active-lens-gui, claude-usage-lens-gui, load-spinner, image-forge / image-forge-gui, csv-editor, mail-analyzer-gui, etc. |
 
@@ -53,7 +53,7 @@ The same tool can be used in different forms, and each has its own path:
 - **MCP server**: registered with an AI agent such as Claude Code. Most start
   over stdio with `<tool> mcp` and are registered in the agent's MCP config.
   - Dedicated MCP: ask-gemini-mcp, ask-llm-mcp, data-toolbox-mcp,
-    voice-studio-mcp, video-studio-mcp, mcp-guardian
+    pcap-analyzer-mcp, voice-studio-mcp, video-studio-mcp, mcp-guardian
   - CLI + MCP: asn-lookup, abuse-lookup, tor-exit-lookup
   - **An MCP server's prerequisites follow the service behind it (§2)** — e.g.
     ask-gemini-mcp needs Vertex AI, ask-llm-mcp needs a local LLM.

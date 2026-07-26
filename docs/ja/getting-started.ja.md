@@ -32,7 +32,7 @@ brew install --cask nlink-jp/tap/<name>   # GUI アプリ
 | **Vertex AI (Gemini)** | [Vertex AI セットアップ](setup-vertex-ai.ja.md) | gem-cli, gem-query, gem-search, gem-image, gem-rag, gem-summary, gem-transcribe, mail-analyzer, ai-ir2, meeting-note, news-collector, product-research 等 |
 | **ローカルLLM (LM Studio / Ollama)** | [ローカルLLM セットアップ](setup-local-llm.ja.md) | llm-cli, data-analyzer, lite-rag, lite-switch, mail-analyzer-local, quick-translate, cti-primer, magi-system, sai, slack-monitor 等 |
 | **Slack / Confluence / Splunk API** | 各ツールのREADMEを参照 | scat, stail, swrite, slack-router, md-to-slack, scli, ir-hub / confl-cli / splunk-cli |
-| **コンテナ (Podman)** | 各READMEのコンテナ手順 | data-toolbox-mcp, shell-agent-v2（サンドボックス実行） |
+| **コンテナ (Podman)** | 各READMEのコンテナ手順 | data-toolbox-mcp, pcap-analyzer-mcp（解析サンドボックス）, shell-agent-v2（サンドボックス実行） |
 | **クラウド (GCP / AWS)** | 各READMEのデプロイ手順 | webhook-relay, mail-triage, m5-data-receiver |
 | **macOS (Apple Silicon) 専用** | Homebrew cask か .dmg | active-lens-gui, claude-usage-lens-gui, load-spinner, image-forge / image-forge-gui, csv-editor, mail-analyzer-gui 等 |
 
@@ -43,7 +43,7 @@ brew install --cask nlink-jp/tap/<name>   # GUI アプリ
 - **CLI**: stdin/stdout でパイプ連携。多くのツールがこれ。入手方法は §1 のとおり。
 - **GUI アプリ**: メニューバー常駐 or 通常ウィンドウ。macOS 中心で、Homebrew cask か .dmg で配布。
 - **MCP サーバー**: Claude Code などの AI エージェントに登録して使う。多くは `<tool> mcp` で stdio 起動し、エージェント側の MCP 設定に登録します。
-  - 専用MCP: ask-gemini-mcp, ask-llm-mcp, data-toolbox-mcp, voice-studio-mcp, video-studio-mcp, mcp-guardian
+  - 専用MCP: ask-gemini-mcp, ask-llm-mcp, data-toolbox-mcp, pcap-analyzer-mcp, voice-studio-mcp, video-studio-mcp, mcp-guardian
   - CLI兼MCP: asn-lookup, abuse-lookup, tor-exit-lookup
   - **MCPサーバーの前提環境は、その裏で使うサービス（§2）に従います**（例: ask-gemini-mcp は Vertex AI、ask-llm-mcp はローカルLLM）。
 
