@@ -319,6 +319,9 @@ htmlcov/
 - [ ] `Makefile` `build` target outputs to `dist/`
 - [ ] `.gitignore` contains `dist/` and nothing else for build artifacts
 - [ ] `go.mod` module path is `github.com/nlink-jp/<tool-name>`
+- [ ] the CLI answers **`--version`** as well as any `version` subcommand, with
+      identical output and a test pinning both (a Homebrew formula's `brew test`
+      runs `--version` — see §Homebrew Tap Distribution)
 
 **Repository structure (Python):**
 
@@ -1436,6 +1439,13 @@ hand-maintained instead.
   `depends_on macos: :big_sur`.
 - `desc`: < 80 chars, no leading article, must not start with the tool name,
   write "command-line" not "command line", and casks omit "macOS"/"Mac".
+- **A CLI must answer `--version`.** The generated formula's `test` block runs
+  `<name> --version`, so a tool offering only a `version` subcommand exits
+  non-zero, `shell_output` raises, and `brew test` fails. `brew install` still
+  succeeds, which is why this surfaces only after the tool is in the tap — it
+  went unnoticed in four tools until 2026-07-26. With cobra, set
+  `rootCmd.Version = Version`; keep the flag's output identical to the
+  subcommand's and pin both forms in a test (`cmd/version_test.go`).
 
 ### Verifying a tap release (no VM required)
 
