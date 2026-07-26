@@ -470,7 +470,13 @@ All build targets must output to `dist/`:
 - Output to project root (`go build -o <binary> .`) — pollutes the working tree
   and causes `.gitignore` confusion.
 - Output to `bin/` — non-standard for this organization. Use `dist/` exclusively.
-- Using separate variables for `build` and `build-all` output dirs (`BIN_DIR` vs `DIST_DIR`).
+- Using separate variables for `build` and `build-all` output dirs within one
+  Makefile (e.g. `BIN_DIR` for one target and `DIST_DIR` for the other).
+
+The rule is about the **path**, not the variable name: `BIN_DIR := dist` is
+conventional, because the resolved output is still `dist/`. `check-org.sh`
+resolves the variable's value and compares that, so any name is accepted as
+long as one variable is used consistently and its value is `dist`.
 
 ### `.gitignore` rules for build artifacts
 

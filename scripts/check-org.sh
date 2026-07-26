@@ -28,6 +28,84 @@ WARN="[!!]"
 
 errors=0
 
+# --- Makefile build-output resolution ---------------------------------------
+# The convention is that `make build` writes into dist/. What matters is the
+# resolved *value* of the output path, not the variable name used to spell it:
+# `BIN_DIR := dist` is perfectly conventional. These helpers resolve the
+# directory a Makefile actually builds into, so the check can compare values.
+
+# makefile_var MAKEFILE VAR -> value of the last assignment to VAR.
+# Handles `VAR = v`, `VAR := v`, `VAR ?= v`, `VAR += v` at the start of a line,
+# plus the `$(eval VAR := v)` form used inside some recipes. Trailing comments
+# and whitespace are stripped.
+makefile_var() {
+  local mf="$1" var="$2"
+  sed -nE \
+    -e "s/^[[:space:]]*${var}[[:space:]]*[:?+]?=[[:space:]]*([^#]*).*\$/\1/p" \
+    -e "s/.*\\\$\\(eval[[:space:]]+${var}[[:space:]]*[:?+]?=[[:space:]]*(.*)\\).*/\1/p" \
+    "$mf" 2>/dev/null | tail -1 | sed -E 's/[[:space:]]+$//'
+}
+
+# makefile_expand MAKEFILE STRING -> STRING with $(VAR) references expanded
+# from the Makefile's own assignments. Stops at the first reference it cannot
+# resolve (an unassigned variable, or a function call such as $(word ...)),
+# leaving it literal for the caller to notice.
+makefile_expand() {
+  local mf="$1" s="$2" var val pat i
+  for i in 1 2 3 4 5 6 7 8; do
+    case "$s" in *'$('*) ;; *) break ;; esac
+    var="${s#*"\$("}"
+    var="${var%%)*}"
+    case "$var" in ''|*[^A-Za-z0-9_]*) break ;; esac
+    val=$(makefile_var "$mf" "$var")
+    [ -n "$val" ] || break
+    # The pattern must come from a variable: an inline ${s//\$($var)/$val}
+    # silently fails to substitute in bash. Do not "simplify" this.
+    pat="\$($var)"
+    s="${s//"$pat"/$val}"
+  done
+  printf '%s' "$s"
+}
+
+# makefile_build_dirs MAKEFILE -> one line per `go build ... -o TARGET` recipe,
+# holding the directory that target resolves to:
+#   dist       conventional
+#   .          the project root
+#   ?          could not be resolved — the caller must not guess
+makefile_build_dirs() {
+  local mf="$1" line target dir prefix had_var
+  while IFS= read -r line; do
+    # Cheap pre-filter, then confirm on the expanded line so that builds routed
+    # through a variable (GO_BUILD := go build ...) are seen too.
+    case "$line" in *-o*) ;; *) continue ;; esac
+    printf '%s\n' "$(makefile_expand "$mf" "$line")" \
+      | grep -qE 'go[[:space:]]+build' || continue
+
+    # The target is taken from the raw line (so expanded flag values can never
+    # be mistaken for it) and only then resolved.
+    target=$(printf '%s\n' "$line" \
+      | awk '{for (i=1;i<NF;i++) if ($i=="-o") {print $(i+1); exit}}')
+    [ -n "$target" ] || continue
+    [ "$target" = "/dev/null" ] && continue   # discard build, not an artifact
+
+    target=$(makefile_expand "$mf" "$target")
+    had_var=0
+    case "$target" in *'$('*) had_var=1 ;; esac
+    prefix="${target%%"\$("*}"                # text before the first $( , if any
+    case "$prefix" in
+      */*) dir="${prefix%/*}"
+           dir="${dir#./}"
+           dir="${dir%/}"
+           [ -n "$dir" ] || dir="." ;;
+      *)   if [ "$had_var" -eq 1 ]; then dir="?"; else dir="."; fi ;;
+    esac
+    # A shell variable in the path (release staging dirs use $$stagedir) is not
+    # resolvable from the Makefile alone.
+    case "$dir" in *'$'*) dir="?" ;; esac
+    printf '%s\n' "$dir"
+  done < "$mf"
+}
+
 check_series() {
   local series="$1"
   local dir="$2"
@@ -89,16 +167,18 @@ check_series() {
       gitignore="$subdir/.gitignore"
 
       if [ -f "$makefile" ]; then
-        # Check: make build must output to dist/, not root or bin/
-        if grep -qE '^\s*go build .* -o \$\(BINARY\)' "$makefile" 2>/dev/null || \
-           grep -qE '^\s*go build .* -o \./[a-z]' "$makefile" 2>/dev/null; then
-          echo "    $FAIL $name: make build outputs to project root (must use dist/)"
+        # Check: make build must output to dist/. Compared on the resolved
+        # value, so any variable name is fine (BIN_DIR := dist passes).
+        while IFS= read -r outdir; do
+          case "$outdir" in
+            dist|dist/*) continue ;;   # conventional
+            '?')         continue ;;   # unresolvable — don't guess
+            .) echo "    $FAIL $name: make build outputs to project root (must use dist/)" ;;
+            *) echo "    $FAIL $name: make build outputs to $outdir/ (must use dist/)" ;;
+          esac
           errors=$((errors + 1))
-        elif grep -qE '^\s*go build .* -o bin/' "$makefile" 2>/dev/null || \
-             grep -qE '-o \$\(BIN_DIR\)/' "$makefile" 2>/dev/null; then
-          echo "    $FAIL $name: make build outputs to bin/ (must use dist/)"
-          errors=$((errors + 1))
-        fi
+          break
+        done < <(makefile_build_dirs "$makefile")
       fi
 
       if [ -f "$gitignore" ]; then
@@ -218,6 +298,12 @@ check_series() {
     fi
   done < <(git -C "$dir" submodule foreach --quiet 'echo "        $displaypath"')
 }
+
+# tests/check-org.test.sh sources this script to exercise the helpers above
+# without running the org-wide checks.
+if [ "${CHECK_ORG_LIB_ONLY:-}" = "1" ]; then
+  return 0 2>/dev/null || exit 0
+fi
 
 echo "Destination: $DEST"
 echo ""
