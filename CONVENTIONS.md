@@ -16,6 +16,7 @@ Organization-wide technical decisions are recorded in [`adr/`](adr/).
 | [001](adr/001-gemini3-migration.md) | Accepted | Gemini 2.5 → 3 migration plan (defer until GA) |
 | [002](adr/002-homebrew-tap-automation.md) | Accepted | Homebrew tap distribution — install notarized release assets, generate formula/cask at release time |
 | [003](adr/003-mcp-tactics-skill.md) | Accepted | `mcp-tactics` Skill — cross-cutting selection layer for our MCP servers (selection/ordering only; `get_usage` owns parameters) |
+| [004](adr/004-skills-series-umbrella.md) | Accepted | skills-series umbrella restructure — one repository per skill, released as GitHub Release skill zips |
 
 ---
 
