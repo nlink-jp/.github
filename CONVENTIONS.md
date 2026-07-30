@@ -65,7 +65,9 @@ Before any code is written, produce and get sign-off on the following:
    | chatops-series | Slack ChatOps automation and monitoring tools (bot-authenticated) |
    | cybersecurity-series | AI-augmented security tools (threat intel, IR, risk assessment) |
    | lab-series | Experimental projects under active development |
+   | lib-series | Shared libraries consumed by tools in other series |
    | lite-series | Local-first LLM interaction and pipeline tools |
+   | skills-series | Claude Code Skills for development process automation (ADR-004 layout) |
    | util-series | Pipe-friendly data transformation and processing CLIs |
 
    If none of the existing series is a good fit, discuss whether a new series
