@@ -125,11 +125,14 @@ Small, local-first CLI tools for LLM interaction, retrieval, and classification.
 
 ### skills-series — Claude Code Skills
 
-Claude Code Skills for development process automation.
+Claude Code Skills for development process automation. One repository per
+skill; each releases a skill zip installable into `~/.claude/skills/` or
+uploadable to claude.ai (Settings → Skills).
 
 | Skill | Command | Description |
 |-------|---------|-------------|
-| [rfp](https://github.com/nlink-jp/skills-series) | `/rfp [tool-name]` | Interactive RFP facilitation — collects requirements through Q&A against CONVENTIONS.md Phase 1 and generates structured RFP documents |
+| [mcp-tactics](https://github.com/nlink-jp/mcp-tactics) | `/mcp-tactics` | Cross-cutting tactics book for the organization's MCP servers and proxies — decision tables from input artifact to route, cross-server chains, and an offline-before-third-party-before-target-contact escalation doctrine |
+| [rfp](https://github.com/nlink-jp/rfp) | `/rfp [tool-name]` | Interactive RFP facilitation — collects requirements through Q&A against CONVENTIONS.md Phase 1 and generates structured RFP documents |
 
 ### util-series — General-purpose data utilities
 
