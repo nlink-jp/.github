@@ -17,6 +17,7 @@ Organization-wide technical decisions are recorded in [`adr/`](adr/).
 | [002](adr/002-homebrew-tap-automation.md) | Accepted | Homebrew tap distribution — install notarized release assets, generate formula/cask at release time |
 | [003](adr/003-mcp-tactics-skill.md) | Accepted | `mcp-tactics` Skill — cross-cutting selection layer for our MCP servers (selection/ordering only; `get_usage` owns parameters) |
 | [004](adr/004-skills-series-umbrella.md) | Accepted | skills-series umbrella restructure — one repository per skill, released as GitHub Release skill zips |
+| [005](adr/005-umbrella-standardization.md) | Accepted | Umbrella standardization — one file set (README/CLAUDE/AGENTS/.gitignore), README as the only catalog, enforced by check-org.sh |
 
 ---
 
@@ -1379,10 +1380,35 @@ Version bumps:
 
 ---
 
+## Umbrella Repositories
+
+Every series is an umbrella repository: a catalog of git submodules, one
+per project. Umbrellas follow one standard file set
+([ADR-005](adr/005-umbrella-standardization.md)):
+
+| File | Role |
+|------|------|
+| `README.md` | **The catalog** — one row per submodule (linked name + one-line description). Rows for former members only when explicitly labeled (moved / renamed / graduated). |
+| `CLAUDE.md` | Org-rules header (this document, linked) + series-specific rules |
+| `AGENTS.md` | Umbrella workflow only — clone/update/pointer-bump commands and gotchas. Never a second catalog: it links to README.md. |
+| `.gitignore` | `.claude/settings.local.json` exclusion |
+
+Optional series extensions: a series-level `CONVENTIONS.md` and `docs/`.
+
+Umbrellas do **not** carry `README.ja.md`, `CHANGELOG.md`, `LICENSE`,
+`Makefile`, or `tests/` — those belong to the tool repositories. Umbrellas
+mint no tags or releases.
+
+`check-org.sh` enforces the required files, that every submodule appears in
+`README.md`, and that all `.gitmodules` URLs are HTTPS.
+
+---
+
 ## Working with Submodules
 
-All series (cli-series, chatops-series, cybersecurity-series, lab-series,
-lite-series, util-series) manage projects as git submodules. Submodule
+All series (chatops-series, cli-series, cybersecurity-series, lab-series,
+lib-series, lite-series, skills-series, util-series) manage projects as
+git submodules. Submodule
 checkouts are in **detached HEAD** state by default. Making commits in
 detached HEAD state produces orphaned commits that are lost when you
 switch to a branch.
