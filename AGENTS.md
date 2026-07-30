@@ -31,6 +31,24 @@ The sections below summarize the rules that are most commonly missed.
 - Always use `make build` (outputs to `dist/`) or `make build-all`.
 - `go test ./...` is fine — it produces no stray binaries.
 
+### Never aim a recursive rewrite at a relative path
+
+`gofmt -w .`, `sed -i`, `prettier --write`, `black`, `ruff format` and friends
+rewrite every file they can reach. Run from the wrong directory, they rewrite
+other people's repositories. This has happened twice here — `gofmt -w .` from
+the workspace root reformatted every Go file in every series.
+
+- Prefer tools that stop at the module boundary: **`go fmt ./...`**, not
+  `gofmt -w .`. Outside a module it fails harmlessly instead of ranging.
+- When a tree-walking tool is genuinely needed, give it an **absolute path**.
+- Do not rely on the working directory persisting between tool calls — it does
+  not. Start each shell call with `cd /absolute/path &&`.
+- A `PreToolUse` guard hook refuses these commands when the target is relative.
+  Install it on every machine: `.github/scripts/install-claude-guards.sh`.
+  If it blocks you, it is right — re-run with an absolute path.
+
+Full details: [`CONVENTIONS.md` → Recursive rewrites](CONVENTIONS.md#recursive-rewrites-prefer-module-scoped-tools-and-install-the-guard)
+
 ### Never commit secrets or environment-specific values
 
 This is the **highest priority rule**. All repositories are public.

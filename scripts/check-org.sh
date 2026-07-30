@@ -19,6 +19,8 @@ SERIES=(
   util-series
 )
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 DEST="${1:-$(pwd)}"
 DEST="$(cd "$DEST" && pwd)"
 
@@ -319,6 +321,19 @@ for series in "${SERIES[@]}"; do
   check_series "$series" "$target"
   echo ""
 done
+
+# Machine-level agent guards. Repo conventions cannot enforce these — they
+# live in ~/.claude — so audit them here instead of trusting that whoever
+# set the machine up remembered.
+echo "==> agent guards (this machine)"
+if [ -x "$SCRIPT_DIR/install-claude-guards.sh" ]; then
+  if ! "$SCRIPT_DIR/install-claude-guards.sh" --check; then
+    errors=$((errors + 1))
+  fi
+else
+  echo "    $WARN install-claude-guards.sh not found or not executable"
+fi
+echo ""
 
 if [ "$errors" -eq 0 ]; then
   echo "Result: all checks passed."

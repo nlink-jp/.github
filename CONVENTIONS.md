@@ -460,6 +460,57 @@ in a project directory.**
 
 > `go test ./...` is fine to run directly — it does not produce stray binaries.
 
+### Recursive rewrites: prefer module-scoped tools, and install the guard
+
+A command that walks a directory tree and rewrites files in place — `gofmt -w`,
+`sed -i`, `prettier --write`, `black`, `ruff format` — destroys work far outside
+the intended repository when the working directory is not what you assumed.
+This has happened twice in this organization: `gofmt -w .` executed from the
+workspace root reformatted every Go file in every series (26 repos the first
+time, 39 the second). Nothing was lost, because nothing had been committed, but
+both incidents produced a workspace full of unreviewed changes.
+
+**Two controls, in this order.**
+
+1. **Choose tools that fail instead of ranging.** Module-scoped commands stop at
+   the module boundary, so a wrong working directory becomes a harmless error
+   rather than a mass edit:
+
+   | Instead of | Use | Behaviour outside a module |
+   |---|---|---|
+   | `gofmt -w .` | `go fmt ./...` | fails: "directory prefix . does not contain main module" |
+   | `gofmt -w .` (single repo) | `gofmt -w /absolute/path/to/repo` | writes only where told |
+   | `ruff format` | `ruff format /absolute/path` | writes only where told |
+
+2. **Install the mechanical guard.** A written rule is not a control: the
+   accident happens exactly when attention lapses, which is also when the rule
+   is forgotten — the second incident occurred with the rule already written
+   down. The guard is a Claude Code `PreToolUse` hook that refuses a recursive
+   in-place rewrite whose target is relative or absent:
+
+   ```sh
+   .github/scripts/install-claude-guards.sh          # install / update
+   .github/scripts/install-claude-guards.sh --check  # verify (check-org.sh runs this)
+   ```
+
+   It installs `.github/claude-code/guard-recursive-write.py` into
+   `~/.claude/hooks/` and merges the hook into `~/.claude/settings.json`,
+   leaving other settings untouched. It is idempotent, and it runs the guard's
+   own test battery (`guard-recursive-write-test.py`) before installing, so a
+   guard edited into uselessness cannot reach a machine.
+
+   Allowed through: absolute targets, `~`-rooted targets, a command anchored by
+   a leading `cd /absolute/path &&`, and every read-only command
+   (`gofmt -l .`, `go fmt ./...`, `grep -r`).
+
+   `check-org.sh` audits the installation, so a new machine that skipped setup
+   shows up as a failed check rather than as the next incident.
+
+   **Known limit:** the hook inspects shell commands. Code that performs the
+   same rewrite from inside a script or program it launches is not covered.
+   Narrowing writable paths (`sandbox.filesystem.denyWrite`, or a tighter set
+   of `additionalDirectories`) is the stronger control where that matters.
+
 ### Build output directory
 
 All build targets must output to `dist/`:
