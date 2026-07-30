@@ -159,6 +159,48 @@ check_series() {
     errors=$((errors + 1))
   fi
 
+  # 5b. Umbrella standard file set (ADR-005): README.md and AGENTS.md
+  local f
+  for f in README.md AGENTS.md; do
+    if [ -f "$dir/$f" ]; then
+      echo "    $PASS $f: present"
+    else
+      echo "    $FAIL $f: missing (ADR-005 umbrella standard)"
+      errors=$((errors + 1))
+    fi
+  done
+
+  # 5c. Every submodule has a catalog row in README.md (ADR-005).
+  # The README is the umbrella's only catalog surface; a submodule absent
+  # from it is invisible to anyone browsing the series.
+  if [ -f "$dir/.gitmodules" ] && [ -f "$dir/README.md" ]; then
+    local missing=""
+    while IFS= read -r subpath; do
+      subpath="${subpath#        }"
+      name=$(basename "$subpath")
+      grep -q "github.com/nlink-jp/$name" "$dir/README.md" || missing="$missing $name"
+    done < <(git -C "$dir" submodule foreach --quiet 'echo "        $displaypath"')
+    if [ -z "$missing" ]; then
+      echo "    $PASS README.md: every submodule cataloged"
+    else
+      echo "    $FAIL README.md: no catalog row for:$missing"
+      errors=$((errors + 1))
+    fi
+  fi
+
+  # 5d. Submodule URLs are HTTPS (SSH fails on machines without key auth)
+  if [ -f "$dir/.gitmodules" ]; then
+    local non_https
+    non_https=$(git config -f "$dir/.gitmodules" --get-regexp '^submodule\..*\.url$' \
+      | awk '{print $2}' | grep -v '^https://' || true)
+    if [ -z "$non_https" ]; then
+      echo "    $PASS .gitmodules: all URLs HTTPS"
+    else
+      echo "    $FAIL .gitmodules: non-HTTPS URL(s): $(echo $non_https | tr '\n' ' ')"
+      errors=$((errors + 1))
+    fi
+  fi
+
   # 6. Submodule build conventions
   if [ -f "$dir/.gitmodules" ]; then
     while IFS= read -r subpath; do
