@@ -18,6 +18,7 @@ Organization-wide technical decisions are recorded in [`adr/`](adr/).
 | [003](adr/003-mcp-tactics-skill.md) | Accepted | `mcp-tactics` Skill — cross-cutting selection layer for our MCP servers (selection/ordering only; `get_usage` owns parameters) |
 | [004](adr/004-skills-series-umbrella.md) | Accepted | skills-series umbrella restructure — one repository per skill, released as GitHub Release skill zips |
 | [005](adr/005-umbrella-standardization.md) | Accepted | Umbrella standardization — one file set (README/CLAUDE/AGENTS/.gitignore), README as the only catalog, enforced by check-org.sh |
+| [006](adr/006-skill-validator-vendoring.md) | Accepted | Skill validator vendoring — per-repo copies of `validate-skill.sh` with a canonical in `.github/templates/`, byte-equality enforced by check-org.sh |
 
 ---
 
