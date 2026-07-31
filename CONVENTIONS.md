@@ -23,6 +23,7 @@ Organization-wide technical decisions are recorded in [`adr/`](adr/).
 | [008](adr/008-incident-research-skill.md) | Accepted | `incident-research` Skill — agentic deep-dive research on public security incidents (timeline-centric, source-tiered, confidence-qualified) |
 | [009](adr/009-incident-review-skill.md) | Accepted | `incident-review` Skill — retrospective analysis of an organization's own IR communication record; retires the `ai-ir` / `ai-ir2` CLIs |
 | [010](adr/010-incident-research-ioc-stix.md) | Accepted | `incident-research` v0.2 — IoC extraction + deterministic STIX 2.1 output; retires the `ioc-collector` CLI |
+| [011](adr/011-compliance-review-skill.md) | Accepted | `compliance-review` Skill — two-phase (compile/review) security review against internal regulations; retires the `virtual-reviewer` PoC |
 
 ---
 
