@@ -131,6 +131,7 @@ uploadable to claude.ai (Settings → Skills).
 
 | Skill | Command | Description |
 |-------|---------|-------------|
+| [incident-research](https://github.com/nlink-jp/incident-research) | `/incident-research <incident>` | Security incident deep-dive research — collects and reads news and primary sources on one publicly reported incident into a schema-validated JSON report (timeline-centric, three source tiers, confidence-qualified attribution) plus compiled Markdown; incident-side companion to service-research |
 | [mcp-tactics](https://github.com/nlink-jp/mcp-tactics) | `/mcp-tactics` | Cross-cutting tactics book for the organization's MCP servers and proxies — decision tables from input artifact to route, cross-server chains, and an offline-before-third-party-before-target-contact escalation doctrine |
 | [meeting-notes](https://github.com/nlink-jp/meeting-notes) | `/meeting-notes <transcript>` | Meeting transcript to structured minutes — validated 3-layer JSON (verbatim quotes / decisions with rationale / summaries) compiled to Markdown or HTML; successor to the meeting-note CLI |
 | [rfp](https://github.com/nlink-jp/rfp) | `/rfp [tool-name]` | Interactive RFP facilitation — collects requirements through Q&A against CONVENTIONS.md Phase 1 and generates structured RFP documents |
