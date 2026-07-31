@@ -200,6 +200,85 @@ that calls them. See the dedicated
 section below for the step-by-step scaffolding, including
 framework-specific Makefile templates and reference projects.
 
+#### Skill project scaffold (skills-series)
+
+Skills follow ADR-004: **repository = skill**, with the skill content in a
+`<skill-name>/` subdirectory that is the distribution boundary — `make
+package` ships exactly that directory, so repo scaffolding can never leak
+into the artifact.
+
+```
+<skill-name>/                ← repository (github.com/nlink-jp/<skill-name>)
+├── <skill-name>/            ← the skill itself (the only thing that ships)
+│   ├── SKILL.md             ← frontmatter `name:` must equal the directory
+│   │                          name — the directory name is the slash command
+│   └── ...                  ← references / scripts the skill instructs with
+├── tests/
+│   └── validate-skill.sh    ← vendored copy of .github/templates/ (ADR-006)
+├── Makefile                 ← see template below
+├── .gitignore               ← `dist/` and `.DS_Store` only
+├── README.md
+├── README.ja.md
+├── CHANGELOG.md
+├── LICENSE
+├── CLAUDE.md
+└── AGENTS.md
+```
+
+- `tests/validate-skill.sh` is a **vendored copy** of
+  `.github/templates/validate-skill.sh`, kept **byte-identical** —
+  `check-org.sh` (check 10b) fails on any drift. To change the validator,
+  edit the canonical template and re-vendor into every skill repo. Never
+  edit a repo's copy in place.
+- Repo-specific tests (e.g. `meeting-notes` runs
+  `python3 tests/run-script-tests.py` for its bundled scripts) are added as
+  extra commands under the Makefile `check` target — the vendored validator
+  stays untouched.
+- Scaffold new skill repos from `rfp` as the reference shape (update every
+  copied field — see the AGENTS.md rule in the Scaffold checklist).
+- No `docs/` split and no binaries: the skill's own Markdown *is* the
+  product; distribution is a GitHub Release zip whose root is the skill
+  folder (see §Release Checklist).
+
+#### Makefile template (Skill)
+
+```makefile
+SKILL   := <skill-name>
+VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
+DEST    ?= $(HOME)/.claude/skills
+
+.PHONY: install uninstall check test package clean
+
+install:
+	@mkdir -p "$(DEST)/$(SKILL)"
+	@cp -R "$(SKILL)/." "$(DEST)/$(SKILL)/"
+	@echo "installed: $(SKILL) -> $(DEST)/$(SKILL)"
+
+uninstall:
+	@rm -rf "$(DEST)/$(SKILL)"
+	@echo "removed: $(DEST)/$(SKILL)"
+
+check:
+	@./tests/validate-skill.sh
+
+test: check
+
+# The zip root is the skill folder itself — the layout claude.ai accepts
+# and the one that unzips cleanly into ~/.claude/skills/ (ADR-004).
+package: check
+	@rm -rf dist
+	@mkdir -p dist
+	@zip -qr "dist/$(SKILL)-$(VERSION).zip" "$(SKILL)" -x '*.DS_Store'
+	@echo "packaged: dist/$(SKILL)-$(VERSION).zip"
+
+clean:
+	@rm -rf dist
+```
+
+Repo-specific tests are appended to the `check` recipe as extra lines
+(e.g. `@python3 tests/run-script-tests.py`). If the skill bundles Python
+scripts, also exclude `-x '*__pycache__*'` in the `package` recipe.
+
 #### Makefile template (Go)
 
 ```makefile
@@ -353,6 +432,22 @@ htmlcov/
 - [ ] README documents the signed/notarized state (see
       [Starting a new GUI app](#starting-a-new-gui-app) step 6)
 - [ ] No `signingIdentity`, team ID, key ID, or `.p8` path in any committed file
+
+**Repository structure (Skill):**
+
+- [ ] Skill content lives in `<skill-name>/` with `SKILL.md` directly inside;
+      frontmatter `name:` equals the directory name (the directory name is
+      the slash command)
+- [ ] `tests/validate-skill.sh` vendored **byte-identical** from
+      `.github/templates/validate-skill.sh` (executable bit set — ADR-006;
+      check-org check 10b enforces this)
+- [ ] Repo-specific tests, if any, hooked into the Makefile `check` target
+      (never into the vendored validator)
+- [ ] `make check` passes
+- [ ] `make package` produces `dist/<skill>-vX.Y.Z.zip` with the skill folder
+      at the zip root — unzip and verify `<skill>/SKILL.md` is directly
+      inside (ADR-004; no README or repo scaffolding in the zip)
+- [ ] `.gitignore` contains `dist/` (and `.DS_Store`)
 
 **Documentation:**
 
@@ -1581,6 +1676,10 @@ Before tagging a release, verify every item:
 - [ ] Release archives follow §Release Archive Standard: name
       `<name>-v<version>-<os>-<arch>.<ext>`, canonical in-archive binary,
       darwin is **arm64-only** zip (no darwin-amd64, no `.dmg`).
+- [ ] Skill repos instead ship one `dist/<skill>-vX.Y.Z.zip`: unzip it and
+      verify the zip root is the skill folder with `SKILL.md` directly
+      inside (ADR-004). Code signing, notarization, and the per-platform
+      archive matrix do not apply to skills.
 
 **Release steps:**
 
