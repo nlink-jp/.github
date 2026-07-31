@@ -311,6 +311,26 @@ check_series() {
     done < <(git -C "$dir" submodule foreach --quiet 'echo "        $displaypath"')
   fi
 
+  # 10b. Vendored skill validator matches canonical (.github/templates).
+  #      Skill repos copy-maintain tests/validate-skill.sh (ADR-006) so a
+  #      standalone clone stays self-contained; this check is what makes the
+  #      copies safe — drift fails the org check instead of rotting silently.
+  #      Repo-specific tests hang off the Makefile check target and are not
+  #      sync-checked.
+  if [ -f "$dir/.gitmodules" ] && [ -f "$DEST/.github/templates/validate-skill.sh" ]; then
+    while IFS= read -r subpath; do
+      subpath="${subpath#        }"
+      subdir="$dir/$subpath"
+      name=$(basename "$subpath")
+      vend="$subdir/tests/validate-skill.sh"
+      [ -f "$vend" ] || continue
+      if ! cmp -s "$vend" "$DEST/.github/templates/validate-skill.sh"; then
+        echo "    $FAIL $name: tests/validate-skill.sh drifted from .github/templates/validate-skill.sh (ADR-006)"
+        errors=$((errors + 1))
+      fi
+    done < <(git -C "$dir" submodule foreach --quiet 'echo "        $displaypath"')
+  fi
+
   # 11. Submodule pointers vs origin/main
   if [ ! -f "$dir/.gitmodules" ]; then
     return
