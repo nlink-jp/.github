@@ -125,9 +125,10 @@ Small, local-first CLI tools for LLM interaction, retrieval, and classification.
 
 ### skills-series — Claude Code Skills
 
-Claude Code Skills for development process automation. One repository per
-skill; each releases a skill zip installable into `~/.claude/skills/` or
-uploadable to claude.ai (Settings → Skills).
+Claude Code Skills packaging the organization's workflows — development
+process, research, meeting minutes, and security analysis. One repository
+per skill; each releases a skill zip installable into `~/.claude/skills/`
+or uploadable to claude.ai (Settings → Skills).
 
 | Skill | Command | Description |
 |-------|---------|-------------|
