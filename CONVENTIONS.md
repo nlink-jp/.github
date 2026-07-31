@@ -20,6 +20,7 @@ Organization-wide technical decisions are recorded in [`adr/`](adr/).
 | [005](adr/005-umbrella-standardization.md) | Accepted | Umbrella standardization — one file set (README/CLAUDE/AGENTS/.gitignore), README as the only catalog, enforced by check-org.sh |
 | [006](adr/006-skill-validator-vendoring.md) | Accepted | Skill validator vendoring — per-repo copies of `validate-skill.sh` with a canonical in `.github/templates/`, byte-equality enforced by check-org.sh |
 | [007](adr/007-service-research-skill.md) | Accepted | `service-research` Skill — agentic product/service risk research; retires the `product-research` CLI |
+| [008](adr/008-incident-research-skill.md) | Accepted | `incident-research` Skill — agentic deep-dive research on public security incidents (timeline-centric, source-tiered, confidence-qualified) |
 
 ---
 
