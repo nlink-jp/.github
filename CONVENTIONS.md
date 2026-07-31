@@ -1601,6 +1601,7 @@ include scripts/release-brew.mk
 #   BREW_NAME := $(APP)              # if the repo uses APP, not BINARY
 #   BREW_APP  := $(APP).app
 #   BREW_BUNDLE_ID := com.example.name
+#   BREW_MACOS_FLOOR := :tahoe       # only if the app needs newer than :big_sur
 ```
 
 Overrides for the uncommon cases: `BREW_REPO` (repo slug != tool name, e.g. the
@@ -1616,7 +1617,9 @@ hand-maintained instead.
   `<name>-v<version>-darwin-arm64.zip` naming puts the version mid-string, where
   Homebrew cannot auto-scan it).
 - `depends_on arch: :arm64`; formulae add `depends_on :macos`, casks use
-  `depends_on macos: :big_sur`.
+  `depends_on macos:` with the floor from `BREW_MACOS_FLOOR` (default
+  `:big_sur`; set it in the repo Makefile when the app requires newer, e.g.
+  `instant-translate` needs `:tahoe` for the Translation API).
 - `desc`: < 80 chars, no leading article, must not start with the tool name,
   write "command-line" not "command line", and casks omit "macOS"/"Mac".
 - **A CLI must answer `--version`.** The generated formula's `test` block runs
