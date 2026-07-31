@@ -102,7 +102,7 @@ Works in progress. APIs, features, and interfaces may change without notice.
 | [meeting-note](https://github.com/nlink-jp/meeting-note) | Python | ~~Meeting minutes structuring tool — audio/transcript to structured JSON via Gemini, then compile to Markdown/HTML~~ **Archived** — superseded by [meeting-notes](https://github.com/nlink-jp/meeting-notes) |
 | [sai](https://github.com/nlink-jp/sai) | Python | ~~Context-aware Slack bot with RAG memory and natural language command execution~~ **Archived** — no longer used or maintained |
 | [slack-monitor](https://github.com/nlink-jp/slack-monitor) | Python | Real-time Slack channel summarizer with local/cloud LLM and Textual TUI |
-| [virtual-reviewer](https://github.com/nlink-jp/virtual-reviewer) | Python | AI-powered security review system — LLM expert models with full regulation context, no RAG, UNIX pipes |
+| [virtual-reviewer](https://github.com/nlink-jp/virtual-reviewer) | Python | ~~AI-powered security review system — LLM expert models with full regulation context, no RAG, UNIX pipes~~ **Archived** — superseded by [compliance-review](https://github.com/nlink-jp/compliance-review) |
 | [workflow-builder](https://github.com/nlink-jp/workflow-builder) | — | ~~LLM-powered workflow builder — generates shell scripts from natural language using CLI tool registry~~ **Archived** — design phase only; never implemented |
 
 ### lib-series — Shared libraries
@@ -133,6 +133,7 @@ or uploadable to claude.ai (Settings → Skills).
 
 | Skill | Command | Description |
 |-------|---------|-------------|
+| [compliance-review](https://github.com/nlink-jp/compliance-review) | `/compliance-review compile \| review` | Two-phase regulation-compliance review — `compile` decomposes your regulation documents into a versioned domain-expert set (full clause text per expert, no RAG, deterministic coverage check), `review` evaluates an application behind a sha256 drift gate and a nonce-isolation preprocessing gate with parallel independent experts, deterministic severity rules, and a two-pass Q&A; successor to the virtual-reviewer PoC |
 | [incident-research](https://github.com/nlink-jp/incident-research) | `/incident-research <incident>` | Security incident deep-dive research — collects and reads news and primary sources on one publicly reported incident into a schema-validated JSON report (timeline-centric, three source tiers, confidence-qualified attribution) plus compiled Markdown and a STIX 2.1 bundle of extracted IoCs; incident-side companion to service-research and successor to the ioc-collector CLI |
 | [incident-review](https://github.com/nlink-jp/incident-review) | `/incident-review <record>` | Own-incident retrospective analysis — turns your IR communication record (Slack exports, plain-text logs, connector-read channels) into a schema-validated report (summary / activity / roles / process review) plus reusable tactic knowledge, behind a defang and nonce-isolation preprocessing gate; successor to the ai-ir / ai-ir2 CLIs |
 | [mcp-tactics](https://github.com/nlink-jp/mcp-tactics) | `/mcp-tactics` | Cross-cutting tactics book for the organization's MCP servers and proxies — decision tables from input artifact to route, cross-server chains, and an offline-before-third-party-before-target-contact escalation doctrine |
