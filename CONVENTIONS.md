@@ -21,6 +21,7 @@ Organization-wide technical decisions are recorded in [`adr/`](adr/).
 | [006](adr/006-skill-validator-vendoring.md) | Accepted | Skill validator vendoring — per-repo copies of `validate-skill.sh` with a canonical in `.github/templates/`, byte-equality enforced by check-org.sh |
 | [007](adr/007-service-research-skill.md) | Accepted | `service-research` Skill — agentic product/service risk research; retires the `product-research` CLI |
 | [008](adr/008-incident-research-skill.md) | Accepted | `incident-research` Skill — agentic deep-dive research on public security incidents (timeline-centric, source-tiered, confidence-qualified) |
+| [009](adr/009-incident-review-skill.md) | Accepted | `incident-review` Skill — retrospective analysis of an organization's own IR communication record; retires the `ai-ir` / `ai-ir2` CLIs |
 
 ---
 
