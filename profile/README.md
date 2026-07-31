@@ -98,7 +98,7 @@ Works in progress. APIs, features, and interfaces may change without notice.
 | [magi-system2](https://github.com/nlink-jp/magi-system2) | Python | Multi-persona AI discussion — dynamic persona generation, dual memory, adaptive facilitation via Gemini |
 | [mail-watcher](https://github.com/nlink-jp/mail-watcher) | Bash | Mail monitoring workflow — watches for incoming eml/msg files, analyzes with LLM, and posts Slack notifications |
 | [mcp-skeleton](https://github.com/nlink-jp/mcp-skeleton) | Python | MCP server skeleton — raw JSON-RPC 2.0 over stdio/SSE with API key auth, for learning MCP internals |
-| [meeting-note](https://github.com/nlink-jp/meeting-note) | Python | Meeting minutes structuring tool — audio/transcript to structured JSON via Gemini, then compile to Markdown/HTML |
+| [meeting-note](https://github.com/nlink-jp/meeting-note) | Python | ~~Meeting minutes structuring tool — audio/transcript to structured JSON via Gemini, then compile to Markdown/HTML~~ **Archived** — superseded by [meeting-notes](https://github.com/nlink-jp/meeting-notes) |
 | [sai](https://github.com/nlink-jp/sai) | Python | Context-aware Slack bot with RAG memory and natural language command execution |
 | [slack-monitor](https://github.com/nlink-jp/slack-monitor) | Python | Real-time Slack channel summarizer with local/cloud LLM and Textual TUI |
 | [virtual-reviewer](https://github.com/nlink-jp/virtual-reviewer) | Python | AI-powered security review system — LLM expert models with full regulation context, no RAG, UNIX pipes |
@@ -132,6 +132,7 @@ uploadable to claude.ai (Settings → Skills).
 | Skill | Command | Description |
 |-------|---------|-------------|
 | [mcp-tactics](https://github.com/nlink-jp/mcp-tactics) | `/mcp-tactics` | Cross-cutting tactics book for the organization's MCP servers and proxies — decision tables from input artifact to route, cross-server chains, and an offline-before-third-party-before-target-contact escalation doctrine |
+| [meeting-notes](https://github.com/nlink-jp/meeting-notes) | `/meeting-notes <transcript>` | Meeting transcript to structured minutes — validated 3-layer JSON (verbatim quotes / decisions with rationale / summaries) compiled to Markdown or HTML; successor to the meeting-note CLI |
 | [rfp](https://github.com/nlink-jp/rfp) | `/rfp [tool-name]` | Interactive RFP facilitation — collects requirements through Q&A against CONVENTIONS.md Phase 1 and generates structured RFP documents |
 
 ### util-series — General-purpose data utilities
