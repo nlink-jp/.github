@@ -166,7 +166,7 @@ because fixtures imitate attacker-quoting conversations).
 |---|---|
 | Migrate ai-ir2 to Gemini 3 and keep the CLI | Pays the migration cost to keep the weaker architecture: single-shot calls that never re-read the conversation, plus permanent GCP coupling. ADR-007 already chose the other branch for the same trade |
 | Skill as a thin wrapper invoking the `aiir2` CLI | Keeps both maintenance surfaces and the Vertex dependency; the Skill would add nothing but indirection |
-| Extend incident-research with an "internal record" mode | Opposite trust models and OpSec rules (public web reading vs. confidential internal logs that must not leave the machine); one SKILL.md cannot open with both. Same reasoning that kept service-research and incident-research apart |
+| Extend incident-research with an "internal record" mode | Opposite trust models and OpSec rules (public web reading vs. confidential internal logs that must reach nothing beyond the model session and local outputs); one SKILL.md cannot open with both. Same reasoning that kept service-research and incident-research apart |
 | Rebuild as an MCP server | The deterministic parts (defang, nonce-wrap, validate, compile) are stdlib scripts, not a stateful engine; a prompt workflow plus scripts is a Skill (ADR-003/007/008 line) |
 | Generalize to any retrospective (outages, projects) | The schema's value is IR-specific (tactics with evidence confidence, IR phases, IoC handling); meeting-notes already covers generic conversation structuring |
 
