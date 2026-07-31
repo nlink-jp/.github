@@ -85,7 +85,16 @@ contains "$out" 'version "0.2.1"'                                               
 contains "$out" 'app "csv-editor.app"'                                            'cask: app stanza'
 contains "$out" 'url "https://github.com/nlink-jp/csv-editor/releases/download/v#{version}/csv-editor-v#{version}-darwin-arm64.zip"' 'cask: url keeps #{version}'
 contains "$out" '"~/Library/Caches/com.wails.csv-editor",'                        'cask: zap uses bundle id'
+contains "$out" 'depends_on macos: :big_sur'                                      'cask: default macOS floor :big_sur'
 missing  "$out" '@'                                                               'cask: no unrendered @PLACEHOLDER@'
+
+# ---- 3b. BREW_MACOS_FLOOR overrides the cask macOS floor -------------------
+out=$(BREW_KIND=cask BREW_DESC="Viewer and editor for CSV and TSV files" \
+      BREW_APP="csv-editor.app" BREW_BUNDLE_ID="com.wails.csv-editor" \
+      BREW_MACOS_FLOOR=":tahoe" \
+      BREW_TEMPLATES_DIR="$TPL_DIR" sh "$GEN" --print "$CZIP")
+contains "$out" 'depends_on macos: :tahoe'                                        'macos_floor: override rendered'
+missing  "$out" ':big_sur'                                                        'macos_floor: default absent when overridden'
 
 # ---- 4. --no-push writes + commits into a tap, does not push ---------------
 TAP="$TMP/homebrew-tap"
@@ -112,6 +121,7 @@ expect_fail "err: bad BREW_KIND"      env BREW_KIND=bogus BREW_DESC=d BREW_TEMPL
 expect_fail "err: missing BREW_DESC"  env BREW_KIND=formula BREW_TEMPLATES_DIR="$TPL_DIR" sh "$GEN" --print "$FZIP"
 expect_fail "err: bad asset name"     env BREW_KIND=formula BREW_DESC=d BREW_TEMPLATES_DIR="$TPL_DIR" sh "$GEN" --print "$TMP/notes.txt"
 expect_fail "err: cask missing APP"   env BREW_KIND=cask BREW_DESC=d BREW_BUNDLE_ID=x BREW_TEMPLATES_DIR="$TPL_DIR" sh "$GEN" --print "$CZIP"
+expect_fail "err: floor missing colon" env BREW_KIND=cask BREW_DESC=d BREW_APP=csv-editor.app BREW_BUNDLE_ID=x BREW_MACOS_FLOOR=tahoe BREW_TEMPLATES_DIR="$TPL_DIR" sh "$GEN" --print "$CZIP"
 expect_fail "err: missing zip file"   env BREW_KIND=formula BREW_DESC=d BREW_TEMPLATES_DIR="$TPL_DIR" sh "$GEN" --print "$TMP/absent-v1.0.0-darwin-arm64.zip"
 expect_fail "err: --no-push, tap absent" env BREW_KIND=formula BREW_DESC=d BREW_TEMPLATES_DIR="$TPL_DIR" BREW_TAP_DIR="$TMP/nope" sh "$GEN" --no-push "$FZIP"
 
