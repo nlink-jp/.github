@@ -26,6 +26,7 @@ Organization-wide technical decisions are recorded in [`adr/`](adr/).
 | [011](adr/011-compliance-review-skill.md) | Accepted | `compliance-review` Skill — two-phase (compile/review) security review against internal regulations; retires the `virtual-reviewer` PoC |
 | [012](adr/012-zip-porter-hardening.md) | Accepted | `zip-porter` extraction hardening — fail-fast size limits, pre-flight space budget, overlapping-entry rejection, quarantine propagation, duplicate-name uniquification |
 | [013](adr/013-zip-porter-parallel-compression.md) | Accepted | `zip-porter` compression throughput — parallel per-entry compression with sequential writing, incompressible-data probe; libz-based work (single-file parallelism, compression level) deferred |
+| [014](adr/014-zip-porter-zlib-parallel-deflate.md) | Accepted | `zip-porter` single-file parallel deflate — zlib level 6 everywhere, pigz-style block joins with crc32_combine, bounded waves; no user-facing level knob |
 
 ---
 
