@@ -30,6 +30,35 @@ WARN="[!!]"
 
 errors=0
 
+# --- archived repositories ---------------------------------------------------
+# GitHub is the authority: an archived repo is read-only, so it can never take
+# a template update and must not be judged against live templates. One org
+# listing serves the whole run. When gh is unavailable (offline, or no auth)
+# the umbrella catalog's "(archived)" marker stands in — best effort rather
+# than a hard dependency, since this script is otherwise fully offline.
+archived_list=""
+archived_loaded=0
+
+load_archived() {
+  [ "$archived_loaded" -eq 1 ] && return 0
+  archived_loaded=1
+  command -v gh >/dev/null 2>&1 || return 0
+  archived_list=$(gh repo list nlink-jp --limit 300 --json name,isArchived \
+    --jq '.[] | select(.isArchived) | .name' 2>/dev/null) || archived_list=""
+  return 0
+}
+
+# is_archived NAME UMBRELLA_DIR
+is_archived() {
+  local name="$1" dir="$2"
+  load_archived
+  if [ -n "$archived_list" ]; then
+    printf '%s\n' "$archived_list" | grep -qx -- "$name"
+    return $?
+  fi
+  grep -q "\[$name\].*(archived)" "$dir/README.md" 2>/dev/null
+}
+
 # --- Makefile build-output resolution ---------------------------------------
 # The convention is that `make build` writes into dist/. What matters is the
 # resolved *value* of the output path, not the variable name used to spell it:
@@ -300,11 +329,8 @@ check_series() {
       subpath="${subpath#        }"
       subdir="$dir/$subpath"
       name=$(basename "$subpath")
-      # An archived repo is read-only on GitHub, so it can never take a
-      # template update — expecting it to track live templates would leave
-      # a permanent failure. The umbrella catalog marks these rows
-      # "(archived)"; that is the signal, no network call needed.
-      if grep -q "\[$name\].*(archived)" "$dir/README.md" 2>/dev/null; then
+      # Archived repos are read-only and can never take a template update.
+      if is_archived "$name" "$dir"; then
         continue
       fi
       for f in gen-brew.sh formula.rb.tmpl cask.rb.tmpl release-brew.mk; do
