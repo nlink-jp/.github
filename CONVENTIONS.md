@@ -134,7 +134,11 @@ uncommitted work. Developing in `_wip/` eliminates this dangerous step entirely.
    push:
    ```bash
    gh repo create nlink-jp/<tool-name> --public --source=. --push
+   gh api -X PUT /repos/nlink-jp/<tool-name>/subscription -F subscribed=true
    ```
+   The explicit watch is required: GitHub sunset automatic watching in
+   May 2025, so a newly created repository is otherwise never watched and
+   external issues/PRs would arrive silently.
 4. Add the project as a submodule in the appropriate umbrella repo:
    ```bash
    cd <umbrella-series>/
@@ -476,6 +480,7 @@ htmlcov/
 - [ ] Repository created under `nlink-jp` organization
 - [ ] Repository is **public** (not private) unless there is a documented reason
 - [ ] Repository **About** configured: description and topics set (see [Repository About](#repository-about))
+- [ ] Repository **watched** (`gh api -X PUT /repos/nlink-jp/<tool-name>/subscription -F subscribed=true`) — auto-watch no longer exists
 - [ ] Repository pushed from `_wip/` to remote before submodule integration
 - [ ] Repository added as submodule to the appropriate series umbrella repo
 - [ ] Series umbrella `.gitmodules` entry uses `https://github.com/nlink-jp/<tool-name>.git`
@@ -1342,6 +1347,27 @@ and discovery.
 - At repository creation (part of the scaffold checklist)
 - When the project scope, language, or key dependencies change significantly
 - When adding major new features that warrant additional topics
+
+---
+
+## Archiving a Repository
+
+When a tool is retired or superseded:
+
+1. Mark it in the umbrella README catalog (`~~...~~ **Archived** — superseded
+   by [successor]` where applicable) and, if it was a listed tool, update the
+   org profile README and the `nlink-web-site` catalog (see Release Checklist
+   step 9).
+2. Archive on GitHub: `gh repo archive nlink-jp/<tool-name>`. Released assets
+   stay downloadable; the repo becomes read-only.
+3. Switch the notification subscription from watching to ignoring —
+   an archived repo cannot receive issues/PRs, so a lingering watch is noise:
+   ```bash
+   gh api -X PUT /repos/nlink-jp/<tool-name>/subscription -F ignored=true
+   ```
+
+`check-org.sh` treats GitHub's archived state as authoritative and excludes
+archived repos from template-drift checks.
 
 ---
 
