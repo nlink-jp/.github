@@ -25,6 +25,14 @@ New to nlink-jp tools? Start here:
 > ```
 > See [nlink-jp/homebrew-tap](https://github.com/nlink-jp/homebrew-tap) for the full list.
 
+## Knowledge Base
+
+[**nlink-jp/knowledge**](https://github.com/nlink-jp/knowledge) — engineering
+lessons learned across all projects, compiled into themed bilingual (ja/en)
+documents: release engineering (signing/notarization), macOS GUI, MCP server
+design, LLM integration, security, and more. Every entry follows
+**symptom → why → how to apply**, distilled from real incidents.
+
 ## Projects
 
 ### cli-series — Service CLI clients
