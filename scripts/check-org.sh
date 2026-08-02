@@ -417,6 +417,45 @@ for series in "${SERIES[@]}"; do
   echo ""
 done
 
+# Standalone knowledge repository (ADR-015). Not part of any series umbrella,
+# so the series loop never sees it. What can rot silently: the en/ja document
+# sets drifting apart, and a document existing without a catalog row (or vice
+# versa). Both are cheap to verify offline.
+echo "==> knowledge (standalone)"
+kdir="$DEST/knowledge"
+if [ ! -d "$kdir/.git" ]; then
+  echo "    $WARN not found locally (git clone https://github.com/nlink-jp/knowledge)"
+else
+  kerr=0
+  for f in README.md README.ja.md LICENSE; do
+    if [ ! -f "$kdir/$f" ]; then
+      echo "    $FAIL knowledge: missing $f"
+      kerr=1
+    fi
+  done
+  # en/ja mirror: identical basename sets in docs/en and docs/ja.
+  mirror_diff=$(diff <(ls "$kdir/docs/en" 2>/dev/null) <(ls "$kdir/docs/ja" 2>/dev/null) || true)
+  if [ -n "$mirror_diff" ]; then
+    echo "    $FAIL knowledge: docs/en and docs/ja file sets differ:"
+    printf '%s\n' "$mirror_diff" | sed 's/^/      /'
+    kerr=1
+  fi
+  # Every document has a catalog row in the matching README, and no row is stale.
+  for doc in "$kdir"/docs/en/*.md; do
+    base=$(basename "$doc")
+    grep -q "docs/en/$base" "$kdir/README.md" 2>/dev/null || {
+      echo "    $FAIL knowledge: docs/en/$base has no catalog row in README.md"; kerr=1; }
+    grep -q "docs/ja/$base" "$kdir/README.ja.md" 2>/dev/null || {
+      echo "    $FAIL knowledge: docs/ja/$base has no catalog row in README.ja.md"; kerr=1; }
+  done
+  if [ "$kerr" -eq 0 ]; then
+    echo "    $PASS knowledge: en/ja mirror and catalog consistent"
+  else
+    errors=$((errors + 1))
+  fi
+fi
+echo ""
+
 # Machine-level agent guards. Repo conventions cannot enforce these — they
 # live in ~/.claude — so audit them here instead of trusting that whoever
 # set the machine up remembered.

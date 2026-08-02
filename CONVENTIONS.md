@@ -10,6 +10,9 @@ these rules but must not contradict them.
 ## Architecture Decision Records (ADR)
 
 Organization-wide technical decisions are recorded in [`adr/`](adr/).
+Non-trivial design decisions and bug-fix strategies are written up as an ADR
+(or a project-level design note) and approved **before** implementation starts —
+not documented after the fact.
 
 | ADR | Status | Summary |
 |-----|--------|---------|
@@ -490,6 +493,24 @@ below for all implementation work.
 ---
 
 ## Development Policy
+
+### Consult and feed the knowledge base
+
+The organization's engineering lessons live in
+[`nlink-jp/knowledge`](https://github.com/nlink-jp/knowledge) — themed bilingual
+documents compiled from real incidents (ADR-015). The loop is mandatory, not
+best-effort:
+
+- **Consult before building.** When starting design or implementation work in a
+  domain the knowledge base covers (release engineering, macOS GUI, MCP servers,
+  LLM integration, shell scripting, …), read the relevant document first — the
+  same standing the ADR index above has for technical decisions.
+- **Feed back what you learn.** When work surfaces new reusable engineering
+  knowledge — an incident, a non-obvious workaround, a pattern worth repeating —
+  contribute it to `nlink-jp/knowledge` as part of completing that work, not
+  deferred. Entries follow **symptom → why → how to apply**, Japanese authored
+  first with English in the same commit, and pass the sanitization gate (no
+  environment-specific values, no personal names).
 
 ### Security first
 
@@ -1720,8 +1741,13 @@ Before tagging a release, verify every item:
    darwin-arm64 zip and push it to `nlink-jp/homebrew-tap`
    (see §Homebrew Tap Distribution)
 8. Update umbrella submodule pointer
-9. Update `nlink-jp/.github/profile/README.md` if new tool
-10. Run `check-org.sh` to verify all green
+9. Update `nlink-jp/.github/profile/README.md` if new tool (keep the tool list
+   alphabetical). Tool additions, archivals, and description changes must also
+   sync the `nlink-web-site` catalog and the repository About metadata — the
+   catalog has multiple surfaces and they drift independently
+10. Feed any new reusable engineering knowledge from this work back to
+    `nlink-jp/knowledge` (see §Consult and feed the knowledge base)
+11. Run `check-org.sh` to verify all green
 
 ---
 
@@ -1754,6 +1780,12 @@ submodule updates, and scaffold creation.
 | 10b | Vendored skill validator | A skill repo's `tests/validate-skill.sh` drifted from `.github/templates/validate-skill.sh` (ADR-006 — edit the canonical, re-vendor into every skill repo) |
 | 11 | Submodule pointers | Recorded commit differs from `origin/main` of submodule |
 | 12 | Release archive naming *(planned)* | Latest release assets match `<name>-v<version>-<os>-<arch>.<ext>`; darwin is zip & arm64-only (no darwin-amd64, no `.dmg`/`.tar.gz` for darwin) |
+
+**Org-level checks (outside the series loop):**
+
+| Check | What it catches |
+|-------|-----------------|
+| `knowledge` standalone repo | Missing local clone; `docs/en` / `docs/ja` file sets drifting apart; a document without a catalog row in `README.md` / `README.ja.md` (ADR-015) |
 
 **Exit code:** `0` if all checks pass, `1` if any check fails.
 
