@@ -110,6 +110,7 @@ Works in progress. APIs, features, and interfaces may change without notice.
 | [meeting-note](https://github.com/nlink-jp/meeting-note) | Python | ~~Meeting minutes structuring tool — audio/transcript to structured JSON via Gemini, then compile to Markdown/HTML~~ **Archived** — superseded by [meeting-notes](https://github.com/nlink-jp/meeting-notes) |
 | [sai](https://github.com/nlink-jp/sai) | Python | ~~Context-aware Slack bot with RAG memory and natural language command execution~~ **Archived** — no longer used or maintained |
 | [slack-monitor](https://github.com/nlink-jp/slack-monitor) | Python | Real-time Slack channel summarizer with local/cloud LLM and Textual TUI |
+| [slack-personal-agent](https://github.com/nlink-jp/slack-personal-agent) | Go/React | ~~Personal Slack knowledge agent — multi-workspace monitoring, channel-scoped RAG over DuckDB with strict 3-tier isolation, Hot/Warm/Cold memory, MITL draft responses~~ **Archived** — no longer used or maintained |
 | [virtual-reviewer](https://github.com/nlink-jp/virtual-reviewer) | Python | ~~AI-powered security review system — LLM expert models with full regulation context, no RAG, UNIX pipes~~ **Archived** — superseded by [compliance-review](https://github.com/nlink-jp/compliance-review) |
 | [workflow-builder](https://github.com/nlink-jp/workflow-builder) | — | ~~LLM-powered workflow builder — generates shell scripts from natural language using CLI tool registry~~ **Archived** — design phase only; never implemented |
 
