@@ -13,16 +13,11 @@ This setup is required if you use any of the following tools.
 | gem-search | util-series | Go | AI web search |
 | gem-image | util-series | Go | AI image generation |
 | gem-rag | util-series | Python | RAG search |
+| gem-summary | util-series | Go | Text summarisation |
+| gem-transcribe | util-series | Python | Audio transcription |
 | mail-analyzer | util-series | Go | Suspicious email analysis |
-| ai-ir2 | cybersecurity-series | Python | Incident response analysis |
-| ir-tracker | cybersecurity-series | Python | Live IR tracking |
-| ioc-collector | cybersecurity-series | Python | IoC collection |
-| mail-triage | cybersecurity-series | Python | Email triage |
+| ask-gemini-mcp | util-series | Go | MCP: Gemini second opinions |
 | news-collector | cybersecurity-series | Python | News collection |
-| product-research | cybersecurity-series | Python | Product risk research |
-| meeting-note | lab-series | Python | Meeting minutes structuring |
-| magi-system2 | lab-series | Python | Multi-AI discussion |
-| virtual-reviewer | lab-series | Python | AI security review |
 
 ## Prerequisites
 

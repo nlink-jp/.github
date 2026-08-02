@@ -9,18 +9,12 @@ All projects that have a `pyproject.toml` or `uv.lock` file are covered. Major t
 | Tool | Series | Description |
 |------|--------|-------------|
 | gem-rag | util-series | RAG search |
-| ai-ir2 | cybersecurity-series | Incident response analysis |
-| ir-tracker | cybersecurity-series | Live IR tracking |
-| ioc-collector | cybersecurity-series | IoC collection |
-| mail-triage | cybersecurity-series | Email triage |
+| gem-transcribe | util-series | Audio transcription |
+| pptx-to-markdown | util-series | pptx → Markdown conversion |
 | news-collector | cybersecurity-series | News collection |
-| product-research | cybersecurity-series | Product risk research |
-| cti-primer | cybersecurity-series | CTI PIR generation |
-| meeting-note | lab-series | Meeting minutes structuring |
-| magi-system | lab-series | Multi-persona discussion |
-| magi-system2 | lab-series | Multi-AI discussion |
-| sai | lab-series | Slack AI bot |
-| virtual-reviewer | lab-series | AI security review |
+| slack-monitor | lab-series | Slack channel summarizer |
+| agent-skeleton | lab-series | Autonomous agent |
+| mcp-skeleton | lab-series | MCP learning skeleton |
 | confl-cli | cli-series | Confluence CLI client |
 
 ## Prerequisites

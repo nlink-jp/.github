@@ -13,11 +13,11 @@
 | mail-analyzer-local | util-series | Go | メール分析（ローカル版） |
 | lite-rag | lite-series | Go | ローカルRAG検索 |
 | lite-switch | lite-series | Go | 自然言語分類器 |
-| magi-system | lab-series | Python | マルチペルソナ議論 |
-| sai | lab-series | Python | Slack AIボット |
+| quick-translate | util-series | Swift | メニューバー翻訳（ローカルLLM） |
+| ask-llm-mcp | util-series | Go | MCP: ローカルLLM セカンドオピニオン |
+| shell-agent-v2 | util-series | Go/React | データ分析デスクトップ（ローカルLLM/Vertex ハイブリッド） |
 | slack-monitor | lab-series | Python | Slackチャンネル要約 |
 | agent-skeleton | lab-series | Python | 自律エージェント |
-| cti-primer | cybersecurity-series | Python | CTI PIR生成 |
 
 ## 必要なもの
 

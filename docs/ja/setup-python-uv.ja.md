@@ -9,18 +9,12 @@ Python 製ツールを使うための環境構築手順です。Python のイン
 | ツール | シリーズ | 説明 |
 |-------|--------|------|
 | gem-rag | util-series | RAG検索 |
-| ai-ir2 | cybersecurity-series | インシデント対応分析 |
-| ir-tracker | cybersecurity-series | ライブIR追跡 |
-| ioc-collector | cybersecurity-series | IoC収集 |
-| mail-triage | cybersecurity-series | メールトリアージ |
+| gem-transcribe | util-series | 音声文字起こし |
+| pptx-to-markdown | util-series | pptx→Markdown変換 |
 | news-collector | cybersecurity-series | ニュース収集 |
-| product-research | cybersecurity-series | 製品リスク調査 |
-| cti-primer | cybersecurity-series | CTI PIR生成 |
-| meeting-note | lab-series | 議事録構造化 |
-| magi-system | lab-series | マルチペルソナ議論 |
-| magi-system2 | lab-series | マルチAI議論 |
-| sai | lab-series | Slack AIボット |
-| virtual-reviewer | lab-series | AIセキュリティレビュー |
+| slack-monitor | lab-series | Slackチャンネル要約 |
+| agent-skeleton | lab-series | 自律エージェント |
+| mcp-skeleton | lab-series | MCP学習用スケルトン |
 | confl-cli | cli-series | Confluence CLIクライアント |
 
 ## 必要なもの

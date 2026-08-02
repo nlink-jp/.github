@@ -13,16 +13,11 @@ Google Cloud の Vertex AI を使うツールのための環境構築手順で�
 | gem-search | util-series | Go | AI Web検索 |
 | gem-image | util-series | Go | AI画像生成 |
 | gem-rag | util-series | Python | RAG検索 |
+| gem-summary | util-series | Go | テキスト要約 |
+| gem-transcribe | util-series | Python | 音声文字起こし |
 | mail-analyzer | util-series | Go | 不審メール分析 |
-| ai-ir2 | cybersecurity-series | Python | インシデント対応分析 |
-| ir-tracker | cybersecurity-series | Python | ライブIR追跡 |
-| ioc-collector | cybersecurity-series | Python | IoC収集 |
-| mail-triage | cybersecurity-series | Python | メールトリアージ |
+| ask-gemini-mcp | util-series | Go | MCP: Gemini セカンドオピニオン |
 | news-collector | cybersecurity-series | Python | ニュース収集 |
-| product-research | cybersecurity-series | Python | 製品リスク調査 |
-| meeting-note | lab-series | Python | 議事録構造化 |
-| magi-system2 | lab-series | Python | マルチAI議論 |
-| virtual-reviewer | lab-series | Python | AIセキュリティレビュー |
 
 ## 必要なもの
 
