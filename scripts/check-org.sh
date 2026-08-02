@@ -300,6 +300,13 @@ check_series() {
       subpath="${subpath#        }"
       subdir="$dir/$subpath"
       name=$(basename "$subpath")
+      # An archived repo is read-only on GitHub, so it can never take a
+      # template update — expecting it to track live templates would leave
+      # a permanent failure. The umbrella catalog marks these rows
+      # "(archived)"; that is the signal, no network call needed.
+      if grep -q "\[$name\].*(archived)" "$dir/README.md" 2>/dev/null; then
+        continue
+      fi
       for f in gen-brew.sh formula.rb.tmpl cask.rb.tmpl release-brew.mk; do
         vend="$subdir/scripts/$f"
         [ -f "$vend" ] || continue
