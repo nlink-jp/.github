@@ -14,16 +14,53 @@ Non-trivial design decisions and bug-fix strategies are written up as an ADR
 (or a project-level design note) and approved **before** implementation starts —
 not documented after the fact.
 
-**Which log a decision belongs in** is decided by what it binds, not by how
-substantial it is. A decision that constrains other projects — a shared
-convention, a tool retired in favour of another, a policy — goes here. A
-decision that constrains one project goes in that project's own log at
-`docs/{en,ja}/adr/NNNN-slug.md`, four-digit numbered per project and mirrored
-in both languages. A hybrid record that both retires a tool and designs its
-successor keeps the design payload in the successor project's log; the
-retirement stays visible here, in the index row and the redirect. Numbers are
-never reused in either log: a decision that moves leaves a redirect behind,
-because release notes and changelogs already link to it.
+**Which log a record belongs in** (ADR-017) is decided by what it binds, not
+by how substantial it is. Ask in order:
+
+1. **Does it change how other projects are built, shipped, or documented** —
+   a shared convention, a policy, a series restructure? → this log
+   (`adr/NNN-slug.md`, three-digit).
+2. **Is it the retirement of a tool in favour of another, or a move of
+   responsibility between repositories?** That *fact* is organization-level;
+   if the fact is all the record decides, it goes here.
+3. **Everything else — including how a successor tool is designed** — goes in
+   the project's own log (`docs/{en,ja}/adr/NNNN-slug.md`, four-digit
+   numbered per project, mirrored in both languages). A hybrid record that
+   both retires a tool and designs its successor keeps the design payload in
+   the successor's log; the retirement stays visible here, in the index row
+   and the redirect.
+
+Both misplacement patterns have actually happened (nine records, moved out
+on 2026-08-03): zip-porter's four internal design records (012–014, 016)
+each bound one app, and five skill-design records (007–011) each bound one
+skill, the organization-level retirement fact fitting in one index-row
+clause. Each followed the record before it — **imitating an existing ADR is
+not checking this section.**
+
+Every new record in either log opens with this header table (ADR-017). The
+**Binds** field forces the placement question at authoring time: a record in
+`adr/` must say `organization`, a record in a project log must name that
+project, and a mismatch is visible at a glance. Existing records are not
+retrofitted.
+
+```markdown
+# ADR-NNN: <title>
+
+| Field | Value |
+|-------|-------|
+| Status | Proposed / **Accepted** / Superseded / Moved |
+| Date | YYYY-MM-DD |
+| Binds | organization — or the project name, in a project log |
+| Decision makers | nlink-jp maintainers |
+| Triggered by | <what forces the decision now> |
+```
+
+Body sections: `Context`, `Decision`, `Consequences`, `Alternatives
+considered`, `References` — write Alternatives even when the choice looks
+obvious.
+
+Numbers are never reused in either log: a decision that moves leaves a
+redirect behind, because release notes and changelogs already link to it.
 
 | ADR | Status | Summary |
 |-----|--------|---------|
@@ -43,6 +80,7 @@ because release notes and changelogs already link to it.
 | [014](adr/014-zip-porter-zlib-parallel-deflate.md) | Moved | `zip-porter` single-file parallel deflate — **moved** to [`zip-porter` ADR-0003](https://github.com/nlink-jp/zip-porter/blob/main/docs/en/adr/0003-zlib-parallel-deflate.md) (project-scoped) |
 | [015](adr/015-knowledge-repository.md) | Accepted | `knowledge` repository — org engineering knowledge base compiled from agent memory (themed bilingual docs); consult-and-feed loop added to Development Policy |
 | [016](adr/016-zip-porter-batch-completion.md) | Moved | `zip-porter` batch completion reporting — **moved** to [`zip-porter` ADR-0004](https://github.com/nlink-jp/zip-porter/blob/main/docs/en/adr/0004-batch-completion.md) (project-scoped) |
+| [017](adr/017-adr-authoring-conventions.md) | Accepted | ADR authoring conventions — mandatory `Binds` header field, placement decision tree with the real misplacement counterexamples, lesson fed to `knowledge` |
 
 ---
 
