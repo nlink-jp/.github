@@ -31,6 +31,7 @@ not documented after the fact.
 | [013](adr/013-zip-porter-parallel-compression.md) | Accepted | `zip-porter` compression throughput — parallel per-entry compression with sequential writing, incompressible-data probe; libz-based work (single-file parallelism, compression level) deferred |
 | [014](adr/014-zip-porter-zlib-parallel-deflate.md) | Accepted | `zip-porter` single-file parallel deflate — zlib level 6 everywhere, pigz-style block joins with crc32_combine, bounded waves; no user-facing level knob |
 | [015](adr/015-knowledge-repository.md) | Accepted | `knowledge` repository — org engineering knowledge base compiled from agent memory (themed bilingual docs); consult-and-feed loop added to Development Policy |
+| [016](adr/016-zip-porter-batch-completion.md) | Accepted | `zip-porter` batch completion reporting — one result per request instead of per archive; trigger-scheduled notifications retire the deferred quit |
 
 ---
 
