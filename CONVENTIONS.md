@@ -19,9 +19,11 @@ substantial it is. A decision that constrains other projects — a shared
 convention, a tool retired in favour of another, a policy — goes here. A
 decision that constrains one project goes in that project's own log at
 `docs/{en,ja}/adr/NNNN-slug.md`, four-digit numbered per project and mirrored
-in both languages. Numbers are never reused in either log: a decision that
-moves leaves a redirect behind, because release notes and changelogs already
-link to it.
+in both languages. A hybrid record that both retires a tool and designs its
+successor keeps the design payload in the successor project's log; the
+retirement stays visible here, in the index row and the redirect. Numbers are
+never reused in either log: a decision that moves leaves a redirect behind,
+because release notes and changelogs already link to it.
 
 | ADR | Status | Summary |
 |-----|--------|---------|
@@ -31,11 +33,11 @@ link to it.
 | [004](adr/004-skills-series-umbrella.md) | Accepted | skills-series umbrella restructure — one repository per skill, released as GitHub Release skill zips |
 | [005](adr/005-umbrella-standardization.md) | Accepted | Umbrella standardization — one file set (README/CLAUDE/AGENTS/.gitignore), README as the only catalog, enforced by check-org.sh |
 | [006](adr/006-skill-validator-vendoring.md) | Accepted | Skill validator vendoring — per-repo copies of `validate-skill.sh` with a canonical in `.github/templates/`, byte-equality enforced by check-org.sh |
-| [007](adr/007-service-research-skill.md) | Accepted | `service-research` Skill — agentic product/service risk research; retires the `product-research` CLI |
-| [008](adr/008-incident-research-skill.md) | Accepted | `incident-research` Skill — agentic deep-dive research on public security incidents (timeline-centric, source-tiered, confidence-qualified) |
-| [009](adr/009-incident-review-skill.md) | Accepted | `incident-review` Skill — retrospective analysis of an organization's own IR communication record; retires the `ai-ir` / `ai-ir2` CLIs |
-| [010](adr/010-incident-research-ioc-stix.md) | Accepted | `incident-research` v0.2 — IoC extraction + deterministic STIX 2.1 output; retires the `ioc-collector` CLI |
-| [011](adr/011-compliance-review-skill.md) | Accepted | `compliance-review` Skill — two-phase (compile/review) security review against internal regulations; retires the `virtual-reviewer` PoC |
+| [007](adr/007-service-research-skill.md) | Moved | `service-research` skill design — **moved** to [`service-research` ADR-0001](https://github.com/nlink-jp/service-research/blob/main/docs/en/adr/0001-agentic-research.md) (project-scoped; retires the `product-research` CLI) |
+| [008](adr/008-incident-research-skill.md) | Moved | `incident-research` skill design — **moved** to [`incident-research` ADR-0001](https://github.com/nlink-jp/incident-research/blob/main/docs/en/adr/0001-deep-dive-research.md) (project-scoped) |
+| [009](adr/009-incident-review-skill.md) | Moved | `incident-review` skill design — **moved** to [`incident-review` ADR-0001](https://github.com/nlink-jp/incident-review/blob/main/docs/en/adr/0001-retrospective-analysis.md) (project-scoped; retires the `ai-ir` / `ai-ir2` CLIs) |
+| [010](adr/010-incident-research-ioc-stix.md) | Moved | `incident-research` v0.2 IoC/STIX design — **moved** to [`incident-research` ADR-0002](https://github.com/nlink-jp/incident-research/blob/main/docs/en/adr/0002-ioc-stix-output.md) (project-scoped; retires the `ioc-collector` CLI) |
+| [011](adr/011-compliance-review-skill.md) | Moved | `compliance-review` skill design — **moved** to [`compliance-review` ADR-0001](https://github.com/nlink-jp/compliance-review/blob/main/docs/en/adr/0001-two-phase-review.md) (project-scoped; retires the `virtual-reviewer` PoC) |
 | [012](adr/012-zip-porter-hardening.md) | Moved | `zip-porter` extraction hardening — **moved** to [`zip-porter` ADR-0001](https://github.com/nlink-jp/zip-porter/blob/main/docs/en/adr/0001-extraction-hardening.md) (project-scoped) |
 | [013](adr/013-zip-porter-parallel-compression.md) | Moved | `zip-porter` compression throughput — **moved** to [`zip-porter` ADR-0002](https://github.com/nlink-jp/zip-porter/blob/main/docs/en/adr/0002-parallel-compression.md) (project-scoped) |
 | [014](adr/014-zip-porter-zlib-parallel-deflate.md) | Moved | `zip-porter` single-file parallel deflate — **moved** to [`zip-porter` ADR-0003](https://github.com/nlink-jp/zip-porter/blob/main/docs/en/adr/0003-zlib-parallel-deflate.md) (project-scoped) |
