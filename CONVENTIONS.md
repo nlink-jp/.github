@@ -14,6 +14,15 @@ Non-trivial design decisions and bug-fix strategies are written up as an ADR
 (or a project-level design note) and approved **before** implementation starts —
 not documented after the fact.
 
+**Which log a decision belongs in** is decided by what it binds, not by how
+substantial it is. A decision that constrains other projects — a shared
+convention, a tool retired in favour of another, a policy — goes here. A
+decision that constrains one project goes in that project's own log at
+`docs/{en,ja}/adr/NNNN-slug.md`, four-digit numbered per project and mirrored
+in both languages. Numbers are never reused in either log: a decision that
+moves leaves a redirect behind, because release notes and changelogs already
+link to it.
+
 | ADR | Status | Summary |
 |-----|--------|---------|
 | [001](adr/001-gemini3-migration.md) | Accepted | Gemini 2.5 → 3 migration plan (defer until GA) |
@@ -27,11 +36,11 @@ not documented after the fact.
 | [009](adr/009-incident-review-skill.md) | Accepted | `incident-review` Skill — retrospective analysis of an organization's own IR communication record; retires the `ai-ir` / `ai-ir2` CLIs |
 | [010](adr/010-incident-research-ioc-stix.md) | Accepted | `incident-research` v0.2 — IoC extraction + deterministic STIX 2.1 output; retires the `ioc-collector` CLI |
 | [011](adr/011-compliance-review-skill.md) | Accepted | `compliance-review` Skill — two-phase (compile/review) security review against internal regulations; retires the `virtual-reviewer` PoC |
-| [012](adr/012-zip-porter-hardening.md) | Accepted | `zip-porter` extraction hardening — fail-fast size limits, pre-flight space budget, overlapping-entry rejection, quarantine propagation, duplicate-name uniquification |
-| [013](adr/013-zip-porter-parallel-compression.md) | Accepted | `zip-porter` compression throughput — parallel per-entry compression with sequential writing, incompressible-data probe; libz-based work (single-file parallelism, compression level) deferred |
-| [014](adr/014-zip-porter-zlib-parallel-deflate.md) | Accepted | `zip-porter` single-file parallel deflate — zlib level 6 everywhere, pigz-style block joins with crc32_combine, bounded waves; no user-facing level knob |
+| [012](adr/012-zip-porter-hardening.md) | Moved | `zip-porter` extraction hardening — **moved** to [`zip-porter` ADR-0001](https://github.com/nlink-jp/zip-porter/blob/main/docs/en/adr/0001-extraction-hardening.md) (project-scoped) |
+| [013](adr/013-zip-porter-parallel-compression.md) | Moved | `zip-porter` compression throughput — **moved** to [`zip-porter` ADR-0002](https://github.com/nlink-jp/zip-porter/blob/main/docs/en/adr/0002-parallel-compression.md) (project-scoped) |
+| [014](adr/014-zip-porter-zlib-parallel-deflate.md) | Moved | `zip-porter` single-file parallel deflate — **moved** to [`zip-porter` ADR-0003](https://github.com/nlink-jp/zip-porter/blob/main/docs/en/adr/0003-zlib-parallel-deflate.md) (project-scoped) |
 | [015](adr/015-knowledge-repository.md) | Accepted | `knowledge` repository — org engineering knowledge base compiled from agent memory (themed bilingual docs); consult-and-feed loop added to Development Policy |
-| [016](adr/016-zip-porter-batch-completion.md) | Accepted | `zip-porter` batch completion reporting — one result per request instead of per archive; trigger-scheduled notifications retire the deferred quit |
+| [016](adr/016-zip-porter-batch-completion.md) | Moved | `zip-porter` batch completion reporting — **moved** to [`zip-porter` ADR-0004](https://github.com/nlink-jp/zip-porter/blob/main/docs/en/adr/0004-batch-completion.md) (project-scoped) |
 
 ---
 
