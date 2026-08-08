@@ -82,6 +82,7 @@ redirect behind, because release notes and changelogs already link to it.
 | [016](adr/016-zip-porter-batch-completion.md) | Moved | `zip-porter` batch completion reporting — **moved** to [`zip-porter` ADR-0004](https://github.com/nlink-jp/zip-porter/blob/main/docs/en/adr/0004-batch-completion.md) (project-scoped) |
 | [017](adr/017-adr-authoring-conventions.md) | Accepted | ADR authoring conventions — mandatory `Binds` header field, placement decision tree with the real misplacement counterexamples, lesson fed to `knowledge` |
 | [018](adr/018-mcp-observability-tiers.md) | Accepted | MCP observability tiers — amends ADR-003 with a fourth tier (target contact from our own IP, `chrome-pilot-mcp`), widens tier 1 to "no external observer", and makes the `get_usage` instruction conditional |
+| [019](adr/019-deployment-repositories.md) | Accepted | Deployment repositories are not series members — a repository holding only one operator's config/data for a tool that lives elsewhere joins no umbrella, is exempt from `check-org.sh`, and may be individually owned |
 
 ---
 
@@ -137,6 +138,14 @@ Before any code is written, produce and get sign-off on the following:
 
    If none of the existing series is a good fit, discuss whether a new series
    is warranted before creating one.
+
+   **Exception — deployment repositories.** A repository that holds only one
+   operator's configuration and accumulated data for a tool living elsewhere,
+   ships nothing, and has no version is a *deployment repository*: it joins no
+   series, appears in no catalogue, is not inspected by `check-org.sh`, and may
+   be owned by an individual. See
+   [ADR-019](adr/019-deployment-repositories.md) for the full definition and
+   the test that distinguishes one from a project.
 
 7. **External platform constraints** — If the tool integrates with external
    platforms (Slack, AWS, GCP, etc.), investigate their API limitations,
