@@ -315,6 +315,13 @@ into the artifact.
 - No `docs/` split and no binaries: the skill's own Markdown *is* the
   product; distribution is a GitHub Release zip whose root is the skill
   folder (see §Release Checklist).
+- **Document the app's own install route first.** A reader on Claude Desktop
+  or claude.ai registers the zip through the app (Customize → Skills); telling
+  them to unzip into `~/.claude/skills/` sends them down the least usable
+  path, and it is the path that breaks when the layout changes. Lead the
+  README's Installation section with the app, keep the manual unzip as the
+  fallback, and describe `make install` as what it is — the development loop,
+  which now installs the built zip so it exercises the same artifact.
 
 #### Makefile template (Skill)
 
@@ -325,10 +332,16 @@ DEST    ?= $(HOME)/.claude/skills
 
 .PHONY: install uninstall check test package clean
 
-install:
-	@mkdir -p "$(DEST)/$(SKILL)"
-	@cp -R "$(SKILL)/." "$(DEST)/$(SKILL)/"
-	@echo "installed: $(SKILL) -> $(DEST)/$(SKILL)"
+# Install what a user installs. Building the zip and unpacking *that* means a
+# packaging defect breaks the developer's own install instead of reaching a
+# release unnoticed — copying the source tree exercises a path no user takes.
+# The removal matters too: copying over a previous install leaves behind files
+# that have since been renamed or deleted.
+install: package
+	@rm -rf "$(DEST)/$(SKILL)"
+	@mkdir -p "$(DEST)"
+	@unzip -q "dist/$(SKILL)-$(VERSION).zip" -d "$(DEST)"
+	@echo "installed from dist/$(SKILL)-$(VERSION).zip -> $(DEST)/$(SKILL)"
 
 uninstall:
 	@rm -rf "$(DEST)/$(SKILL)"
