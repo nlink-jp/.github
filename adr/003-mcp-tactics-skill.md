@@ -101,6 +101,10 @@ Skill; a separate CLI tactics artifact can follow if the need proves real.
 
 ## References
 
+- **Amended by [ADR-018](018-mcp-observability-tiers.md)** (2026-08-08) — the
+  three tiers below become four, tier 1 is widened from "local cache" to "no
+  external observer", and the "every server ships `get_usage`" instruction
+  becomes conditional
 - [CONVENTIONS.md](../CONVENTIONS.md) — documentation structure, ADR process
 - [skills-series](https://github.com/nlink-jp/skills-series) — implementation
 - [mcp-guardian](https://github.com/nlink-jp/mcp-guardian) — runtime governance, the enforcement counterpart

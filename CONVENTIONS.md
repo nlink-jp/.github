@@ -81,6 +81,7 @@ redirect behind, because release notes and changelogs already link to it.
 | [015](adr/015-knowledge-repository.md) | Accepted | `knowledge` repository — org engineering knowledge base compiled from agent memory (themed bilingual docs); consult-and-feed loop added to Development Policy |
 | [016](adr/016-zip-porter-batch-completion.md) | Moved | `zip-porter` batch completion reporting — **moved** to [`zip-porter` ADR-0004](https://github.com/nlink-jp/zip-porter/blob/main/docs/en/adr/0004-batch-completion.md) (project-scoped) |
 | [017](adr/017-adr-authoring-conventions.md) | Accepted | ADR authoring conventions — mandatory `Binds` header field, placement decision tree with the real misplacement counterexamples, lesson fed to `knowledge` |
+| [018](adr/018-mcp-observability-tiers.md) | Accepted | MCP observability tiers — amends ADR-003 with a fourth tier (target contact from our own IP, `chrome-pilot-mcp`), widens tier 1 to "no external observer", and makes the `get_usage` instruction conditional |
 
 ---
 
