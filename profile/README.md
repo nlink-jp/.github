@@ -136,8 +136,9 @@ Small, local-first CLI tools for LLM interaction, retrieval, and classification.
 ### skills-series — Claude Code Skills
 
 Claude Code Skills packaging the organization's workflows — development
-process, research, meeting minutes, and security analysis. One repository
-per skill; each releases a skill zip installable into `~/.claude/skills/`
+process, research, meeting minutes, security analysis, and news
+collection. One repository per skill; each releases a skill zip
+installable into `~/.claude/skills/`
 or uploadable to claude.ai (Settings → Skills).
 
 | Skill | Command | Description |
@@ -147,6 +148,7 @@ or uploadable to claude.ai (Settings → Skills).
 | [incident-review](https://github.com/nlink-jp/incident-review) | `/incident-review <record>` | Own-incident retrospective analysis — turns your IR communication record (Slack exports, plain-text logs, connector-read channels) into a schema-validated report (summary / activity / roles / process review) plus reusable tactic knowledge, behind a defang and nonce-isolation preprocessing gate; successor to the ai-ir / ai-ir2 CLIs |
 | [mcp-tactics](https://github.com/nlink-jp/mcp-tactics) | `/mcp-tactics` | Cross-cutting tactics book for the organization's MCP servers and proxies — decision tables from input artifact to route, cross-server chains, and a four-tier escalation doctrine ranked by who can observe the query: no external observer, third party, target contact via urlscan, target contact from our own IP |
 | [meeting-notes](https://github.com/nlink-jp/meeting-notes) | `/meeting-notes <transcript>` | Meeting transcript to structured minutes — validated 3-layer JSON (verbatim quotes / decisions with rationale / summaries) compiled to Markdown or HTML; successor to the meeting-note CLI |
+| [news-digest](https://github.com/nlink-jp/news-digest) | `/news-digest --repo <corpus>` | Feed collection and digesting — the agent scores novelty, significance and relevance behind a nonce-isolation gate and never writes a priority, which a swappable profile's decision table derives; continuing stories are tracked so a rehash with no new facts is named as such. The engine is public and holds no data: the feed list, relevance profile and article corpus live in a private corpus repository joined by a versioned contract |
 | [rfp](https://github.com/nlink-jp/rfp) | `/rfp [tool-name]` | Interactive RFP facilitation — collects requirements through Q&A against CONVENTIONS.md Phase 1 and generates structured RFP documents |
 | [service-research](https://github.com/nlink-jp/service-research) | `/service-research <name>` | Product/service risk research — reads ToS, privacy-policy, and security primary sources on the web into a schema-validated JSON report with a three-tier risk rating plus compiled Markdown; successor to the product-research CLI |
 
