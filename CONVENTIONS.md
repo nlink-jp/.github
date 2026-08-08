@@ -1686,6 +1686,17 @@ as-is (`url` + `sha256` → `bin.install` / `app`). Building from source would
 strip the Developer ID signature; installing the notarized asset preserves it,
 so `spctl -a` reports `source=Notarized Developer ID` even on a clean machine.
 
+### Formulae declare no `version`; casks do
+
+A formula's `url` carries the version literally, so Homebrew scans it from
+there and restating it is what `brew audit --online` reports as *"version X is
+redundant with version scanned from URL"*. `formula.rb.tmpl` therefore emits no
+`version` line.
+
+A cask's `url` interpolates `#{version}` instead of spelling it out, so there
+the declaration is what *defines* the version and must stay. This asymmetry
+between the two templates is deliberate — do not "fix" one to match the other.
+
 ### Eligibility
 
 Only tools that ship a signed + notarized single macOS arm64 binary or `.app`:
