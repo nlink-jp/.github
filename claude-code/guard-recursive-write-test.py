@@ -33,13 +33,13 @@ CASES = [
     ("goimports -w internal", True),
     ("clang-format -i src/x.c", True),
     # Absolute targets are the point of the guard: allowed.
-    ("gofmt -w /Users/magi/works/nlink-jp/util-series/chrome-pilot-mcp", False),
-    ("gofmt -w ~/works/nlink-jp/util-series/chrome-pilot-mcp", False),
+    ("gofmt -w /Users/you/src/example-org/some-project", False),
+    ("gofmt -w ~/src/example-org/some-project", False),
     ("sed -i '' 's/a/b/' /tmp/x.go", False),
     ("prettier --write /abs/path/file.ts", False),
     ("black /abs/pkg", False),
     # Anchored by an absolute cd: allowed.
-    ("cd /Users/magi/works/nlink-jp/util-series/chrome-pilot-mcp && gofmt -w .", False),
+    ("cd /Users/you/src/example-org/some-project && gofmt -w .", False),
     ("cd /abs/repo && ruff format", False),
     # Read-only or module-scoped: never blocked.
     ("gofmt -l .", False),
