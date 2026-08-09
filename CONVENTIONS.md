@@ -1554,6 +1554,36 @@ username, OS, and directory structure.
 - If a local replace is needed during development, remove it before committing
 - `check-org.sh` (check 8) scans for this automatically
 
+### Local paths in any tracked file
+
+`go.mod` is not the only place a home directory escapes. A sweep in 2026-08
+found them in a config example, a Go RFP, an ADR's pasted tool output, a Swift
+test fixture, a shell script, and a changelog entry describing the removal of
+exactly this kind of leak. **Write example paths with a placeholder** —
+`/Users/you/…` is what most of these repos already use.
+
+`check-org.sh` (check 11) scans every tracked file of every submodule. It
+matches **the account name of the machine running it**, not a list of
+"suspicious-looking" names: docs and tests legitimately contain `/Users/test`,
+`/Users/tester`, `/Users/yourname` and `/home/u`, and a check that flags those
+is a check nobody reads. The trade is stated plainly — a username belonging to
+someone else's machine is not detected.
+
+### README status prose
+
+**Do not describe release status in prose.** Whether something has shipped is
+already conveyed by whether the README gives install instructions, and a version
+number in prose is a second copy of what `git tag` already answers.
+
+Nothing in the release procedure reads a README banner, so "not released yet" —
+true the moment it is written — survives every release that disproves it. Three
+repos were found saying it after shipping; one had shipped four times and
+printed its own `brew install` two lines below the banner.
+
+`check-org.sh` (check 12) fails when a repo has a GitHub release and its README
+still claims otherwise. "Pre-release gates" and "pre-release smoke test" name a
+procedure, not a status, and deliberately do not trip it.
+
 ### Incident response for accidental secret exposure
 
 If secrets or environment-specific values are pushed to a public repository:

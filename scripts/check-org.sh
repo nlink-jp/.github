@@ -59,6 +59,69 @@ is_archived() {
   grep -q "\[$name\].*(archived)" "$dir/README.md" 2>/dev/null
 }
 
+# --- released repositories ---------------------------------------------------
+# Same shape as the archived listing: one org query, cached for the run, and
+# absent when gh is unavailable. Used to catch a README that still calls a
+# shipped tool unreleased — a claim that is true when written and only becomes
+# false at the first release, which is why nothing catches it otherwise.
+released_list=""
+released_loaded=0
+
+load_released() {
+  [ "$released_loaded" -eq 1 ] && return 0
+  released_loaded=1
+  command -v gh >/dev/null 2>&1 || return 0
+  released_list=$(gh repo list nlink-jp --limit 300 --json name,latestRelease \
+    --jq '.[] | select(.latestRelease != null) | .name' 2>/dev/null) || released_list=""
+  return 0
+}
+
+# has_release NAME — false when gh is unavailable, so the check stays quiet
+# rather than accusing every repo of lying.
+has_release() {
+  load_released
+  [ -n "$released_list" ] || return 1
+  printf '%s\n' "$released_list" | grep -qx -- "$1"
+}
+
+# unreleased_claims — line filter: echoes README lines claiming nothing has
+# shipped. Deliberately narrow; "pre-release smoke test" is a procedure, not a
+# status, and must not trip this.
+unreleased_claim_re='[Nn]ot yet released|[Nn]ot released yet|未リリース|プレリリース|[Pp]re-release[.:：]'
+
+unreleased_claims() {
+  grep -E "$unreleased_claim_re" || true
+}
+
+# --- leaked home directories -------------------------------------------------
+# An absolute path like /Users/<name>/ in a tracked file publishes a username
+# and a local directory layout. The hard part is telling a leak from an example:
+# docs and tests are full of legitimate fake homes (/Users/you, /Users/test,
+# /Users/tester, /Users/yourname, /home/u), and an allowlist of invented names
+# is a losing game — flagging them all is how a check gets ignored.
+#
+# So this matches on the *account name* instead, supplied by the caller. In
+# practice that is whoever runs this script, which is precisely the
+# pasted-from-my-machine case that produces real leaks.
+#
+# Limitation, stated rather than papered over: a username belonging to some
+# other machine is not detected. For a single-operator org that is the whole
+# population; for a team, pass every account you want covered.
+
+# home_path_leaks ACCOUNT... — line filter: echoes lines naming one of these
+# accounts under /Users or /home.
+home_path_leaks() {
+  local re
+  [ "$#" -gt 0 ] || { cat >/dev/null; return 0; }
+  re=$(printf '%s|' "$@")
+  grep -E "/(Users|home)/(${re%|})([^A-Za-z0-9._-]|$)" || true
+}
+
+# local_accounts — the account names this machine could leak.
+local_accounts() {
+  { id -un 2>/dev/null; [ -n "${HOME:-}" ] && basename "$HOME"; } | sort -u | grep -v '^$'
+}
+
 # --- Makefile build-output resolution ---------------------------------------
 # The convention is that `make build` writes into dist/. What matters is the
 # resolved *value* of the output path, not the variable name used to spell it:
@@ -364,7 +427,55 @@ check_series() {
     done < <(git -C "$dir" submodule foreach --quiet 'echo "        $displaypath"')
   fi
 
-  # 11. Submodule pointers vs origin/main
+  # 11. Tracked files must not carry this machine's home directory
+  #     accounts is built with a read loop, not mapfile: macOS ships bash 3.2
+  #     and mapfile is a bash 4 builtin.
+  accounts=()
+  while IFS= read -r acct; do
+    [ -n "$acct" ] && accounts+=("$acct")
+  done < <(local_accounts)
+
+  if [ -f "$dir/.gitmodules" ] && [ "${#accounts[@]}" -gt 0 ]; then
+    while IFS= read -r subpath; do
+      subpath="${subpath#        }"
+      subdir="$dir/$subpath"
+      name=$(basename "$subpath")
+
+      # -I skips binaries.
+      home_hits=$(git -C "$subdir" grep -nI -E '/(Users|home)/' HEAD 2>/dev/null \
+        | home_path_leaks "${accounts[@]}" | head -20 || true)
+      if [ -n "$home_hits" ]; then
+        echo "    $FAIL $name: tracked files contain this machine's home directory:"
+        echo "$home_hits" | sed 's/^/            /'
+        errors=$((errors + 1))
+      fi
+    done < <(git -C "$dir" submodule foreach --quiet 'echo "        $displaypath"')
+  fi
+
+  # 12. A shipped tool's README must not say it has not shipped.
+  #     Nothing in the release procedure reads README prose, so a status
+  #     written at scaffold time survives every release that disproves it.
+  if [ -f "$dir/.gitmodules" ]; then
+    while IFS= read -r subpath; do
+      subpath="${subpath#        }"
+      subdir="$dir/$subpath"
+      name=$(basename "$subpath")
+
+      has_release "$name" || continue
+      for readme in README.md README.ja.md; do
+        [ -f "$subdir/$readme" ] || continue
+        claim=$(unreleased_claims < "$subdir/$readme" | head -3)
+        if [ -n "$claim" ]; then
+          echo "    $FAIL $name: $readme calls a released tool unreleased:"
+          echo "$claim" | sed 's/^/            /'
+          errors=$((errors + 1))
+        fi
+      done
+    done < <(git -C "$dir" submodule foreach --quiet 'echo "        $displaypath"')
+  fi
+
+  # 13. Submodule pointers vs origin/main
+  #     (was check 11 before the home-path and release-status checks)
   if [ ! -f "$dir/.gitmodules" ]; then
     return
   fi

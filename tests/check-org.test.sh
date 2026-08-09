@@ -179,6 +179,72 @@ var_is 'makefile_var: unassigned is empty'    NOPE      ''
 var_is 'makefile_var: no suffix-name match'   BINARY    'tool'
 var_is 'makefile_var: no prefix-name match'   DIST      ''
 
+# ---- 9. home_path_leaks: the account leaks, invented names do not -----------
+# The line filter behind check 11. Every "leaks" case is a real line found in a
+# public repo; every "clean" case is a legitimate fake home that was ALSO found
+# in these repos — an allowlist of invented names is unwinnable, which is why
+# the filter matches the account instead. Account under test: "realuser".
+
+# leaks LABEL LINE
+leaks() {
+  if [ -n "$(printf '%s\n' "$2" | home_path_leaks realuser)" ]; then ok "$1"; else no "$1"; fi
+}
+# clean LABEL LINE
+clean() {
+  _got=$(printf '%s\n' "$2" | home_path_leaks realuser)
+  if [ -z "$_got" ]; then ok "$1"; else no "$1"; printf '        flagged: [%s]\n' "$_got" >&2; fi
+}
+
+leaks 'markdown config example'  '    "/Users/realuser/works/org/_wip/tool/samples",'
+leaks 'shell variable'           'SW="/Users/realuser/works/tool/dist/tool"'
+leaks 'swift test fixture'       '            "/Users/realuser/works/org",'
+leaks 'json tool output'         '  "host_work_dir": "/Users/realuser/.data-toolbox/samples/work/"'
+leaks 'elided tail, named user'  '  => /Users/realuser/...` comment line from `app/go.mod`'
+leaks 'linux home'               'CFG=/home/realuser/.config/tool.toml'
+
+clean 'placeholder you'          '      "command": "/Users/you/path/to/tool/dist/tool",'
+clean 'placeholder alice'        'A line like `replace foo => /Users/alice/src/foo` leaks the'
+clean 'go test fixture'          '	t.Setenv("HOME", "/Users/test")'
+clean 'swift test fixture'       '    private let home = "/Users/tester"'
+clean 'docs walkthrough'         'args = ["run", "--project", "/Users/yourname/works/skeleton"]'
+clean 'single-letter fixture'    '	got := Candidates("/Users/x")'
+clean 'short linux fixture'      '	withXDG := DefaultDataDir(env, "/home/u")'
+clean 'elided user'              'the path is /Users/.../samples/sales.csv'
+clean 'no home path at all'      'make build          # -> dist/tool'
+# The account has to match the whole segment, or a longer real name slips by.
+clean 'account is a prefix only' 'see /Users/realuser2/src for the layout'
+# Multiple accounts (id -un and the home basename can differ).
+multi=$(printf '%s\n' '/Users/other/x' | home_path_leaks realuser other)
+if [ -n "$multi" ]; then ok 'second account also matches'; else no 'second account also matches'; fi
+# No accounts supplied: consume input, flag nothing (gh-less / odd environments).
+none=$(printf '%s\n' '/Users/realuser/x' | home_path_leaks)
+if [ -z "$none" ]; then ok 'no accounts given flags nothing'; else no 'no accounts given flags nothing'; fi
+
+# ---- 10. unreleased_claims: status prose vs procedure names -----------------
+# The line filter behind check 12.
+
+# claims LABEL LINE
+claims() {
+  if [ -n "$(printf '%s\n' "$2" | unreleased_claims)" ]; then ok "$1"; else no "$1"; fi
+}
+# noclaim LABEL LINE
+noclaim() {
+  _got=$(printf '%s\n' "$2" | unreleased_claims)
+  if [ -z "$_got" ]; then ok "$1"; else no "$1"; printf '        flagged: [%s]\n' "$_got" >&2; fi
+}
+
+claims 'en banner'        '> **Pre-release.** Everything the design calls for works.'
+claims 'en status line'   '> **Status: in development, not yet released.** The shelf works.'
+claims 'en install line'  'Not yet released. To build from source (Go 1.25+):'
+claims 'ja banner'        '> **プレリリース。** 設計にある機能はすべて動きます。'
+claims 'ja install line'  '未リリース。公開後は以下で入ります。'
+
+# "Pre-release" also names a procedure. Those must not trip the check, or it
+# fires on every repo that documents its release gates and gets ignored.
+noclaim 'pre-release gates heading'  '**Pre-release gates (must pass before tagging):**'
+noclaim 'pre-release smoke'          '### 6.4 Manual smoke (pre-release)'
+noclaim 'ordinary install line'      'brew install nlink-jp/tap/tool'
+
 # ---- summary ---------------------------------------------------------------
 echo "------------------------------------------------------------"
 echo "passed: $pass   failed: $fail"
