@@ -99,6 +99,7 @@ Works in progress. APIs, features, and interfaces may change without notice.
 |------|------|-------------|
 | [agent-skeleton](https://github.com/nlink-jp/agent-skeleton) | Python | Autonomous agent skeleton — plan-approve-execute loop, per-tool approval, 2-tier memory compression, MCP support |
 | [agentic-web-search](https://github.com/nlink-jp/agentic-web-search) | Go | ~~Agentic web search — autonomous research via local LLM + Brave Search API~~ **FROZEN** (search API ToS concerns) |
+| [gem-agent](https://github.com/nlink-jp/gem-agent) | Go | Interactive CLI agent on Vertex AI Gemini — continuity tool for when Claude Code is unavailable; sandboxed file/shell tools, MCP, two-tier auto-approve (macOS) |
 | [llm-othello](https://github.com/nlink-jp/llm-othello) | Go | Browser-based Othello against a local LLM — server-side move generation via OpenAI-compatible API |
 | [log-analyzer](https://github.com/nlink-jp/log-analyzer) | Python | ~~Large JSONL log analyzer — LLM-driven analysis with timestamp-based chunking for files exceeding context limits~~ **Archived** — no longer used or maintained |
 | [m5-clock](https://github.com/nlink-jp/m5-clock) | C++ | NTP-synchronized digital clock for M5Stack Core2 — night mode, RTC backup, SD card config |
