@@ -1892,9 +1892,11 @@ validate the tap approach — but is **not** part of the routine release process
 ### `check-org.sh` enforcement
 
 Check 10 verifies every repo's vendored `scripts/gen-brew.sh` (and the templates
-+ `release-brew.mk` it carries), plus the vendored `notarize-darwin-app.sh`
-(which writes the `verify-release` marker), matches the canonical copy in
-`.github/templates/`. Re-vendor after changing a canonical template.
++ `release-brew.mk` it carries), plus the vendored `notarize-darwin-app.sh` and
+`notarize-darwin.sh` (which write the `verify-release` marker; also checked
+under `build-tools/` for repos whose `scripts/` is part of the shipped bundle),
+matches the canonical copy in `.github/templates/`. Re-vendor after changing a
+canonical template.
 
 ---
 
@@ -1985,7 +1987,7 @@ submodule updates, and scaffold creation.
 | 7 | Secret scanning | Tracked files containing likely secrets (service accounts, tokens, API keys) |
 | 8 | go.mod local replace | `replace` directives with local filesystem paths (leaks username/directory structure) |
 | 9 | HTTPS URLs | `.gitmodules` using SSH instead of HTTPS |
-| 10 | Vendored release-tooling assets | A repo's vendored `scripts/gen-brew.sh` (or the formula/cask template, `release-brew.mk`, or `notarize-darwin-app.sh`) drifted from `.github/templates/` (see §Homebrew Tap Distribution and §Code Signing → Verifying a release) |
+| 10 | Vendored release-tooling assets | A repo's vendored `scripts/gen-brew.sh` (or the formula/cask template, `release-brew.mk`, `notarize-darwin-app.sh`, or `notarize-darwin.sh` — the latter two also under `build-tools/`) drifted from `.github/templates/` (see §Homebrew Tap Distribution and §Code Signing → Verifying a release) |
 | 10b | Vendored skill validator | A skill repo's `tests/validate-skill.sh` drifted from `.github/templates/validate-skill.sh` (ADR-006 — edit the canonical, re-vendor into every skill repo) |
 | 11 | Submodule pointers | Recorded commit differs from `origin/main` of submodule |
 | 12 | Release archive naming *(planned)* | Latest release assets match `<name>-v<version>-<os>-<arch>.<ext>`; darwin is zip & arm64-only (no darwin-amd64, no `.dmg`/`.tar.gz` for darwin) |

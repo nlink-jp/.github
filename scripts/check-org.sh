@@ -396,11 +396,22 @@ check_series() {
       if is_archived "$name" "$dir"; then
         continue
       fi
-      for f in gen-brew.sh formula.rb.tmpl cask.rb.tmpl release-brew.mk notarize-darwin-app.sh; do
+      for f in gen-brew.sh formula.rb.tmpl cask.rb.tmpl release-brew.mk notarize-darwin-app.sh notarize-darwin.sh; do
         vend="$subdir/scripts/$f"
         [ -f "$vend" ] || continue
         if ! cmp -s "$vend" "$tpl/$f"; then
           echo "    $FAIL $name: vendored scripts/$f drifted from .github/templates/$f"
+          errors=$((errors + 1))
+        fi
+      done
+      # slack-router keeps its release tooling in build-tools/ (its scripts/
+      # directory is part of the shipped bundle); check the notarize
+      # canonicals there too so that layout is not a silent drift gap.
+      for f in notarize-darwin.sh notarize-darwin-app.sh; do
+        vend="$subdir/build-tools/$f"
+        [ -f "$vend" ] || continue
+        if ! cmp -s "$vend" "$tpl/$f"; then
+          echo "    $FAIL $name: vendored build-tools/$f drifted from .github/templates/$f"
           errors=$((errors + 1))
         fi
       done
