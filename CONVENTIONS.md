@@ -1049,6 +1049,17 @@ For the notarytool submission log on a specific submission:
 xcrun notarytool log <submission-id> --keychain-profile nlink-jp-notary
 ```
 
+GUI repos additionally carry a mechanical gate: `make verify-release`.
+`notarize-darwin-app.sh` writes a `<app>.notarized` marker **only** after
+`status: Accepted` (and clears any previous marker at startup), and
+`verify-release` requires the marker plus an offline `stapler validate`
+of the bundle. The notarize step itself stays fail-open by design
+(contributors without credentials can still build), which is exactly why
+manual log-reading is not enough: an unattended release once shipped the
+fail-open path with everything green (the screen locked mid-run and the
+keychain probe failed). Run `make verify-release` after `make package`,
+before any `gh release upload`.
+
 ### Why no stapling for CLI binaries
 
 `stapler staple` only works on app bundles, `.dmg`, and `.pkg`.
@@ -1150,6 +1161,16 @@ package: build
         @$(NOTARIZE_SCRIPT) dist/$(APP).app "$(NOTARY_PROFILE)"
         cd dist && /usr/bin/ditto -c -k --keepParent \
                 $(APP).app $(APP)-$(VERSION)-darwin-arm64.zip
+
+verify-release:
+        @test -f "dist/$(APP).app.notarized" || { \
+                echo "verify-release: FAIL — dist/$(APP).app has no notarization marker."; \
+                echo "  make package must end with '[notarize-app] ...: Accepted and stapled'. Do not upload."; \
+                exit 1; }
+        @xcrun stapler validate dist/$(APP).app
+        @test -f "dist/$(APP)-$(VERSION)-darwin-arm64.zip" || { \
+                echo "verify-release: FAIL — release zip missing"; exit 1; }
+        @echo "verify-release: OK ($(VERSION) — marker present, ticket stapled)"
 ```
 
 Notes:
@@ -1211,6 +1232,16 @@ package: build
         @mkdir -p dist
         @cd $(dir $(APP_PATH)) && /usr/bin/ditto -c -k --keepParent \
                 $(APP).app "$(CURDIR)/dist/$(APP)-v$(VERSION)-darwin-arm64.zip"
+
+verify-release:
+        @test -f "$(APP_PATH).notarized" || { \
+                echo "verify-release: FAIL — $(APP_PATH) has no notarization marker."; \
+                echo "  make package must end with '[notarize-app] ...: Accepted and stapled'. Do not upload."; \
+                exit 1; }
+        @xcrun stapler validate $(APP_PATH)
+        @test -f "dist/$(APP)-v$(VERSION)-darwin-arm64.zip" || { \
+                echo "verify-release: FAIL — release zip missing"; exit 1; }
+        @echo "verify-release: OK (v$(VERSION) — marker present, ticket stapled)"
 ```
 
 Tauri-specific traps to be aware of:
@@ -1295,6 +1326,16 @@ package: build-app
         @$(NOTARIZE_SCRIPT) $(APP_BUNDLE) "$(NOTARY_PROFILE)"
         @cd $(DIST_DIR) && /usr/bin/ditto -c -k --keepParent \
                 $(APP_NAME).app $(NAME)-$(VERSION)-darwin-arm64.zip
+
+verify-release:
+        @test -f "$(APP_BUNDLE).notarized" || { \
+                echo "verify-release: FAIL — $(APP_BUNDLE) has no notarization marker."; \
+                echo "  make package must end with '[notarize-app] ...: Accepted and stapled'. Do not upload."; \
+                exit 1; }
+        @xcrun stapler validate $(APP_BUNDLE)
+        @test -f "$(DIST_DIR)/$(NAME)-$(VERSION)-darwin-arm64.zip" || { \
+                echo "verify-release: FAIL — release zip missing"; exit 1; }
+        @echo "verify-release: OK ($(VERSION) — marker present, ticket stapled)"
 ```
 
 Notes:
@@ -1872,9 +1913,11 @@ Before tagging a release, verify every item:
      ad-hoc + un-notarized — do not proceed past this step in that
      case
 5. Verify the darwin signature + notarization (see §Code Signing →
-   Verifying a release). For GUI bundles, `spctl --assess` must
-   return `source=Notarized Developer ID` — this is the only release
-   gate for GUI distribution
+   Verifying a release). For GUI bundles, run `make verify-release` —
+   it gates on the `.notarized` marker (written only on
+   `status: Accepted`) plus `stapler validate`, so the notarize step's
+   fail-open path cannot reach an upload. `spctl --assess` must
+   return `source=Notarized Developer ID`
 6. Upload zips one by one (`gh release upload`)
 7. For tap-eligible tools (Go CLI → formula, notarized GUI `.app` → cask),
    run `make brew` to generate this release's formula/cask from the built
