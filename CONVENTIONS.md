@@ -987,7 +987,31 @@ package: build-all
 		rm -rf $$stage; \
 	done
 	@scripts/notarize-darwin.sh dist/$(BINARY)-$(VERSION)-darwin-arm64.zip "$(NOTARY_PROFILE)"
+
+## verify-release: refuse to release an un-notarized zip (marker gate)
+verify-release:
+	@test -f "dist/$(BINARY)-$(VERSION)-darwin-arm64.zip.notarized" || { \
+		echo "verify-release: FAIL — $(BINARY)-$(VERSION)-darwin-arm64.zip has no notarization marker."; \
+		echo "  make package must end with '[notarize] ...: Accepted'. Do not upload this zip."; \
+		exit 1; }
+	@test "dist/$(BINARY)-$(VERSION)-darwin-arm64.zip.notarized" -nt "dist/$(BINARY)-$(VERSION)-darwin-arm64.zip" || { \
+		echo "verify-release: FAIL — the zip was rebuilt after its marker (re-run make package)."; \
+		exit 1; }
+	@tmp=$$(mktemp -d) && \
+		unzip -oq "dist/$(BINARY)-$(VERSION)-darwin-arm64.zip" -d "$$tmp" && \
+		"$$tmp/$(BINARY)" --version && \
+		spctl -a -vv -t install "$$tmp/$(BINARY)" 2>&1 | head -2 || true; \
+		rm -rf "$$tmp"
+	@echo "verify-release: OK ($(VERSION), notarization marker present)"
 ```
+
+The marker is written by `notarize-darwin.sh` only on `status: Accepted`
+(and cleared at script start). The `-nt` freshness test is the CLI's
+second gate: bare zips cannot be stapled, so unlike GUI bundles there is
+no offline `stapler validate` — a zip rebuilt after its marker must be
+re-notarized. The spctl line is informational only (piped through `head`
+it cannot fail the chain, and the online ticket lookup can lag a fresh
+submission).
 
 Copy the two scripts verbatim from `nlink-jp/.github/templates/`:
 
@@ -1914,11 +1938,12 @@ Before tagging a release, verify every item:
      ad-hoc + un-notarized — do not proceed past this step in that
      case
 5. Verify the darwin signature + notarization (see §Code Signing →
-   Verifying a release). For GUI bundles, run `make verify-release` —
-   it gates on the `.notarized` marker (written only on
-   `status: Accepted`) plus `stapler validate`, so the notarize step's
-   fail-open path cannot reach an upload. `spctl --assess` must
-   return `source=Notarized Developer ID`
+   Verifying a release). Run `make verify-release` — it gates on the
+   `.notarized` marker (written only on `status: Accepted`), plus
+   `stapler validate` for GUI bundles and a marker-freshness test for
+   CLI zips, so the notarize step's fail-open path cannot reach an
+   upload. For GUI bundles `spctl --assess` must return
+   `source=Notarized Developer ID`
 6. Upload zips one by one (`gh release upload`)
 7. For tap-eligible tools (Go CLI → formula, notarized GUI `.app` → cask),
    run `make brew` to generate this release's formula/cask from the built
