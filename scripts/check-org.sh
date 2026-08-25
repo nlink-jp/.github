@@ -396,7 +396,7 @@ check_series() {
       if is_archived "$name" "$dir"; then
         continue
       fi
-      for f in gen-brew.sh formula.rb.tmpl cask.rb.tmpl release-brew.mk; do
+      for f in gen-brew.sh formula.rb.tmpl cask.rb.tmpl release-brew.mk notarize-darwin-app.sh; do
         vend="$subdir/scripts/$f"
         [ -f "$vend" ] || continue
         if ! cmp -s "$vend" "$tpl/$f"; then
