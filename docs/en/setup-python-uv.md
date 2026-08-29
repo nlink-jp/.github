@@ -13,8 +13,6 @@ All projects that have a `pyproject.toml` or `uv.lock` file are covered. Major t
 | pptx-to-markdown | util-series | pptx → Markdown conversion |
 | news-collector | cybersecurity-series | News collection |
 | slack-monitor | lab-series | Slack channel summarizer |
-| agent-skeleton | lab-series | Autonomous agent |
-| mcp-skeleton | lab-series | MCP learning skeleton |
 | confl-cli | cli-series | Confluence CLI client |
 
 ## Prerequisites

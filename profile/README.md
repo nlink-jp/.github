@@ -97,7 +97,7 @@ Works in progress. APIs, features, and interfaces may change without notice.
 
 | Tool | Lang | Description |
 |------|------|-------------|
-| [agent-skeleton](https://github.com/nlink-jp/agent-skeleton) | Python | Autonomous agent skeleton — plan-approve-execute loop, per-tool approval, 2-tier memory compression, MCP support |
+| [agent-skeleton](https://github.com/nlink-jp/agent-skeleton) | Python | ~~Autonomous agent skeleton — plan-approve-execute loop, per-tool approval, 2-tier memory compression, MCP support~~ **Archived** — no longer used or maintained |
 | [agentic-web-search](https://github.com/nlink-jp/agentic-web-search) | Go | ~~Agentic web search — autonomous research via local LLM + Brave Search API~~ **FROZEN** (search API ToS concerns) |
 | [gem-agent](https://github.com/nlink-jp/gem-agent) | Go | Interactive CLI agent on Vertex AI Gemini — continuity tool for when Claude Code is unavailable; sandboxed file/shell tools, MCP, two-tier auto-approve (interactive and headless `-p`), session resume, context compaction (macOS) |
 | [llm-othello](https://github.com/nlink-jp/llm-othello) | Go | Browser-based Othello against a local LLM — server-side move generation via OpenAI-compatible API |
@@ -108,7 +108,7 @@ Works in progress. APIs, features, and interfaces may change without notice.
 | [magi-system](https://github.com/nlink-jp/magi-system) | Python | ~~Multi-agent discussion system with 3 AI personas (MELCHIOR / BALTHASAR / CASPER)~~ **Archived** — no longer used or maintained |
 | [magi-system2](https://github.com/nlink-jp/magi-system2) | Python | ~~Multi-persona AI discussion — dynamic persona generation, dual memory, adaptive facilitation via Gemini~~ **Archived** — no longer used or maintained |
 | [mail-watcher](https://github.com/nlink-jp/mail-watcher) | Bash | ~~Mail monitoring workflow — watches for incoming eml/msg files, analyzes with LLM, and posts Slack notifications~~ **Archived** — no longer used or maintained |
-| [mcp-skeleton](https://github.com/nlink-jp/mcp-skeleton) | Python | MCP server skeleton — raw JSON-RPC 2.0 over stdio/SSE with API key auth, for learning MCP internals |
+| [mcp-skeleton](https://github.com/nlink-jp/mcp-skeleton) | Python | ~~MCP server skeleton — raw JSON-RPC 2.0 over stdio/SSE with API key auth, for learning MCP internals~~ **Archived** — no longer used or maintained |
 | [meeting-note](https://github.com/nlink-jp/meeting-note) | Python | ~~Meeting minutes structuring tool — audio/transcript to structured JSON via Gemini, then compile to Markdown/HTML~~ **Archived** — superseded by [meeting-notes](https://github.com/nlink-jp/meeting-notes) |
 | [sai](https://github.com/nlink-jp/sai) | Python | ~~Context-aware Slack bot with RAG memory and natural language command execution~~ **Archived** — no longer used or maintained |
 | [slack-monitor](https://github.com/nlink-jp/slack-monitor) | Python | Real-time Slack channel summarizer with local/cloud LLM and Textual TUI |

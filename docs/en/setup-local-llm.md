@@ -16,7 +16,6 @@ This setup is required if you use any of the following tools.
 | ask-llm-mcp | util-series | Go | MCP: local-LLM second opinions |
 | shell-agent-v2 | util-series | Go/React | Data-analysis desktop (local LLM / Vertex hybrid) |
 | slack-monitor | lab-series | Python | Slack channel summarization |
-| agent-skeleton | lab-series | Python | Autonomous agent |
 
 ## Prerequisites
 

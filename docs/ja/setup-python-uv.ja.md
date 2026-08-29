@@ -13,8 +13,6 @@ Python 製ツールを使うための環境構築手順です。Python のイン
 | pptx-to-markdown | util-series | pptx→Markdown変換 |
 | news-collector | cybersecurity-series | ニュース収集 |
 | slack-monitor | lab-series | Slackチャンネル要約 |
-| agent-skeleton | lab-series | 自律エージェント |
-| mcp-skeleton | lab-series | MCP学習用スケルトン |
 | confl-cli | cli-series | Confluence CLIクライアント |
 
 ## 必要なもの

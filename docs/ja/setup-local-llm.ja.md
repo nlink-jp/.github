@@ -16,7 +16,6 @@
 | ask-llm-mcp | util-series | Go | MCP: ローカルLLM セカンドオピニオン |
 | shell-agent-v2 | util-series | Go/React | データ分析デスクトップ（ローカルLLM/Vertex ハイブリッド） |
 | slack-monitor | lab-series | Python | Slackチャンネル要約 |
-| agent-skeleton | lab-series | Python | 自律エージェント |
 
 ## 必要なもの
 
