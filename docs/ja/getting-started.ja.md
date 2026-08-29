@@ -24,15 +24,15 @@ brew install --cask nlink-jp/tap/<name>   # GUI アプリ
 
 ## 2. ツールの前提環境
 
-「そのツールが動くのに外部の何が要るか」で分類しています。**1つのツールが複数に該当することがあります**（例: news-collector は Vertex AI ＋ Slack、quick-translate はローカルLLM ＋ macOS GUI）。正確な要件は各ツールの README が最終根拠です。
+「そのツールが動くのに外部の何が要るか」で分類しています。**1つのツールが複数に該当することがあります**（例: news-collector は Vertex AI ＋ Slack、shell-agent-v2 はローカルLLM ＋ macOS GUI）。正確な要件は各ツールの README が最終根拠です。
 
 | 前提 | 必要なセットアップ | 対象ツールの例 |
 |------|----------------|-------------|
 | **認証情報なし・オフライン** | 追加準備不要 | json-to-table, json-filter, csv-to-json, rex, sdate, jstats, jviz, lookup, eml-to-jsonl, msg-to-jsonl, markdown-viewer, instant-translate と、lookup 系の大半（tor-exit-lookup, icloud-relay-lookup, mac-lookup, whois-lookup, doh-lookup, rdns-lookup） |
 | **サードパーティのAPIキー/トークン** | 各サービスでキーを取得（手順は各README） | abuse-lookup（AbuseIPDB キー）, urlscan-lookup（urlscan.io キー）, asn-lookup（IPinfo トークン。DB取得時のみ、照合はオフライン）, malware-lookup（abuse.ch キーは任意） |
 | **Vertex AI (Gemini)** | [Vertex AI セットアップ](setup-vertex-ai.ja.md) | gem-cli, gem-query, gem-search, gem-image, gem-rag, gem-summary, gem-transcribe, mail-analyzer, news-collector, ask-gemini-mcp 等 |
-| **ローカルLLM (LM Studio / Ollama)** | [ローカルLLM セットアップ](setup-local-llm.ja.md) | llm-cli, data-analyzer, lite-rag, lite-switch, mail-analyzer-local, quick-translate, slack-monitor, ask-llm-mcp 等 |
-| **Slack / Confluence / Splunk API** | 各ツールのREADMEを参照 | scat, stail, swrite, slack-router, md-to-slack, slack-mcp-extender, scli, ir-hub / confl-cli / splunk-cli, splunk-mcp |
+| **ローカルLLM (LM Studio / Ollama)** | [ローカルLLM セットアップ](setup-local-llm.ja.md) | llm-cli, data-analyzer, lite-rag, lite-switch, mail-analyzer-local, slack-monitor, ask-llm-mcp 等 |
+| **Slack / Confluence / Splunk API** | 各ツールのREADMEを参照 | scat, stail, swrite, slack-router, md-to-slack, slack-mcp-extender, scli, confl-cli / splunk-cli, splunk-mcp |
 | **コンテナ (Podman)** | 各READMEのコンテナ手順 | data-toolbox-mcp, pcap-analyzer-mcp（解析サンドボックス）, shell-agent-v2（サンドボックス実行）, cclaude |
 | **クラウド (GCP / AWS)** | 各READMEのデプロイ手順 | webhook-relay, m5-data-receiver |
 | **macOS (Apple Silicon) 専用** | Homebrew cask か Releases の zip（.app） | active-lens-gui, claude-usage-lens-gui, load-spinner, image-forge / image-forge-gui, grid-edit, instant-translate, share-mounter, url-shelf, zip-porter 等 |
@@ -67,7 +67,7 @@ brew install --cask nlink-jp/tap/<name>   # GUI アプリ
   ├─ Gemini を使う（gem-* / mail-analyzer / news-collector 等）
   │   → Vertex AI セットアップ
   │
-  ├─ ローカルLLM を使う（llm-cli / *-local / lite-* / quick-translate 等）
+  ├─ ローカルLLM を使う（llm-cli / *-local / lite-* / shell-agent-v2 等）
   │   → ローカルLLM セットアップ
   │
   ├─ Slack / Confluence / Splunk を操作

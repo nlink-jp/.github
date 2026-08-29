@@ -1289,7 +1289,7 @@ Tauri-specific traps to be aware of:
 
 #### Native Swift / AppKit (Swift Package Manager)
 
-Used by: `quick-translate`. Pattern: `swift build -c release`
+Used by: `instant-translate`. Pattern: `swift build -c release`
 produces a bare Mach-O binary; the Makefile manually assembles the
 `.app` bundle (`Contents/MacOS/`, `Contents/Info.plist`,
 `Contents/Resources/`) and signs at the end of the bundle step.
@@ -1437,7 +1437,7 @@ Reference projects (one per framework, look at these when in doubt):
 |---|---|
 | Wails | [shell-agent-v2](https://github.com/nlink-jp/shell-agent-v2) |
 | Tauri | [mail-analyzer-gui](https://github.com/nlink-jp/mail-analyzer-gui) |
-| Swift SPM | [quick-translate](https://github.com/nlink-jp/quick-translate) |
+| Swift SPM | [instant-translate](https://github.com/nlink-jp/instant-translate) |
 | Go CLI (for contrast) | [splunk-cli](https://github.com/nlink-jp/splunk-cli) |
 
 ### Why this matters

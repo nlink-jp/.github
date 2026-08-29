@@ -13,7 +13,6 @@ This setup is required if you use any of the following tools.
 | mail-analyzer-local | util-series | Go | Email analysis (local version) |
 | lite-rag | lite-series | Go | Local RAG search |
 | lite-switch | lite-series | Go | Natural language classifier |
-| quick-translate | util-series | Swift | Menu-bar translator (local LLM) |
 | ask-llm-mcp | util-series | Go | MCP: local-LLM second opinions |
 | shell-agent-v2 | util-series | Go/React | Data-analysis desktop (local LLM / Vertex hybrid) |
 | slack-monitor | lab-series | Python | Slack channel summarization |

@@ -30,7 +30,7 @@ source build.
 
 Grouped by "what external thing the tool depends on." **A single tool can fall
 in more than one group** (e.g. news-collector is Vertex AI + Slack;
-quick-translate is local LLM + macOS GUI). Each tool's README is the final word
+shell-agent-v2 is local LLM + macOS GUI). Each tool's README is the final word
 on its requirements.
 
 | Prerequisite | Setup needed | Example tools |
@@ -38,8 +38,8 @@ on its requirements.
 | **No credentials, offline** | None | json-to-table, json-filter, csv-to-json, rex, sdate, jstats, jviz, lookup, eml-to-jsonl, msg-to-jsonl, markdown-viewer, instant-translate, and most of the lookup family (tor-exit-lookup, icloud-relay-lookup, mac-lookup, whois-lookup, doh-lookup, rdns-lookup) |
 | **A third-party API key / token** | Obtain a key from the service (steps in each README) | abuse-lookup (AbuseIPDB key), urlscan-lookup (urlscan.io key), asn-lookup (IPinfo token — only to fetch the DB; lookups are offline), malware-lookup (abuse.ch key optional) |
 | **Vertex AI (Gemini)** | [Vertex AI Setup](setup-vertex-ai.md) | gem-cli, gem-query, gem-search, gem-image, gem-rag, gem-summary, gem-transcribe, mail-analyzer, news-collector, ask-gemini-mcp, etc. |
-| **Local LLM (LM Studio / Ollama)** | [Local LLM Setup](setup-local-llm.md) | llm-cli, data-analyzer, lite-rag, lite-switch, mail-analyzer-local, quick-translate, slack-monitor, ask-llm-mcp, etc. |
-| **Slack / Confluence / Splunk API** | See each tool's README | scat, stail, swrite, slack-router, md-to-slack, slack-mcp-extender, scli, ir-hub / confl-cli / splunk-cli, splunk-mcp |
+| **Local LLM (LM Studio / Ollama)** | [Local LLM Setup](setup-local-llm.md) | llm-cli, data-analyzer, lite-rag, lite-switch, mail-analyzer-local, slack-monitor, ask-llm-mcp, etc. |
+| **Slack / Confluence / Splunk API** | See each tool's README | scat, stail, swrite, slack-router, md-to-slack, slack-mcp-extender, scli, confl-cli / splunk-cli, splunk-mcp |
 | **Container runtime (Podman)** | Container steps in each README | data-toolbox-mcp, pcap-analyzer-mcp (analysis sandbox), shell-agent-v2 (sandboxed execution), cclaude |
 | **Cloud (GCP / AWS)** | Deployment steps in each README | webhook-relay, m5-data-receiver |
 | **macOS (Apple Silicon) only** | Homebrew cask or the Releases zip (.app) | active-lens-gui, claude-usage-lens-gui, load-spinner, image-forge / image-forge-gui, grid-edit, instant-translate, share-mounter, url-shelf, zip-porter, etc. |
@@ -87,7 +87,7 @@ What does the tool you want do?
   ├─ Uses Gemini (gem-* / mail-analyzer / news-collector, ...)
   │   → Vertex AI Setup
   │
-  ├─ Uses a local LLM (llm-cli / *-local / lite-* / quick-translate, ...)
+  ├─ Uses a local LLM (llm-cli / *-local / lite-* / shell-agent-v2, ...)
   │   → Local LLM Setup
   │
   ├─ Drives Slack / Confluence / Splunk
