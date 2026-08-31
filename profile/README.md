@@ -43,6 +43,7 @@ Authenticate as the human user, not a bot.
 | Tool | Lang | Description |
 |------|------|-------------|
 | [confl-cli](https://github.com/nlink-jp/confl-cli) | Python | Confluence Cloud CLI — list, search, read, export |
+| [gem-agent](https://github.com/nlink-jp/gem-agent) | Go | Interactive CLI agent runtime on Vertex AI Gemini — sandboxed file/shell tools, MCP, skills, two-tier auto-approve (interactive and headless `-p`), session resume, context compaction (macOS) |
 | [gem-cli](https://github.com/nlink-jp/gem-cli) | Go | Gemini CLI client — multimodal prompts, streaming, grounding, structured output via Vertex AI |
 | [llm-cli](https://github.com/nlink-jp/llm-cli) | Go | CLI client for local LLMs (LM Studio, Ollama) — streaming, batch, multi-image VLM, structured output |
 | [scli](https://github.com/nlink-jp/scli) | Go | Terminal Slack client — channels, messages, DMs, search |
@@ -99,7 +100,6 @@ Works in progress. APIs, features, and interfaces may change without notice.
 |------|------|-------------|
 | [agent-skeleton](https://github.com/nlink-jp/agent-skeleton) | Python | ~~Autonomous agent skeleton — plan-approve-execute loop, per-tool approval, 2-tier memory compression, MCP support~~ **Archived** — no longer used or maintained |
 | [agentic-web-search](https://github.com/nlink-jp/agentic-web-search) | Go | ~~Agentic web search — autonomous research via local LLM + Brave Search API~~ **FROZEN** (search API ToS concerns) |
-| [gem-agent](https://github.com/nlink-jp/gem-agent) | Go | Interactive CLI agent on Vertex AI Gemini — continuity tool for when Claude Code is unavailable; sandboxed file/shell tools, MCP, two-tier auto-approve (interactive and headless `-p`), session resume, context compaction (macOS) |
 | [llm-othello](https://github.com/nlink-jp/llm-othello) | Go | Browser-based Othello against a local LLM — server-side move generation via OpenAI-compatible API |
 | [log-analyzer](https://github.com/nlink-jp/log-analyzer) | Python | ~~Large JSONL log analyzer — LLM-driven analysis with timestamp-based chunking for files exceeding context limits~~ **Archived** — no longer used or maintained |
 | [m5-clock](https://github.com/nlink-jp/m5-clock) | C++ | NTP-synchronized digital clock for M5Stack Core2 — night mode, RTC backup, SD card config |
