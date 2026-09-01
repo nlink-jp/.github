@@ -604,6 +604,30 @@ best-effort:
   first with English in the same commit, and pass the sanitization gate (no
   environment-specific values, no personal names).
 
+### Verify with an independent pass
+
+The author's own knowledge-base read is not the last line of defense — the
+consult norm above still relies on the same mind that produced the design.
+Once a design is fixed, and once an implementation is complete (at the
+latest before its release), have an **independent reviewer with fresh
+context** check it:
+
+- **Design verification**: a reviewer (typically a sub-agent) whose *only*
+  task is to cross-check the design against the knowledge base, the
+  workspace memory, and the reference projects' `CLAUDE.md`/`AGENTS.md` —
+  "which recorded lesson does this violate?" — reporting each violation with
+  the entry cited and the affected location.
+- **Implementation verification**: a review pass over the change (the
+  code-review tooling or a reviewer agent) before release. Findings are
+  triaged by the author, never auto-applied.
+- Checks that only a human can perform stay human: GUI panel contents are
+  verified on real hardware by a person, as before.
+
+Why (2026-09-02): the consult-at-decision-point norm was itself introduced
+after defects shipped despite the relevant entries having been read — the
+author's self-check is structurally weak against "read but not applied". A
+verifier whose only job is cross-checking has no design to be attached to.
+
 ### Security first
 
 - Treat security as a design constraint, not an afterthought.
