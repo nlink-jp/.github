@@ -579,10 +579,24 @@ The organization's engineering lessons live in
 documents compiled from real incidents (ADR-015). The loop is mandatory, not
 best-effort:
 
-- **Consult before building.** When starting design or implementation work in a
-  domain the knowledge base covers (release engineering, macOS GUI, MCP servers,
-  LLM integration, shell scripting, …), read the relevant document first — the
-  same standing the ADR index above has for technical decisions.
+- **Consult before building — per decision, not per project.** A single read
+  at kickoff does not survive to the decisions that follow it; the trigger is
+  **every design decision and every mechanism newly adopted mid-project** (a
+  window class, a persistence scheme, a distribution step, …):
+  - search the knowledge base and the workspace memory **by the mechanism's
+    name** (NSPanel, notarize, reload, cask, …) and read every hit before
+    writing code;
+  - when porting from a reference project, read its `CLAUDE.md` and
+    `AGENTS.md` **in full, first** — that is where its traps live; the code
+    alone does not carry them;
+  - after consulting, **name which entries constrain the design at hand** — a
+    lesson read but not applied is the expensive failure mode.
+
+  Why (2026-09-01): one session shipped two GUI defects whose preventions were
+  already recorded — a resizable-panel workaround was built and scrapped
+  before finding the documented NSPanel precedent, and a click-away bug
+  shipped although its fix was in an entry read during that very migration.
+  Knowledge existed both times; retrieval at the decision point did not.
 - **Feed back what you learn.** When work surfaces new reusable engineering
   knowledge — an incident, a non-obvious workaround, a pattern worth repeating —
   contribute it to `nlink-jp/knowledge` as part of completing that work, not
