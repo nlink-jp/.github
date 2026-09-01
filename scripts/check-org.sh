@@ -4,7 +4,9 @@
 # Usage:
 #   ./check-org.sh [DEST_DIR]
 #
-# Exit code: 0 if all checks pass, 1 if any check fails.
+# Exit code: 0 only when every repository was found AND every check
+# passed. 1 when any check fails — or when any repository was not found
+# locally, because a repo that was not examined is not a passing repo.
 
 set -euo pipefail
 
@@ -21,7 +23,15 @@ SERIES=(
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-DEST="${1:-$(pwd)}"
+# default_dest — the org root this script belongs to: the script lives at
+# <org-root>/.github/scripts/, so the root is two levels up. Deriving the
+# root from $PWD was measured producing an all-green run that had checked
+# nothing: invoked from the wrong cwd, every repo was "not found locally",
+# the misses were warnings, and the summary still said "all checks
+# passed". The caller's cwd must never decide what this script examines.
+default_dest() { CDPATH= cd -- "$SCRIPT_DIR/../.." && pwd; }
+
+DEST="${1:-$(default_dest)}"
 DEST="$(cd "$DEST" && pwd)"
 
 PASS="[OK]"
@@ -29,6 +39,27 @@ FAIL="[NG]"
 WARN="[!!]"
 
 errors=0
+skipped=0
+
+# verdict ERRORS SKIPPED — the one summary line, and the exit status.
+# A repository that was not examined is not a passing repository: skips
+# make the run INCOMPLETE and the status non-zero, so a green summary
+# always means "every repo examined, every check passed" — the check
+# must never claim more than it verified.
+verdict() {
+  local errs="$1" skips="$2" msg=""
+  if [ "$errs" -eq 0 ] && [ "$skips" -eq 0 ]; then
+    echo "Result: all checks passed."
+    return 0
+  fi
+  [ "$errs" -gt 0 ] && msg="$errs check(s) failed."
+  if [ "$skips" -gt 0 ]; then
+    [ -n "$msg" ] && msg="$msg "
+    msg="${msg}INCOMPLETE — $skips repo(s) not found locally; their checks did not run."
+  fi
+  echo "Result: $msg"
+  return 1
+}
 
 # --- archived repositories ---------------------------------------------------
 # GitHub is the authority: an archived repo is read-only, so it can never take
@@ -531,8 +562,9 @@ for series in "${SERIES[@]}"; do
   target="$DEST/$series"
   if [ ! -d "$target/.git" ]; then
     echo "==> $series"
-    echo "    $WARN not found locally (run clone-all.sh first)"
+    echo "    $WARN not found locally (run clone-all.sh first) — NOT checked"
     echo ""
+    skipped=$((skipped + 1))
     continue
   fi
   check_series "$series" "$target"
@@ -546,7 +578,8 @@ done
 echo "==> knowledge (standalone)"
 kdir="$DEST/knowledge"
 if [ ! -d "$kdir/.git" ]; then
-  echo "    $WARN not found locally (git clone https://github.com/nlink-jp/knowledge)"
+  echo "    $WARN not found locally (git clone https://github.com/nlink-jp/knowledge) — NOT checked"
+  skipped=$((skipped + 1))
 else
   kerr=0
   for f in README.md README.ja.md LICENSE; do
@@ -591,9 +624,6 @@ else
 fi
 echo ""
 
-if [ "$errors" -eq 0 ]; then
-  echo "Result: all checks passed."
-else
-  echo "Result: $errors check(s) failed."
+if ! verdict "$errors" "$skipped"; then
   exit 1
 fi

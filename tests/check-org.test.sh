@@ -245,6 +245,36 @@ noclaim 'pre-release gates heading'  '**Pre-release gates (must pass before tagg
 noclaim 'pre-release smoke'          '### 6.4 Manual smoke (pre-release)'
 noclaim 'ordinary install line'      'brew install nlink-jp/tap/tool'
 
+# ---- default_dest: the org root comes from the script, not the caller -----
+# Invoked from a wrong cwd, the old $(pwd) default made every repo "not
+# found locally" and still summarized green. The root is the script's own
+# location, two levels up, regardless of where the caller stands.
+_want_root=$(CDPATH= cd -- "$HERE/../.." && pwd)
+_got_root=$(cd "$TMP" && default_dest)
+if [ "$_got_root" = "$_want_root" ]; then ok 'default_dest ignores cwd'; else
+  no 'default_dest ignores cwd'
+  printf '        want: [%s]\n        got:  [%s]\n' "$_want_root" "$_got_root" >&2
+fi
+
+# ---- verdict: skipped repos can never summarize green ----------------------
+# verdict_is LABEL EXPECTED-STATUS EXPECTED-SUBSTRING ERRORS SKIPPED
+verdict_is() {
+  _label="$1"; _status="$2"; _substr="$3"
+  _out=$(verdict "$4" "$5"); _rc=$?
+  if [ "$_rc" = "$_status" ] && printf '%s' "$_out" | grep -qF "$_substr"; then
+    ok "$_label"
+  else
+    no "$_label"
+    printf '        rc=%s out=[%s]\n' "$_rc" "$_out" >&2
+  fi
+}
+
+verdict_is 'all found, all passed → green'      0 'all checks passed'            0 0
+verdict_is 'failures fail'                      1 '2 check(s) failed'            2 0
+verdict_is 'skips alone are INCOMPLETE, rc 1'   1 'INCOMPLETE — 3 repo(s)'       0 3
+verdict_is 'failures and skips both reported'   1 'INCOMPLETE'                   1 1
+verdict_is 'failures shown alongside skips'     1 '1 check(s) failed'            1 1
+
 # ---- summary ---------------------------------------------------------------
 echo "------------------------------------------------------------"
 echo "passed: $pass   failed: $fail"
