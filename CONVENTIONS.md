@@ -648,6 +648,21 @@ verifier whose only job is cross-checking has no design to be attached to.
 - When fixing a bug, make the smallest change that addresses the root cause.
 - Do not refactor, reformat, or improve unrelated code in the same change.
 
+**Root cause before patch.** A bug fix starts by naming the cause, not the
+symptom. When review findings recur in kind — three of a kind, or one that
+comes back after a fix — stop fixing instances: classify the findings, name
+the root cause, close the class structurally, and pin it with a test that
+names the class. A symptomatic patch is acceptable only as a stopgap whose
+root cause and closing plan are written down (ADR or issue). "Smallest
+change" bounds the diff, not the analysis.
+
+**Reviewers observe; contributors decide.** A reviewer's finding is local by
+nature and is evidence, not a fix. The contributor takes the fact — the
+reproduced behaviour — and decides the remedy from the design, never by
+merging the reviewer's proposed change as written. A finding that is not
+adopted is recorded with its reason (in the ADR or the review response);
+silently dropping one is as much an abdication as merging one.
+
 ### Implement code and tests together
 
 - Tests are not optional or deferred — write them alongside the implementation.
