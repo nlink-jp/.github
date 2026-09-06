@@ -324,6 +324,35 @@ check_series() {
     fi
   fi
 
+  # 5e. No archived repository is registered in an active series umbrella.
+  # Archived repos are read-only, so every org-wide sweep that walks one does
+  # work that can never be committed — and a local scan cannot tell it is dead,
+  # because the only authority is GitHub. They belong in nlink-jp/archive-series,
+  # whose directory layout makes "is this alive, and what was it?" answerable
+  # from the filesystem. This is the inverse of the skip in check 10: name the
+  # misfiling rather than work around it. Silent when gh is unavailable.
+  if [ -f "$dir/.gitmodules" ]; then
+    load_archived
+    if [ -n "$archived_list" ]; then
+      local misfiled=""
+      while IFS= read -r subpath; do
+        subpath="${subpath#        }"
+        name=$(basename "$subpath")
+        if printf '%s\n' "$archived_list" | grep -qx -- "$name"; then
+          misfiled="$misfiled $name"
+        fi
+      done < <(git -C "$dir" submodule foreach --quiet 'echo "        $displaypath"')
+      if [ -z "$misfiled" ]; then
+        echo "    $PASS no archived repository registered here"
+      else
+        echo "    $FAIL archived repo(s) still registered:$misfiled"
+        echo "         move them to nlink-jp/archive-series — see its README,"
+        echo "         \"Adding a newly archived project\""
+        errors=$((errors + 1))
+      fi
+    fi
+  fi
+
   # 6. Submodule build conventions
   if [ -f "$dir/.gitmodules" ]; then
     while IFS= read -r subpath; do

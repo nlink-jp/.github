@@ -1545,20 +1545,34 @@ and discovery.
 
 When a tool is retired or superseded:
 
-1. Mark it in the umbrella README catalog (`~~...~~ **Archived** — superseded
-   by [successor]` where applicable) and, if it was a listed tool, update the
-   org profile README and the `nlink-web-site` catalog (see Release Checklist
-   step 9).
-2. Archive on GitHub: `gh repo archive nlink-jp/<tool-name>`. Released assets
+1. Archive on GitHub: `gh repo archive nlink-jp/<tool-name>`. Released assets
    stay downloadable; the repo becomes read-only.
-3. Switch the notification subscription from watching to ignoring —
+2. Move it out of its series umbrella into `archive-series`:
+   ```bash
+   git -C <series>-series submodule deinit -f -- <tool-name>
+   git -C <series>-series rm -f -- <tool-name>
+   git -C archive-series submodule add \
+     https://github.com/nlink-jp/<tool-name>.git <series>/<tool-name>
+   ```
+   Move its catalog row from the series README into the `archive-series`
+   README, and drop it from the series `CLAUDE.md` tree.
+3. If it was a listed tool, update the org profile README and the
+   `nlink-web-site` catalog (see Release Checklist step 9).
+4. Switch the notification subscription from watching to ignoring —
    an archived repo cannot receive issues/PRs, so a lingering watch is noise:
    ```bash
    gh api -X PUT /repos/nlink-jp/<tool-name>/subscription -F ignored=true
    ```
 
-`check-org.sh` treats GitHub's archived state as authoritative and excludes
-archived repos from template-drift checks.
+**Why the move matters.** An archived repo is read-only, so every org-wide
+sweep that walks its umbrella does work that can never be committed — and a
+local scan cannot tell the repo is dead, because GitHub is the only authority.
+Inside `archive-series` the directory answers both "is this alive?" and "which
+series was it?" without a network call.
+
+`check-org.sh` treats GitHub's archived state as authoritative: check 5e fails
+when an archived repo is still registered in an active series umbrella, and
+template-drift checks skip archived repos wherever they are found.
 
 ---
 
@@ -1770,7 +1784,14 @@ Optional series extensions: a series-level `CONVENTIONS.md` and `docs/`.
 
 Umbrellas do **not** carry `README.ja.md`, `CHANGELOG.md`, `LICENSE`,
 `Makefile`, or `tests/` — those belong to the tool repositories. Umbrellas
-mint no tags or releases.
+mint no tags or releases. A `LICENSE` would be actively misleading: it cannot
+cover the submodules, whose licences are not uniform.
+
+`archive-series` is the one umbrella holding no active work. It collects the
+projects that are archived on GitHub, grouped by the series each came from
+(`archive-series/<series>/<project>`). It keeps the same file set, is skipped
+by `clone-all.sh` unless `--with-archive` is passed, and is not walked by the
+per-series checks in `check-org.sh`.
 
 `check-org.sh` enforces the required files, that every submodule appears in
 `README.md`, and that all `.gitmodules` URLs are HTTPS.
@@ -1781,7 +1802,7 @@ mint no tags or releases.
 
 All series (chatops-series, cli-series, cybersecurity-series, lab-series,
 lib-series, lite-series, skills-series, util-series) manage projects as
-git submodules. Submodule
+git submodules, as does `archive-series` — though nothing there is writable. Submodule
 checkouts are in **detached HEAD** state by default. Making commits in
 detached HEAD state produces orphaned commits that are lost when you
 switch to a branch.
@@ -2036,6 +2057,7 @@ submodule updates, and scaffold creation.
 | 3 | `.gitignore` coverage | Missing `.claude/settings.local.json` exclusion |
 | 4 | No tracked secrets config | `.claude/settings.local.json` in git index |
 | 5 | `CLAUDE.md` presence | Missing series-level `CLAUDE.md` |
+| 5e | Archived repo misfiled | A repo archived on GitHub is still registered in an active series umbrella — move it to `archive-series` (§Archiving a Repository) |
 | 6 | Build conventions | `make build` outputting to root or `bin/` instead of `dist/`; bare binary names in `.gitignore`; missing `dist/` in `.gitignore` |
 | 7 | Secret scanning | Tracked files containing likely secrets (service accounts, tokens, API keys) |
 | 8 | go.mod local replace | `replace` directives with local filesystem paths (leaks username/directory structure) |
