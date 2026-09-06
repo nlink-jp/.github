@@ -77,14 +77,22 @@ Common types: `feat`, `fix`, `docs`, `chore`, `test`, `refactor`, `security`
 This organization uses **series** as umbrella repositories, each managing individual
 tool repositories as git submodules.
 
-| Series | Umbrella repo | Tools |
-|--------|---------------|-------|
-| cli-series | nlink-jp/cli-series | scli, confl-cli, splunk-cli, gem-cli |
-| chatops-series | nlink-jp/chatops-series | swrite, scat, stail, slack-router, md-to-slack |
-| cybersecurity-series | nlink-jp/cybersecurity-series | ioc-collector, product-research, ai-ir, news-collector |
-| lab-series | nlink-jp/lab-series | sai, slack-monitor, magi-system, mail-analyzer, llm-othello, log-analyzer |
-| lite-series | nlink-jp/lite-series | lite-llm, lite-rag, lite-switch, lite-eml, lite-msg |
-| util-series | nlink-jp/util-series | json-to-table, rex, sdate, csv-to-json, json-to-sqlite, lookup, pptx-to-markdown, json-filter, markdown-viewer, jstats, jviz, eml-to-jsonl, msg-to-jsonl |
+| Series | Umbrella repo |
+|--------|---------------|
+| chatops-series | nlink-jp/chatops-series |
+| cli-series | nlink-jp/cli-series |
+| cybersecurity-series | nlink-jp/cybersecurity-series |
+| lab-series | nlink-jp/lab-series |
+| lib-series | nlink-jp/lib-series |
+| lite-series | nlink-jp/lite-series |
+| skills-series | nlink-jp/skills-series |
+| util-series | nlink-jp/util-series |
+| archive-series | nlink-jp/archive-series — archived projects, read-only |
+
+Each umbrella's `README.md` is the catalog: the single list of what a series
+contains. It is not duplicated here. The table above once carried a `Tools`
+column and it drifted — it named two projects that had moved series, four that
+had been archived, and omitted two series entirely.
 
 **After releasing a submodule project, always update the umbrella pointer:**
 
@@ -128,7 +136,8 @@ Full details and templates: [`CONVENTIONS.md` → Starting a New Project](CONVEN
 1. Commit with `chore: release vX.Y.Z`
 2. Tag: `git tag vX.Y.Z && git push origin main --tags`
 3. `gh release create` (no assets yet)
-4. Build all 5 platforms: `linux/amd64`, `linux/arm64`, `darwin/amd64`, `darwin/arm64`, `windows/amd64`
+4. Build all 4 platforms: `linux/amd64`, `linux/arm64`, `darwin/arm64`, `windows/amd64`
+   (darwin is arm64-only — see CONVENTIONS.md §Release Archive Standard)
 5. Zip each binary with `README.md`
 6. Upload zip files one by one (`gh release upload`)
 7. Update umbrella submodule pointer
