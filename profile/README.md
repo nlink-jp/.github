@@ -90,6 +90,7 @@ Works in progress. APIs, features, and interfaces may change without notice.
 
 | Tool | Lang | Description |
 |------|------|-------------|
+| [lagent](https://github.com/nlink-jp/lagent) | Go | Sandboxed coding-agent runtime on a local LLM (LM Studio / Ollama, OpenAI-compatible API) — gem-agent's design as a separate product line |
 | [llm-othello](https://github.com/nlink-jp/llm-othello) | Go | Browser-based Othello against a local LLM — server-side move generation via OpenAI-compatible API |
 | [m5-clock](https://github.com/nlink-jp/m5-clock) | C++ | NTP-synchronized digital clock for M5Stack Core2 — night mode, RTC backup, SD card config |
 | [m5-data-receiver](https://github.com/nlink-jp/m5-data-receiver) | Bash/CFn | Serverless AWS backend for m5-vehicle-logger — API Gateway + Lambda + S3 with deploy/destroy scripts |
