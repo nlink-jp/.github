@@ -1929,9 +1929,12 @@ hand-maintained instead.
 
 ### Formula/cask conventions (from `brew audit` / `brew style`)
 
-- `url` **before** `version`; `version` declared explicitly (the uniform
-  `<name>-v<version>-darwin-arm64.zip` naming puts the version mid-string, where
-  Homebrew cannot auto-scan it).
+- `version`: a formula declares none — Homebrew scans it from the literal
+  version in `url`, and `brew audit --online` flags a declaration as redundant.
+  A cask declares it, **before** `url` (`version`, `sha256`, blank line, `url`,
+  `name`, `desc`, `homepage`): that is the stanza order `brew style` enforces
+  via `Cask/StanzaOrder`, and its `url` interpolates `#{version}`. See
+  "Formulae declare no `version`; casks do" above.
 - `depends_on arch: :arm64`; formulae add `depends_on :macos`, casks use
   `depends_on macos:` with the floor from `BREW_MACOS_FLOOR` (default
   `:big_sur`; set it in the repo Makefile when the app requires newer, e.g.
