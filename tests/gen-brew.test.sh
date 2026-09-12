@@ -55,7 +55,7 @@ out=$(BREW_KIND=formula BREW_DESC="Agentic web search CLI using Vertex AI Ground
       BREW_TEMPLATES_DIR="$TPL_DIR" sh "$GEN" --print "$FZIP")
 contains "$out" 'class GemSearch < Formula'                                       'formula: class name kebab->camel'
 contains "$out" 'url "https://github.com/nlink-jp/gem-search/releases/download/v0.4.0/gem-search-v0.4.0-darwin-arm64.zip"' 'formula: url with parsed version'
-contains "$out" 'version "0.4.0"'                                                 'formula: version parsed (no v)'
+missing  "$out" '  version "'                                                     'formula: no version line (scanned from url)'
 contains "$out" "sha256 \"$FSHA\""                                                'formula: sha256 of real artifact'
 contains "$out" 'bin.install "gem-search"'                                        'formula: canonical bin.install'
 contains "$out" 'desc "Agentic web search CLI using Vertex AI Grounding"'         'formula: desc rendered'
