@@ -83,6 +83,7 @@ redirect behind, because release notes and changelogs already link to it.
 | [017](adr/017-adr-authoring-conventions.md) | Accepted | ADR authoring conventions — mandatory `Binds` header field, placement decision tree with the real misplacement counterexamples, lesson fed to `knowledge` |
 | [018](adr/018-mcp-observability-tiers.md) | Accepted | MCP observability tiers — amends ADR-003 with a fourth tier (target contact from our own IP, `chrome-pilot-mcp`), widens tier 1 to "no external observer", and makes the `get_usage` instruction conditional |
 | [019](adr/019-deployment-repositories.md) | Accepted | Deployment repositories are not series members — a repository holding only one operator's config/data for a tool that lives elsewhere joins no umbrella, is exempt from `check-org.sh`, and may be individually owned |
+| [020](adr/020-records-repositories.md) | Accepted | Records repositories hold review submissions outside the series taxonomy — organization-owned, private, one immutable dated directory per submission, written in the review's language with no en/ja mirror, exempt from `check-org.sh` |
 
 ---
 
@@ -146,6 +147,16 @@ Before any code is written, produce and get sign-off on the following:
    be owned by an individual. See
    [ADR-019](adr/019-deployment-repositories.md) for the full definition and
    the test that distinguishes one from a project.
+
+   **Exception — records repositories.** A repository that holds only review
+   submissions about the organization's tools — the documents as handed to the
+   reviewers and the status of their findings — ships nothing, and has no
+   version is a *records repository*: it joins no series, appears in no
+   catalogue, is not inspected by `check-org.sh`, is organization-owned and
+   private, and is written in the review's language with no en/ja mirror.
+   See [ADR-020](adr/020-records-repositories.md) for the definition, the
+   immutable-snapshot rule, and the test that distinguishes one from a
+   project.
 
 7. **External platform constraints** — If the tool integrates with external
    platforms (Slack, AWS, GCP, etc.), investigate their API limitations,
