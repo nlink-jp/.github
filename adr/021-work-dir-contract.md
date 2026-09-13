@@ -129,11 +129,20 @@ data that could be paged.** Data comes back in the response, capped and counted;
 if it needs to be on disk, the calling runtime is what puts it there.
 
 The second half of the first row came out of building the reference
-implementation: voice-scribe's `transcribe` returns a transcript inline when it
-is short, so by the returning-paths rule alone it would have been conditional —
-but it reads the recording from `<work_dir>/<workspace_id>/`, so without the
-work directory it cannot even find its input. Reading and writing are the same
-requirement.
+implementation: voice-scribe's `transcribe` returns the transcript in the
+response as well as writing it, so by the returning-paths rule alone it would
+have been conditional — but it reads the recording from
+`<work_dir>/<workspace_id>/`, so without the work directory it cannot even find
+its input. Reading and writing are the same requirement.
+
+A server can be on both sides of §3 at once, and the two scribes are: the
+transcript **file** is a product (an srt goes to a video player), so `work_dir`
+stays required, while the transcript **text** is data, so the response carries
+it under an explicit cap with the remainder counted rather than switching to a
+preview. Their `inline_threshold` — which dropped the text entirely past 8 KB —
+was withdrawn on 2026-09-14 for the same reason splunk's and pcap's spills were
+(voice-scribe ADR-0011, gem-scribe ADR-0003). The test of §3 is what the
+*product* is, not whether a response happens to be large.
 
 ### 4. Validation — a closed list
 
@@ -301,8 +310,8 @@ Twenty-six tool schemas across nine servers, plus one audit.
 | image-forge | 2 | **done** (project ADR-0009) | `required`; the default root and both ways to configure one (`--workspace-root`, `[mcp] workspace_root`) deleted; the model store denied |
 | voice-studio-mcp | 4 | **done** (project ADR-0013, amending ADR-0010) | `required`; the `~/.voice-studio` fallback deleted |
 | video-studio-mcp | 1 | **done** (project ADR-0008) | `required`; the `~/.video-studio` fallback deleted |
-| voice-scribe | 1 | **done** — reference implementation (project ADR-0010) | `internal/mcp/workdir` + `mcpserver.RequestMeta`; default root deleted; `work_dir_*` codes; contract arch test; retired spellings answered by name. `audio` was relaxed to an absolute path plus the blacklist once pcap-analyzer had settled that shape |
-| gem-scribe | 1 | **done** (project ADR-0002) | the same shape as voice-scribe — a transplant, not a design |
+| voice-scribe | 1 | **done** — reference implementation (project ADR-0010; response cap ADR-0011) | `internal/mcp/workdir` + `mcpserver.RequestMeta`; default root deleted; `work_dir_*` codes; contract arch test; retired spellings answered by name. `audio` was relaxed to an absolute path plus the blacklist once pcap-analyzer had settled that shape |
+| gem-scribe | 1 | **done** (project ADR-0002; response cap ADR-0003) | the same shape as voice-scribe — a transplant, not a design |
 | splunk-mcp | — | **out of scope** | The spill it needed `work_dir` for is gone: a server cannot know the caller's context window, so results are capped with `max_rows` and the omission counted, and file-mediating a large response is the runtime's job (owner's decision 2026-09-06). No work directory, no argument |
 | chrome-pilot-mcp | 2 (+1 handler) | **done** (project ADR-0005, amending ADR-0004) | the only camelCase exception falls; the server stops creating the directory; `--workspace-root`, `[workspace] root` and the temp-dir fallback deleted |
 | pcap-analyzer-mcp | 12 | **done** (project ADR-0008) | `allowed_paths` deleted, blacklist floor, unknown config keys rejected by name, `_meta` channel, contract tests. Settled the both-spellings rule above |
