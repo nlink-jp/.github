@@ -752,8 +752,9 @@ in a project directory.**
 ### Recursive rewrites: prefer module-scoped tools, and install the guard
 
 A command that walks a directory tree and rewrites files in place — `gofmt -w`,
-`sed -i`, `prettier --write`, `black`, `ruff format` — destroys work far outside
-the intended repository when the working directory is not what you assumed.
+`sed -i`, `prettier --write`, `black`, `ruff format`, `swift format -i -r` —
+destroys work far outside the intended repository when the working directory
+is not what you assumed.
 This has happened twice in this organization: `gofmt -w .` executed from the
 workspace root reformatted every Go file in every series (26 repos the first
 time, 39 the second). Nothing was lost, because nothing had been committed, but
@@ -770,6 +771,7 @@ both incidents produced a workspace full of unreviewed changes.
    | `gofmt -w .` | `go fmt ./...` | fails: "directory prefix . does not contain main module" |
    | `gofmt -w .` (single repo) | `gofmt -w /absolute/path/to/repo` | writes only where told |
    | `ruff format` | `ruff format /absolute/path` | writes only where told |
+   | `swift format -i -r .` | `swift format -i -r /absolute/path/to/repo/Sources` | writes only where told |
 
 2. **Install the mechanical guard.** A written rule is not a control: the
    accident happens exactly when attention lapses, which is also when the rule
@@ -788,9 +790,15 @@ both incidents produced a workspace full of unreviewed changes.
    own test battery (`guard-recursive-write-test.py`) before installing, so a
    guard edited into uselessness cannot reach a machine.
 
+   The tools it knows are the tables at the top of the guard
+   (`IN_PLACE_WRITERS`, `SUBCOMMAND_WRITERS`) — that file is the list, it is
+   not repeated here. Besides its own name, a tool is recognised behind
+   `xcrun [options]`, and swift-format also as SwiftPM's two-word form
+   `swift format`.
+
    Allowed through: absolute targets, `~`-rooted targets, a command anchored by
-   a leading `cd /absolute/path &&`, and every read-only command
-   (`gofmt -l .`, `go fmt ./...`, `grep -r`).
+   a leading `cd /absolute/path &&`, and every read-only or module-scoped
+   command (`gofmt -l .`, `go fmt ./...`, `grep -r`, `swift format lint -r .`).
 
    `check-org.sh` audits the installation, so a new machine that skipped setup
    shows up as a failed check rather than as the next incident.

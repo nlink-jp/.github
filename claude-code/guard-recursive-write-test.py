@@ -57,6 +57,61 @@ CASES = [
     ("cd relative/dir && gofmt -l .", False), # relative cd but read-only cmd
     # Relative cd does NOT anchor a dangerous command.
     ("cd some/dir && gofmt -w .", True),
+    # swift-format is one tool with three spellings: `swift-format`, SwiftPM's
+    # two-word `swift format`, and either behind `xcrun`.
+    ("swift-format -i -r .", True),
+    ("swift-format --in-place --recursive .", True),
+    ("swift format --in-place --recursive .", True),
+    ("swift format -i -r Sources Tests", True),
+    ("/usr/bin/swift format -i -r .", True),
+    ("xcrun swift-format -i -r .", True),
+    ("xcrun swift format --in-place --recursive Sources", True),
+    ("xcrun --toolchain swift swift-format -i -r .", True),
+    ("swift format --in-place --recursive /abs/Sources /abs/Tests", False),
+    ("xcrun swift-format -i -r /abs/Sources", False),
+    ("cd /abs/repo && swift format --in-place --recursive .", False),
+    # `xcrun` is seen through for every tool, not only this one.
+    ("xcrun clang-format -i src/x.c", True),
+    ("xcrun --find swift-format", False),
+    ("xcrun --find swiftformat", False),      # prints a path; launches nothing
+    ("xcrun -f black", False),
+    ("xcrun --sdk macosx --show-sdk-path", False),
+    ("xcrun simctl list", False),
+    # The subcommand word is not a path. `format` is the default and rewrites;
+    # `lint` and `dump-configuration` are read-only.
+    ("swift-format format -i -r /abs/Sources", False),
+    ("swift-format format -i -r Sources", True),
+    ("swift format format -i -r .", True),
+    ("swift format lint -r .", False),
+    ("swift-format lint --strict --recursive Sources", False),
+    ("xcrun swift-format lint -r .", False),
+    ("swift format dump-configuration", False),
+    ("swift-format dump-configuration --effective", False),
+    # The subcommand decides, not the flag: `lint` rejects `-i` as an unknown
+    # option (measured: exit 64, nothing written).
+    ("swift format lint -i -r .", False),
+    # Measured: the word is a subcommand only when it leads. After an option,
+    # `lint` is a path and the default `format` runs.
+    ("swift format -i -r lint .", True),
+    ("swift-format format lint -i /abs/Sources", True),
+    # No in-place flag: prints to stdout.
+    ("swift format -r .", False),
+    ("swift format --configuration cfg.json -r Sources", False),
+    # The value of an option is not a target.
+    ("swift-format -i --configuration cfg.json /abs/Sources/a.swift", False),
+    ("swift format -i --configuration cfg.json /abs/Sources/a.swift", False),
+    ("swift format -i --lines 3:9 /abs/a.swift", False),
+    ("swift format -i --offsets 10:20 --offsets 40:60 /abs/a.swift", False),
+    ("swift format -i --assume-filename a.swift /abs/a.swift", False),
+    ("swift format -i -r --enable-experimental-feature Foo /abs/Sources", False),
+    ("swift format -i --configuration /abs/cfg.json -r .", True),
+    ("swift format -i --configuration cfg.json -r Sources", True),
+    # The rest of SwiftPM is not a formatter.
+    ("swift build -c release", False),
+    ("swift test --filter FooTests", False),
+    ("swift package update", False),
+    ("swift run tool -i .", False),
+    ("xcrun swift build", False),
 ]
 
 failures = []
