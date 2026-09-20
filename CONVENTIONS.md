@@ -1077,7 +1077,9 @@ package: build-all
 	done
 	@scripts/notarize-darwin.sh dist/$(BINARY)-$(VERSION)-darwin-arm64.zip "$(NOTARY_PROFILE)"
 
-## verify-release: refuse to release an un-notarized zip (marker gate)
+## verify-release: refuse to release a zip that is un-notarized, stale, does
+## not unpack, does not run, or holds a build from another tag. Every step
+## fails closed; only the spctl line is informational.
 verify-release:
 	@test -f "dist/$(BINARY)-$(VERSION)-darwin-arm64.zip.notarized" || { \
 		echo "verify-release: FAIL — $(BINARY)-$(VERSION)-darwin-arm64.zip has no notarization marker."; \
@@ -1086,21 +1088,49 @@ verify-release:
 	@test "dist/$(BINARY)-$(VERSION)-darwin-arm64.zip.notarized" -nt "dist/$(BINARY)-$(VERSION)-darwin-arm64.zip" || { \
 		echo "verify-release: FAIL — the zip was rebuilt after its marker (re-run make package)."; \
 		exit 1; }
-	@tmp=$$(mktemp -d) && \
-		unzip -oq "dist/$(BINARY)-$(VERSION)-darwin-arm64.zip" -d "$$tmp" && \
-		"$$tmp/$(BINARY)" --version && \
-		spctl -a -vv -t install "$$tmp/$(BINARY)" 2>&1 | head -2 || true; \
-		rm -rf "$$tmp"
-	@echo "verify-release: OK ($(VERSION), notarization marker present)"
+	@tmp=$$(mktemp -d); rc=0; \
+		if ! unzip -oq "dist/$(BINARY)-$(VERSION)-darwin-arm64.zip" -d "$$tmp"; then \
+			echo "verify-release: FAIL — the zip does not unpack. Do not upload it."; rc=1; \
+		elif ! out=$$("$$tmp/$(BINARY)" --version 2>&1); then \
+			echo "verify-release: FAIL — the packaged binary does not run:"; \
+			echo "  $$out"; rc=1; \
+		elif ! printf '%s\n' "$$out" | grep -qF "$(VERSION)"; then \
+			echo "verify-release: FAIL — the packaged binary reports \"$$out\", not $(VERSION)."; \
+			echo "  The zip holds a build from another tag (re-run make package)."; rc=1; \
+		else \
+			echo "  $$out"; \
+			spctl -a -vv -t install "$$tmp/$(BINARY)" 2>&1 | head -2 || true; \
+		fi; \
+		rm -rf "$$tmp"; \
+		exit $$rc
+	@echo "verify-release: OK ($(VERSION), notarized, unpacks, runs, reports its version)"
 ```
 
 The marker is written by `notarize-darwin.sh` only on `status: Accepted`
 (and cleared at script start). The `-nt` freshness test is the CLI's
 second gate: bare zips cannot be stapled, so unlike GUI bundles there is
 no offline `stapler validate` — a zip rebuilt after its marker must be
-re-notarized. The spctl line is informational only (piped through `head`
-it cannot fail the chain, and the online ticket lookup can lag a fresh
-submission).
+re-notarized. The third block then opens the zip the way a user would:
+it must unpack, the packaged binary must answer `--version`, and the
+answer must contain `$(VERSION)` — a zip left over from another tag
+passes the first two gates and fails here. Each failure sets `rc=1` and
+the block ends with `exit $$rc`; the temporary directory is removed on
+every path. The spctl line is informational only, and it is the **only**
+statement allowed to carry `|| true` (piped through `head` it reports
+nothing usable as an exit code, and the online ticket lookup can lag a
+fresh submission).
+
+Do not write this block as one `a && b && c | head || true` chain. `||`
+binds the whole `&&` list to its left, so the `|| true` meant for the
+last command absorbs every failure before it, and the target prints
+`OK` for a zip that does not unpack. The template shipped in that form
+until 2026-09; a repository whose recipe still reads
+`head -2 || true; \` followed directly by `rm -rf "$$tmp"` carries the
+open gate. A gate run by hand once per release only ever sees good
+input, so exercise it in both directions when you touch it: one passing
+state and the five failing ones (no marker, marker older than the zip,
+a zip that does not unpack, a binary that does not run, a build from
+another tag).
 
 Copy the two scripts verbatim from `nlink-jp/.github/templates/`:
 
@@ -2057,8 +2087,10 @@ Before tagging a release, verify every item:
    `.notarized` marker (written only on `status: Accepted`), plus
    `stapler validate` for GUI bundles and a marker-freshness test for
    CLI zips, so the notarize step's fail-open path cannot reach an
-   upload. For GUI bundles `spctl --assess` must return
-   `source=Notarized Developer ID`
+   upload. For CLI zips it then unpacks the zip, runs the packaged
+   binary, and requires its `--version` to contain the tag; any of the
+   three failing stops the release. For GUI bundles `spctl --assess`
+   must return `source=Notarized Developer ID`
 6. Upload zips one by one (`gh release upload`)
 7. For tap-eligible tools (Go CLI → formula, notarized GUI `.app` → cask),
    run `make brew` to generate this release's formula/cask from the built
