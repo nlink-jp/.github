@@ -153,6 +153,40 @@ local_accounts() {
   { id -un 2>/dev/null; [ -n "${HOME:-}" ] && basename "$HOME"; } | sort -u | grep -v '^$'
 }
 
+# --- cask macOS floor --------------------------------------------------------
+# A cask's `depends_on macos:` is what Homebrew checks before installing. The
+# shared template defaults it to :big_sur, and nothing fails when that is wrong:
+# the cask installs on a Mac the app cannot launch on. Ten casks stood that way,
+# two of them re-issued after the lesson had been written down. The deployment
+# target in Package.swift is the fact; the cask has to say the same.
+
+# package_macos_major PACKAGE_SWIFT -> the deployment target's major version,
+# from `.macOS(.v14)` or `.macOS("26.0")`. Empty when there is none.
+package_macos_major() {
+  sed -n -E \
+    -e 's/.*\.macOS\(\.v([0-9]+)\).*/\1/p' \
+    -e 's/.*\.macOS\("([0-9]+)[^"]*"\).*/\1/p' "$1" 2>/dev/null | head -1
+}
+
+# macos_symbol_for MAJOR -> Homebrew's symbol for that release. The names are
+# not the marketing names; the authority is `brew ruby -e 'puts
+# MacOSVersion::SYMBOLS'`. An unknown major prints nothing, and the caller
+# fails rather than skips: a new macOS every year must not quietly switch this
+# check off.
+macos_symbol_for() {
+  case "$1" in
+    11) echo ":big_sur" ;;   12) echo ":monterey" ;; 13) echo ":ventura" ;;
+    14) echo ":sonoma" ;;    15) echo ":sequoia" ;;  26) echo ":tahoe" ;;
+    27) echo ":golden_gate" ;;
+  esac
+}
+
+# cask_macos_floor CASK_RB -> the symbol in `depends_on macos:`, whether written
+# bare (`:sonoma`) or as a comparison (`">= :sonoma"`). Empty when absent.
+cask_macos_floor() {
+  sed -n -E 's/^[[:space:]]*depends_on[[:space:]]+macos:[[:space:]]*"?(>=[[:space:]]*)?(:[a-z_]+)"?.*/\2/p' "$1" 2>/dev/null | head -1
+}
+
 # --- Makefile build-output resolution ---------------------------------------
 # The convention is that `make build` writes into dist/. What matters is the
 # resolved *value* of the output path, not the variable name used to spell it:
@@ -542,6 +576,34 @@ check_series() {
           errors=$((errors + 1))
         fi
       done
+    done < <(git -C "$dir" submodule foreach --quiet 'echo "        $displaypath"')
+  fi
+
+  # 12b. A Swift app's cask states the macOS floor its package declares.
+  #      Silent when the tap is not cloned beside the series: the casks live
+  #      there, and this script is otherwise usable without it.
+  if [ -f "$dir/.gitmodules" ] && [ -d "$DEST/homebrew-tap/Casks" ]; then
+    while IFS= read -r subpath; do
+      subpath="${subpath#        }"
+      subdir="$dir/$subpath"
+      name=$(basename "$subpath")
+      [ -f "$subdir/Package.swift" ] || continue
+      cask="$DEST/homebrew-tap/Casks/$name.rb"
+      [ -f "$cask" ] || continue
+
+      major=$(package_macos_major "$subdir/Package.swift")
+      [ -n "$major" ] || continue
+      want=$(macos_symbol_for "$major")
+      got=$(cask_macos_floor "$cask")
+      if [ -z "$want" ]; then
+        echo "    $FAIL $name: Package.swift targets macOS $major, which check-org.sh has no Homebrew symbol for"
+        echo "         add it to macos_symbol_for (brew ruby -e 'puts MacOSVersion::SYMBOLS')"
+        errors=$((errors + 1))
+      elif [ "$got" != "$want" ]; then
+        echo "    $FAIL $name: cask says 'depends_on macos: ${got:-<nothing>}', Package.swift says macOS $major ($want)"
+        echo "         set BREW_MACOS_FLOOR := $want in its Makefile; the template default is :big_sur"
+        errors=$((errors + 1))
+      fi
     done < <(git -C "$dir" submodule foreach --quiet 'echo "        $displaypath"')
   fi
 

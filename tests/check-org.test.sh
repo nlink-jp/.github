@@ -277,5 +277,28 @@ verdict_is 'failures shown alongside skips'     1 '1 check(s) failed'           
 
 # ---- summary ---------------------------------------------------------------
 echo "------------------------------------------------------------"
+# ---- cask macOS floor: the package's target, Homebrew's symbol, the cask's line
+is() { if [ "$2" = "$3" ]; then ok "$1"; else no "$1"; printf '        want: [%s]\n        got:  [%s]\n' "$3" "$2" >&2; fi; }
+
+printf '%s\n' 'let package = Package(' '    name: "X",' '    platforms: [.macOS(.v14)],' > "$TMP/Package.swift"
+is 'Package.swift .macOS(.v14) is major 14' "$(package_macos_major "$TMP/Package.swift")" '14'
+printf '%s\n' '    platforms: [.macOS("26.0")],' > "$TMP/Package.swift"
+is 'Package.swift .macOS("26.0") is major 26' "$(package_macos_major "$TMP/Package.swift")" '26'
+printf '%s\n' '    platforms: [.iOS(.v17)],' > "$TMP/Package.swift"
+is 'no macOS platform is no major' "$(package_macos_major "$TMP/Package.swift")" ''
+
+is 'macOS 13 is :ventura' "$(macos_symbol_for 13)" ':ventura'
+is 'macOS 14 is :sonoma' "$(macos_symbol_for 14)" ':sonoma'
+is 'macOS 26 is :tahoe (not the marketing name)' "$(macos_symbol_for 26)" ':tahoe'
+is 'macOS 27 is :golden_gate' "$(macos_symbol_for 27)" ':golden_gate'
+is 'an unknown major has no symbol, so the caller fails' "$(macos_symbol_for 99)" ''
+
+printf '%s\n' 'cask "x" do' '  depends_on arch: :arm64' '  depends_on macos: :big_sur' 'end' > "$TMP/x.rb"
+is 'a bare symbol is read' "$(cask_macos_floor "$TMP/x.rb")" ':big_sur'
+printf '%s\n' 'cask "x" do' '  depends_on macos: ">= :sonoma"' 'end' > "$TMP/x.rb"
+is 'a comparison is read as its symbol' "$(cask_macos_floor "$TMP/x.rb")" ':sonoma'
+printf '%s\n' 'cask "x" do' '  depends_on arch: :arm64' 'end' > "$TMP/x.rb"
+is 'no macos line is no floor' "$(cask_macos_floor "$TMP/x.rb")" ''
+
 echo "passed: $pass   failed: $fail"
 [ "$fail" -eq 0 ]

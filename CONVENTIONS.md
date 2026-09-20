@@ -1993,7 +1993,14 @@ hand-maintained instead.
 - `depends_on arch: :arm64`; formulae add `depends_on :macos`, casks use
   `depends_on macos:` with the floor from `BREW_MACOS_FLOOR` (default
   `:big_sur`; set it in the repo Makefile when the app requires newer, e.g.
-  `instant-translate` needs `:tahoe` for the Translation API).
+  `instant-translate` needs `:tahoe` for the Translation API). **For a Swift
+  app the floor is the deployment target in `Package.swift`, and
+  `check-org.sh` holds the published cask to it** (check 12b): the default is
+  wrong for every such app, nothing fails when it is — Homebrew installs an
+  app that will not launch — and ten casks stood that way, two re-issued after
+  the lesson was written down. Use Homebrew's symbol, not the marketing name
+  (`brew ruby -e 'puts MacOSVersion::SYMBOLS'`); a macOS release the script has
+  no symbol for fails the check rather than switching it off.
 - `desc`: < 80 chars, no leading article, must not start with the tool name,
   write "command-line" not "command line", and casks omit "macOS"/"Mac".
 - **A CLI must answer `--version`.** The generated formula's `test` block runs
