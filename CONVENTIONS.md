@@ -550,6 +550,22 @@ htmlcov/
       inside (ADR-004; no README or repo scaffolding in the zip)
 - [ ] `.gitignore` contains `dist/` (and `.DS_Store`)
 
+**Formatter hooks (any language — only if the project wants one):**
+
+- [ ] A `fmt` target lands **in the same commit as the formatter's configuration**
+      (`.swift-format`, `.prettierrc`, `[tool.ruff]` in `pyproject.toml`, …). `go fmt`
+      needs none. A formatter with no pinned configuration applies the tool's own
+      defaults to the whole tree
+- [ ] `make fmt` on a clean checkout produces **no diff** — run it once before
+      committing the target. A target that has never been run is not known to be safe
+- [ ] Adding a formatter to an **existing** codebase comes with the one-time `style:`
+      commit that brings the tree in line, and the size of that diff is measured
+      first: configuration cannot always reproduce hand-formatted code. (A Swift
+      repo's `fmt` target, scaffolded without a `.swift-format` and never run, rewrote
+      all 39 files from 4-space to 2-space the first time it was used; no swift-format
+      configuration brought that repo below 54 changed lines, so the target was
+      removed rather than pinned)
+
 **Documentation:**
 
 - [ ] `README.md` and `README.ja.md` created with at least description and installation
