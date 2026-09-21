@@ -722,6 +722,15 @@ Additional documents (design docs, RFP, reference manuals, evaluation guides):
 Do NOT duplicate root READMEs into `docs/en/` or `docs/ja/`.
 Do NOT use a flat `docs/design/` directory — always separate by language.
 
+**A move is not finished until the links that point at the moved file are
+followed.** Each language's reader is sent to their own side: `README.md` and
+`CHANGELOG.md` link `docs/en/…`, `README.ja.md` links `docs/ja/…`. Moving
+documents and leaving the references behind left 55 dead links across 6
+repositories — several in release entries, where the link is the only route to
+the record. `check-org.sh` resolves every relative markdown link in a tracked
+`.md`/`.toml` file and fails on the ones that do not exist, so run it after any
+documentation move.
+
 ### Make small commits
 
 - Each commit should represent one logical change.

@@ -255,6 +255,63 @@ mirror_problems() {
   done < <(cd "$dir" && git ls-files README.md README.ja.md docs 2>/dev/null)
 }
 
+# --- document references -----------------------------------------------------
+# The mirror check above compares a pair of documents to each other, and a pair
+# can be flawless while every link *into* it is dead. The 2026-09-21 language
+# split proved it: the pairs came out symmetric, and 55 markdown links across 6
+# repositories still pointed at paths the split had moved — including release
+# entries in CHANGELOG.md, where the link is the reader's only route to the
+# record. Nothing resolved a reference, so nothing noticed.
+
+# doc_link_targets FILE — one relative link target per line.
+#
+# Code is excluded: a path inside a fenced block or an inline span is shown to
+# the reader as text, not offered as a link, so `docs/adr/0009` in a command
+# example is not a broken reference. External schemes, protocol-relative and
+# absolute paths are left alone — this check resolves what the repository owns.
+doc_link_targets() {
+  awk '
+    /^[[:space:]]*```/ { fence = !fence; next }
+    fence { next }
+    {
+      line = $0
+      gsub(/`[^`]*`/, "", line)
+      while (match(line, /\[[^]]*\]\([^)[:space:]]+\)/)) {
+        m = substr(line, RSTART, RLENGTH)
+        line = substr(line, RSTART + RLENGTH)
+        sub(/^\[[^]]*\]\(/, "", m)
+        sub(/\)$/, "", m)
+        sub(/#.*$/, "", m)
+        if (m != "" && m !~ /^[a-zA-Z][a-zA-Z0-9+.-]*:/ && m !~ /^\// ) print m
+      }
+    }
+  ' "$1"
+}
+
+# broken_links REPO_DIR — one line per link whose target does not exist.
+# Silent when every reference resolves.
+broken_links() {
+  local dir="$1" rel base target
+  [ -d "$dir" ] || return 0
+  while IFS= read -r rel; do
+    [ -n "$rel" ] || continue
+    # Upstream copies carry their own broken references and are not ours to fix.
+    case "$rel" in
+      third_party/*|vendor/*|Vendor/*|node_modules/*) continue ;;
+    esac
+    base=$(dirname "$rel")
+    while IFS= read -r target; do
+      [ -n "$target" ] || continue
+      # Resolved by cd'ing to the document's own directory, so ../ and ./
+      # behave exactly as they do for a reader following the link. The subshell
+      # keeps the caller's working directory out of it.
+      ( cd "$dir/$base" && [ -e "$target" ] ) || echo "$rel -> $target"
+    done < <(doc_link_targets "$dir/$rel")
+    # Here a pathspec's `*` matching slashes is what is wanted: every .md in
+    # the repository, at any depth.
+  done < <(cd "$dir" && git ls-files '*.md' '*.toml' 2>/dev/null)
+}
+
 # --- Makefile build-output resolution ---------------------------------------
 # The convention is that `make build` writes into dist/. What matters is the
 # resolved *value* of the output path, not the variable name used to spell it:
@@ -696,6 +753,20 @@ check_series() {
       printf '%s\n' "$layout" | sed 's/^/            /'
       skipped=$((skipped + 1))
     fi
+  done < <(git -C "$dir" submodule foreach --quiet 'echo "        $displaypath"')
+
+  # 14. Document references resolve (CONVENTIONS.md §Documentation structure)
+  echo "    document references:"
+  while IFS= read -r subpath; do
+    subpath="${subpath#        }"
+    name=$(basename "$subpath")
+    problems=$(broken_links "$dir/$subpath")
+    [ -n "$problems" ] || continue
+    count=$(printf '%s\n' "$problems" | wc -l | tr -d ' ')
+    echo "        $FAIL $name: $count link(s) point at a path that does not exist"
+    printf '%s\n' "$problems" | head -8 | sed 's/^/            /'
+    [ "$count" -le 8 ] && : || echo "            … and $((count - 8)) more"
+    errors=$((errors + 1))
   done < <(git -C "$dir" submodule foreach --quiet 'echo "        $displaypath"')
 
   # 14. Submodule pointers vs origin/main

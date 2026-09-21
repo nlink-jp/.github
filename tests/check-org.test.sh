@@ -355,5 +355,75 @@ case "$(mirror_problems "$MIRROR")" in
   *) ok 'a document under docs/en is not called flat' ;;
 esac
 
+# ---- document references: a link is checked by resolving it ----------------
+# The pair check above can be satisfied while every reference into the pair is
+# dead, which is how 55 broken links survived the language split.
+link_repo() {  # builds a repo under $TMP/links and echoes its path
+  local dir="$TMP/links"
+  rm -rf "$dir"; mkdir -p "$dir/docs/en/adr" "$dir/docs/ja/adr"
+  git -C "$dir" init -q 2>/dev/null || git init -q "$dir"
+  printf 'x\n' > "$dir/docs/en/adr/0001-x.md"
+  printf 'x\n' > "$dir/docs/ja/adr/0001-x.ja.md"
+  printf 'see [ADR-0001](docs/en/adr/0001-x.md)\n' > "$dir/README.md"
+  printf 'see [ADR-0001](docs/ja/adr/0001-x.ja.md)\n' > "$dir/README.ja.md"
+  git -C "$dir" add -A >/dev/null 2>&1
+  echo "$dir"
+}
+
+LINKS=$(link_repo)
+is 'every reference resolving is silent' "$(broken_links "$LINKS")" ''
+
+# The exact shape the split left behind: the record moved, the link did not.
+printf 'see [ADR-0001](docs/adr/0001-x.md)\n' > "$LINKS/README.md"
+git -C "$LINKS" add -A >/dev/null 2>&1
+is 'a link to a moved document is named with its target' \
+   "$(broken_links "$LINKS")" 'README.md -> docs/adr/0001-x.md'
+
+# A ../ reference is resolved from the document's own directory, not the repo root.
+LINKS=$(link_repo)
+printf 'see [the other side](../../en/adr/0001-x.md)\n' > "$LINKS/docs/ja/adr/0002-y.ja.md"
+git -C "$LINKS" add -A >/dev/null 2>&1
+is 'a ../ link is resolved from the document, not the root' "$(broken_links "$LINKS")" ''
+
+printf 'see [nothing](../../en/adr/9999-nope.md)\n' > "$LINKS/docs/ja/adr/0002-y.ja.md"
+git -C "$LINKS" add -A >/dev/null 2>&1
+case "$(broken_links "$LINKS")" in
+  *'docs/ja/adr/0002-y.ja.md -> ../../en/adr/9999-nope.md'*) ok 'a dead ../ link is named' ;;
+  *) no 'a dead ../ link is named' ;;
+esac
+
+# Text the reader is shown rather than offered: not a reference, not a failure.
+LINKS=$(link_repo)
+cat > "$LINKS/docs/en/adr/0003-z.md" <<'EOF'
+Run it like this:
+
+```bash
+cp [template](docs/adr/0000-template.md) .
+```
+
+Inline `[x](docs/adr/0000-template.md)` too.
+EOF
+git -C "$LINKS" add -A >/dev/null 2>&1
+is 'a path inside code is not a reference' "$(broken_links "$LINKS")" ''
+
+# External and absolute targets belong to somebody else.
+LINKS=$(link_repo)
+printf '%s\n' 'a [site](https://example.com/x.md)' 'a [scheme](mailto:x@example.com)' \
+  'a [root](/etc/hosts)' 'an [anchor](#section)' > "$LINKS/docs/en/adr/0004-w.md"
+git -C "$LINKS" add -A >/dev/null 2>&1
+is 'external, absolute and anchor targets are left alone' "$(broken_links "$LINKS")" ''
+
+# Untracked files are not the repository's references yet.
+LINKS=$(link_repo)
+printf 'see [nothing](nope.md)\n' > "$LINKS/scratch.md"
+is 'an untracked document is not checked' "$(broken_links "$LINKS")" ''
+
+# Upstream copies carry their own dead links; they are not ours to fix.
+LINKS=$(link_repo)
+mkdir -p "$LINKS/third_party/upstream"
+printf 'see [nothing](README.ijg)\n' > "$LINKS/third_party/upstream/LICENSE.md"
+git -C "$LINKS" add -A >/dev/null 2>&1
+is 'a vendored document is skipped' "$(broken_links "$LINKS")" ''
+
 echo "passed: $pass   failed: $fail"
 [ "$fail" -eq 0 ]
