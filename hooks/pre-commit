@@ -36,10 +36,14 @@ fi
 # no document that explains an App-Level Token could ever be committed — found
 # on 2026-09-21 when a Slack setup guide was blocked by its own placeholders,
 # `xapp-YOUR-APP-TOKEN` among them. A real app token is
-# `xapp-<version>-<app id>-<digits>-<hex>`; requiring a digit-hyphen after the
-# prefix is enough to tell the two apart. `xoxe.xoxp-` (a refresh token) keeps
-# its own rule: the prefix itself is specific enough to be worth stopping.
-slack_token_re='xoxb-[0-9]{10,}|xoxp-[0-9]{10,}|xoxe\.xoxp-|xapp-[0-9]+-'
+# `xapp-<version>-<app id>-<digits>-<hex>`, e.g.
+# `xapp-1-A01234567-1234567890123-<64 hex>`, and the shape has to be demanded as
+# a whole: the guides write the placeholder the way Slack's own documentation
+# does, `xapp-1-xxxxxxxx…`, so requiring only a digit-hyphen after the prefix
+# still blocks them. The app id, the digit run and the hex tail together are
+# what tell a token from a placeholder. `xoxe.xoxp-` (a refresh token) keeps its
+# own rule: that prefix is specific enough to be worth stopping on its own.
+slack_token_re='xoxb-[0-9]{10,}|xoxp-[0-9]{10,}|xoxe\.xoxp-|xapp-[0-9]+-A[A-Z0-9]{6,}-[0-9]{10,}-[0-9a-f]{16,}'
 if echo "$STAGED_DIFF" | grep -qE "$slack_token_re"; then
   echo -e "${RED}BLOCKED:${NC} Slack token detected in staged files."
   echo "$STAGED_DIFF" | grep --color=always -E "$slack_token_re" | head -5

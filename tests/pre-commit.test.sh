@@ -60,6 +60,11 @@ blocks 'a bot-token placeholder passes'    'SLACK_BOT_TOKEN=xoxb-YOUR-BOT-TOKEN'
 blocks 'an app-token placeholder passes'   'SLACK_APP_TOKEN=xapp-YOUR-APP-TOKEN' pass
 blocks 'an elided app token passes'        'Paste the token (xapp-...) into the field' pass
 blocks 'the bare word xapp passes'         'The App-Level Token begins with xapp-' pass
+# Slack's own documentation writes the placeholder this way, and so do the
+# setup guides in this organisation.
+blocks "Slack's placeholder shape passes" \
+  'SLACK_APP_TOKEN=xapp-1-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx' pass
+blocks 'an app id on its own passes'       'the app id looks like xapp-1-A01234567' pass
 
 echo "== other rules"
 anthropic_key="sk-${_ant:-ant}-api03-${alnum24}"
