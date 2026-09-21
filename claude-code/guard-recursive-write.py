@@ -291,6 +291,42 @@ def single_quoted(segment):
 MID_DOLLAR_RE = re.compile(r"(?<!\\)\$(?=[^)|])")
 
 
+def raw_words(segment):
+    """The words of a segment as typed, quotes kept: `'=x'` stays `'=x'`, so a
+    word the shell will see unquoted can be told from one it will not."""
+    out, cur, quote = [], [], None
+    for c in segment:
+        if quote:
+            cur.append(c)
+            if c == quote:
+                quote = None
+        elif c in ("'", '"'):
+            quote = c
+            cur.append(c)
+        elif c.isspace():
+            if cur:
+                out.append("".join(cur))
+                cur = []
+        else:
+            cur.append(c)
+    if cur:
+        out.append("".join(cur))
+    return out
+
+
+def leading_equals(segment):
+    """An unquoted word starting with `=` (and more than a lone `=`), which zsh
+    expands to a command's path — or fails on. `==` and `=~` inside `[[ ]]` or
+    `(( ))` are operators there and are left alone."""
+    conditional = "[[" in segment or "((" in segment
+    for w in raw_words(segment):
+        if len(w) > 1 and w[0] == "=":
+            if conditional and w in ("==", "=~"):
+                continue
+            return True
+    return False
+
+
 def footguns(command):
     """Reasons to refuse from family 2, judged on the command minus heredocs."""
     reasons = []
@@ -314,6 +350,13 @@ def footguns(command):
         )
 
     for segment in split_segments(body):
+        if leading_equals(segment):
+            reasons.append(
+                "zsh expands an unquoted word that starts with `=` into a command's path "
+                "(`=ls` becomes /bin/ls) and fails with 'not found' otherwise, so `echo ====` "
+                "and `[ a == b ]` both break. Quote it (`'===='`), compare inside `[[ ]]`, "
+                "or put the logic in a bash script"
+            )
         tokens = words(segment)
         if not tokens:
             continue

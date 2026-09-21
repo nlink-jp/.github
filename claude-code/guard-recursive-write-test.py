@@ -182,6 +182,24 @@ CASES = [
     ("cat > /abs/n.md <<'EOF'\ndon't\nEOF\nsed -i 's/a/b/' /abs/f", True),
     # ...and a body line that reads like a command is not one.
     ("cat > /abs/n.md <<'EOF'\nblack .\nEOF", False),
+
+    # ---- zsh expands a word that starts with `=` ------------------------------
+    # The one that was stepped on: a separator line printed between outputs.
+    ("sed -n '1,5p' /abs/a; echo ======; sed -n '1,5p' /abs/b", True),
+    ("echo =====", True),
+    ('[ "$a" == b ] && echo same', True),
+    ("ls =git", True),
+    # Quoted, a lone `=`, `==` inside [[ ]] or (( )), or `=` inside a word: fine.
+    ("echo '======'", False),
+    ('echo "== section =="', False),
+    ('test "$a" = b', False),
+    ("[[ $a == b ]] && echo same", False),
+    ("[[ $a =~ ^v ]] && echo tag", False),
+    ("(( n == 3 )) && echo three", False),
+    ("git log --format=%H -1", False),
+    ("VAR=1 make build", False),
+    ("sed -n '/==/p' /abs/f", False),
+    ("cat > /abs/s.sh <<'EOF'\n[ a == b ]\necho ====\nEOF", False),
 ]
 
 failures = []
