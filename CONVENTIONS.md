@@ -2130,17 +2130,16 @@ Before tagging a release, verify every item:
 10. Feed any new reusable engineering knowledge from this work back to
     `nlink-jp/knowledge` (see §Consult and feed the knowledge base)
 11. Run `check-org.sh` to verify all green
-12. **A release is not delivered until the processes running it restart.**
-    `brew upgrade` replaces the Cellar directory, but a resident process keeps
-    the inode it started with — an MCP server spawned earlier answers with the
-    old behaviour while every file on disk is current. Run
-    `.github/scripts/stale-running-images.sh` to list which tools are still
-    answering from a replaced binary and which hosts to restart. Claude
-    Desktop has no MCP reload, so its servers only pick a release up when the
-    app itself restarts; this drift is the machine's normal state, which is why
-    it is a report you run rather than a gate that fails. Restarting ends
-    running sessions, so it is the operator's decision — say what is stale
-    rather than deciding for them
+
+A release is complete when the artifact is published, installable at the
+version it claims, and the umbrella and catalogs say so. **Which machine is
+running which build is not part of it.** These are development repositories:
+an agent holding an older binary is the normal state of a working machine, not
+an outstanding defect, and treating it as one imports an operations
+requirement that does not exist here. If a tool ever answers something you
+have already fixed, `.github/scripts/stale-running-images.sh` says which
+resident processes are still holding a replaced binary — a debugging aid for
+that specific confusion, not a step in this checklist.
 
 ---
 
@@ -2186,13 +2185,12 @@ submodule updates, and scaffold creation.
 
 **Exit code:** `0` if all checks pass, `1` if any check fails.
 
-**Not in `check-org.sh`:** whether a *running* process holds the installed
-binary. It is the third place a release can stop (tap → install → running
-image), but it can never be green here — Claude Desktop cannot reload an MCP
-server, so its servers hold whatever they started with. A gate that always
-fails is a gate people learn to ignore, so that measurement lives in
-`.github/scripts/stale-running-images.sh`, to be run when the answer matters
-(after a release, or when a tool answers something you just fixed).
+**Not in `check-org.sh`:** anything about this machine's running processes.
+This script judges repositories — their files, their history, their published
+artifacts. What a long-lived agent process happens to be executing is a
+property of the machine, and on a development machine it is not a defect at
+all. `.github/scripts/stale-running-images.sh` answers that question when
+debugging makes it relevant, deliberately outside the gate.
 
 > Check 12 is documented here as the target; that `check-org.sh` check is
 > a follow-up task (see §Release Archive Standard).

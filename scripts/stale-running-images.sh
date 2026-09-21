@@ -7,30 +7,28 @@
 #   ./stale-running-images.sh --strict    # exit 1 when anything is stale
 #   STALE_LIB_ONLY=1 . ./stale-running-images.sh   # load the helpers only
 #
-# Why this exists, and why it is NOT part of check-org.sh
-# ------------------------------------------------------
-# A release reaches a user in three stages, and each has a different check:
+# What this is for
+# ----------------
+# A debugging aid for one specific confusion: a tool answers something you have
+# already fixed. `brew upgrade` replaces the Cellar directory, but a resident
+# process keeps the inode it started with — so an MCP server spawned before an
+# upgrade goes on answering with the old behaviour while every file on disk is
+# current, and nothing on disk shows it. Measured 2026-09-21 while chasing
+# exactly that: a urlscan-lookup server was serving the 0.2.0 manual two
+# releases after the behaviour changed.
 #
-#   1. the tap points at the release   — a file; check-org.sh verifies it
-#   2. the install matches the tap     — `<tool> --version`
-#   3. the running process is that install — only visible from the process
+# What it is NOT
+# --------------
+# It is not a health check, and a process holding an older build is not a
+# defect. These are development repositories: an agent carrying the binary it
+# started with is the normal state of a working machine, and Claude Desktop has
+# no way to reload an MCP server anyway. Requiring every resident process to
+# match the installed version is an operations requirement, and importing it
+# here would make a permanently failing check out of ordinary development.
 #
-# `brew upgrade` replaces the Cellar directory, but a running process keeps the
-# inode it started with. So an MCP server spawned before an upgrade answers with
-# the old behaviour while every file on disk is current. Measured 2026-09-21: an
-# urlscan-lookup server was serving the 0.2.0 manual two releases after the
-# behaviour changed, and an image-forge server was reporting a model licence as
-# "commercial OK" that its publisher forbids.
-#
-# Stage 3 drift is the normal state of this machine, not a defect: Claude
-# Desktop has no way to reload an MCP server, so its servers keep whatever they
-# started with until the app itself restarts. A gate that can never be green
-# teaches everyone to ignore the gate, so this is a tool you run when the answer
-# matters — after a release, or when a tool answers something you just fixed —
-# rather than a check that fails every day.
-#
-# The answer it gives is a list of hosts to restart. Restarting them is the
-# operator's decision: it ends running sessions.
+# So this is not in check-org.sh, not a step in the release checklist, and it
+# exits 0 whatever it finds. It names hosts; restarting them ends running
+# sessions and is the operator's call.
 
 set -uo pipefail
 
@@ -115,8 +113,8 @@ echo ""
 # different times appears once per version it is still holding.
 count=$(printf '%s\n' "$out" | wc -l | tr -d ' ')
 tools=$(printf '%s\n' "$out" | cut -d: -f1 | sort -u | wc -l | tr -d ' ')
-echo "$count stale image(s) across $tools tool(s) — answering from a binary that is no longer installed."
-echo "Restart the host that spawned them to pick up the installed version:"
+echo "$count running image(s) across $tools tool(s) are not the installed version."
+echo "If you want one of these to pick up the installed version, restart its host:"
 echo "  - Claude Code: the session's MCP servers restart with the session"
 echo "  - Claude Desktop: quit and reopen the app (it has no MCP reload)"
 echo "  - gem-agent / lagent: restart the runtime"
