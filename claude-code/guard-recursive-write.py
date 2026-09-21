@@ -1,20 +1,44 @@
 #!/usr/bin/env python3
-"""Block in-place rewrite commands aimed at a relative path.
+"""Refuse the shell commands that keep going wrong in the same way.
 
-Why this exists: `gofmt -w .` run from the wrong directory reformatted every
-Go file in the nlink-jp workspace — twice, months apart, despite notes and
-procedures telling the agent to pass absolute paths. Procedure fails exactly
-when attention lapses, which is the same moment the accident happens, so the
-control has to live outside the agent. This runs as a PreToolUse hook.
+Why this exists: procedure fails exactly when attention lapses, which is the
+same moment the accident happens, so the control has to live outside the
+agent. This runs as a PreToolUse hook. Two families are refused.
 
-Blocked: a tool that rewrites files in place whose targets are relative
-(`.`, `./x`, `src`, `*.go`) or absent (implicit cwd). Besides its own name, a
-tool is recognised behind `xcrun [options]`, and swift-format also as
-SwiftPM's two-word form `swift format`. Other launchers are not seen through.
-Allowed: absolute targets, `~`-rooted targets, a command anchored by a
-leading `cd /absolute/path &&`, and read-only invocations — no in-place flag,
-or a read-only subcommand (`swift format lint`, `swift format
-dump-configuration`).
+1. In-place rewrites aimed at a relative path. `gofmt -w .` run from the wrong
+   directory reformatted every Go file in the nlink-jp workspace — twice,
+   months apart, despite notes telling the agent to pass absolute paths.
+
+   Blocked: a tool that rewrites files in place whose targets are relative
+   (`.`, `./x`, `src`, `*.go`) or absent (implicit cwd). Besides its own name,
+   a tool is recognised behind `xcrun [options]`, and swift-format also as
+   SwiftPM's two-word form `swift format`. Other launchers are not seen
+   through. Allowed: absolute targets, `~`-rooted targets, a command anchored
+   by a leading `cd /absolute/path &&`, and read-only invocations — no
+   in-place flag, or a read-only subcommand (`swift format lint`, `swift
+   format dump-configuration`).
+
+2. Shell footguns that recurred after being written down. Each one was
+   recorded in memory, then stepped on again — three times for one of them —
+   and the maintainer named the pattern: the same failure, then a retry, every
+   time, with the risk of damaging the environment. A note is read when it is
+   remembered; this is read every time.
+
+   - In-place sed, at any path. This machine's `sed` is GNU, so the BSD form
+     `sed -i '' 's/x/y/' FILE` takes '' as the script and the substitution as
+     a *file name*: the edit silently does not happen, and the named files are
+     opened for rewriting. Edit with python3 or the Edit tool instead.
+   - `PIPESTATUS` in a command the tool runs under zsh. It is bash-only; under
+     zsh it is empty and a status read through it falls back to `$?` of the
+     pipe's last stage — a failed make reported as rc=0. Allowed inside
+     `bash -c '...'`, or in a script written through a heredoc.
+   - A single-quoted grep pattern with a `$` in the middle, without `-F`.
+     `$` is an anchor, so `grep 'exit $$rc'` (a Makefile escape pasted into a
+     pattern) matched nothing and reported 59 converted files as unconverted.
+     `$` at the end, before `)` or `|`, or escaped as `\\$` is left alone.
+
+   Heredoc bodies are removed before this family is judged: writing a script
+   is not running it, and a script that is run with bash is bash's business.
 """
 import json
 import re
@@ -175,6 +199,102 @@ def dangerous(tokens):
     return False, ""
 
 
+HEREDOC_RE = re.compile(r"<<(-?)\s*(['\"]?)([A-Za-z_][A-Za-z0-9_]*)\2")
+
+
+def strip_heredocs(command):
+    """Remove heredoc bodies, keeping the line that opens each one.
+
+    `cmd <<'EOF'` ... `EOF` (and <<"EOF", <<EOF, <<-EOF) — the body is data
+    handed to the command, not commands for this shell to run.
+    """
+    lines = command.split("\n")
+    out = []
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        out.append(line)
+        m = HEREDOC_RE.search(line)
+        i += 1
+        if not m:
+            continue
+        dash, tag = m.group(1), m.group(3)
+        while i < len(lines):
+            body = lines[i].lstrip("\t") if dash else lines[i]
+            i += 1
+            if body.strip() == tag:
+                break
+    return "\n".join(out)
+
+
+def single_quoted(segment):
+    """The contents of each '...' in a segment, as the shell passes them."""
+    return re.findall(r"'([^']*)'", segment)
+
+
+# `$` followed by something other than the end, `)` or `|`, and not escaped.
+MID_DOLLAR_RE = re.compile(r"(?<!\\)\$(?=[^)|])")
+
+
+def footguns(command):
+    """Reasons to refuse from family 2, judged on the command minus heredocs."""
+    reasons = []
+    body = strip_heredocs(command)
+
+    # The command word, read from the start of the text rather than from the
+    # first segment: the segment splitter is not quote-aware, so it cuts
+    # `bash -c 'false | true; ...'` inside the quotes and loses the word.
+    # Leading VAR=value assignments are skipped.
+    first_word = ""
+    for word in body.lstrip().split():
+        if re.match(r"^[A-Za-z_][A-Za-z0-9_]*=", word):
+            continue
+        first_word = word.rsplit("/", 1)[-1]
+        break
+    if "PIPESTATUS" in body and first_word != "bash":
+        reasons.append(
+            "`PIPESTATUS` is bash-only; the tool shell is zsh, where it is empty and "
+            "the status falls back to `$?` of the pipe's last stage. Capture the status "
+            "without a pipe: `cmd >log 2>&1; rc=$?`"
+        )
+
+    for segment in SEGMENT_SPLIT_RE.split(body):
+        segment = segment.strip()
+        if not segment:
+            continue
+        try:
+            tokens = shlex.split(segment)
+        except ValueError:
+            continue
+        if not tokens:
+            continue
+        tool = tokens[0].rsplit("/", 1)[-1]
+
+        if tool in ("sed", "gsed") and any(
+            t == "--in-place" or t.startswith("--in-place=") or
+            re.match(r"^-i", t) or re.match(r"^-[a-zA-Z]*i[a-zA-Z]*$", t)
+            for t in tokens[1:]
+        ):
+            reasons.append(
+                "in-place sed is refused: this machine's sed is GNU, so `sed -i '' 's/x/y/' "
+                "FILE` takes '' as the script and the substitution as a file name. Edit with "
+                "python3 (read, replace, assert it changed, write) or the Edit tool"
+            )
+
+        if tool in ("grep", "egrep"):
+            fixed = any(
+                t in ("-F", "--fixed-strings") or re.match(r"^-[a-zA-Z]*F[a-zA-Z]*$", t)
+                for t in tokens[1:]
+            )
+            if not fixed and any(MID_DOLLAR_RE.search(p) for p in single_quoted(segment)):
+                reasons.append(
+                    "a single-quoted grep pattern has a `$` in the middle, and `$` is a regex "
+                    "anchor, so the literal is never matched. Use `grep -F` for a literal, or "
+                    "escape it as `\\$`"
+                )
+    return reasons
+
+
 def anchored_by_cd(command):
     """True when the command starts with `cd <absolute path>`."""
     first = SEGMENT_SPLIT_RE.split(command, maxsplit=1)[0].strip()
@@ -194,39 +314,50 @@ def main():
     if not command.strip():
         return 0
 
-    if anchored_by_cd(command):
-        return 0
+    # Family 2 is judged first and regardless of a leading absolute `cd`: that
+    # anchor answers "which directory", and none of these is about directories.
+    footgun_reasons = footguns(command)
 
     reasons = []
-    for segment in SEGMENT_SPLIT_RE.split(command):
-        segment = segment.strip()
-        if not segment:
-            continue
-        try:
-            tokens = shlex.split(segment)
-        except ValueError:
-            continue
-        hit, why = dangerous(tokens)
-        if hit:
-            reasons.append(why)
+    if not anchored_by_cd(command):
+        for segment in SEGMENT_SPLIT_RE.split(command):
+            segment = segment.strip()
+            if not segment:
+                continue
+            try:
+                tokens = shlex.split(segment)
+            except ValueError:
+                continue
+            hit, why = dangerous(tokens)
+            if hit:
+                reasons.append(why)
 
-    if not reasons:
+    if not reasons and not footgun_reasons:
         return 0
 
-    detail = "; ".join(reasons)
+    parts = []
+    if reasons:
+        detail = "; ".join(reasons)
+        parts.append(
+            f"Blocked by guard-recursive-write: {detail}. "
+            "A recursive in-place rewrite must name an absolute path — the shell's "
+            "working directory is not reliable between tool calls, and this exact "
+            "pattern reformatted the whole nlink-jp workspace twice. "
+            "Re-run it as `gofmt -w /absolute/path/to/repo`, or prefix the command "
+            "with `cd /absolute/path &&`. Module-scoped alternatives such as "
+            "`go fmt ./...` are safer still: they fail harmlessly outside a module."
+        )
+    if footgun_reasons:
+        parts.append(
+            "Blocked by guard (recurring shell footgun): " + "; ".join(footgun_reasons) + ". "
+            "Each of these was written down and then stepped on again; the guard refuses "
+            "it every time so the retry never has to happen."
+        )
     print(json.dumps({
         "hookSpecificOutput": {
             "hookEventName": "PreToolUse",
             "permissionDecision": "deny",
-            "permissionDecisionReason": (
-                f"Blocked by guard-recursive-write: {detail}. "
-                "A recursive in-place rewrite must name an absolute path — the shell's "
-                "working directory is not reliable between tool calls, and this exact "
-                "pattern reformatted the whole nlink-jp workspace twice. "
-                "Re-run it as `gofmt -w /absolute/path/to/repo`, or prefix the command "
-                "with `cd /absolute/path &&`. Module-scoped alternatives such as "
-                "`go fmt ./...` are safer still: they fail harmlessly outside a module."
-            ),
+            "permissionDecisionReason": " ".join(parts),
         }
     }))
     return 0

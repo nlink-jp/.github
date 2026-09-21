@@ -35,7 +35,10 @@ CASES = [
     # Absolute targets are the point of the guard: allowed.
     ("gofmt -w /Users/you/src/example-org/some-project", False),
     ("gofmt -w ~/src/example-org/some-project", False),
-    ("sed -i '' 's/a/b/' /tmp/x.go", False),
+    # Changed from allowed: in-place sed is refused at any path now (family 2).
+    # This exact spelling, aimed at an absolute path, is the one that went wrong
+    # — GNU sed took '' as the script and the substitution as a file name.
+    ("sed -i '' 's/a/b/' /tmp/x.go", True),
     ("prettier --write /abs/path/file.ts", False),
     ("black /abs/pkg", False),
     # Anchored by an absolute cd: allowed.
@@ -112,6 +115,47 @@ CASES = [
     ("swift package update", False),
     ("swift run tool -i .", False),
     ("xcrun swift build", False),
+
+    # ---- family 2: recurring shell footguns --------------------------------
+    # In-place sed, at any path and under any spelling.
+    ("sed -i 's/a/b/' /abs/file", True),
+    ("gsed -i 's/a/b/' /abs/file", True),
+    ("/usr/bin/sed -i.bak 's/a/b/' /abs/file", True),
+    ("sed --in-place 's/a/b/' /abs/file", True),
+    ("sed -ni 's/a/b/p' /abs/file", True),
+    ("cd /abs/repo && sed -i 's/a/b/' Makefile", True),   # the cd anchor answers a different question
+    # ... and every sed that does not write in place is left alone.
+    ("sed -n '1,5p' /abs/file", False),
+    ("sed -E 's/(a)/\\1/' /abs/file > /abs/out", False),
+    ("sed -e 's/i/I/' /abs/file", False),                  # an `i` in the script is not the flag
+    ("cat /abs/f | sed 's/x/y/'", False),
+    # A heredoc body is data: writing a note that mentions sed -i is not running it.
+    ("cat > /abs/notes.md <<'EOF'\nnever use sed -i here\nEOF", False),
+
+    # PIPESTATUS under the tool's zsh.
+    ("make test | tail -3; echo ${PIPESTATUS[0]}", True),
+    ('echo "rc=${PIPESTATUS[0]}"', True),
+    ("cd /abs && make check 2>&1 | tail -1; echo rc=${PIPESTATUS[0]}", True),
+    # Inside bash, or inside a script written through a heredoc: bash's business.
+    ("bash -c 'false | true; echo ${PIPESTATUS[0]}'", False),
+    ("cat > /abs/s.sh <<'EOF'\nfalse | true\necho ${PIPESTATUS[0]}\nEOF", False),
+    ("make test >/dev/null 2>&1; echo rc=$?", False),
+
+    # A single-quoted grep pattern with a mid-pattern `$`, without -F.
+    ("grep -q 'exit $$rc' /abs/Makefile", True),
+    ("grep -c '$(VERSION)-darwin' /abs/Makefile", True),
+    ("grep -rn 'a$b' /abs/dir", True),
+    # -F in any spelling, an anchor at the end, before ) or |, or escaped: fine.
+    ("grep -qF 'exit $$rc' /abs/Makefile", False),
+    ("grep -F -q 'exit $$rc' /abs/Makefile", False),
+    ("grep --fixed-strings 'a$b' /abs/f", False),
+    ("grep -E '^v[0-9]+$' /abs/f", False),
+    ("grep -E '(foo$|bar$)' /abs/f", False),
+    ("grep '\\$1' /abs/f", False),
+    # Double-quoted: the shell expands it first, so the guard cannot know the pattern.
+    ('grep "$pattern" /abs/f', False),
+    # The existing read-only case must stay allowed.
+    ("grep -rn 'foo' .", False),
 ]
 
 failures = []
