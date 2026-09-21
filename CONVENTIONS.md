@@ -2158,6 +2158,8 @@ submodule updates, and scaffold creation.
 | 10b | Vendored skill validator | A skill repo's `tests/validate-skill.sh` drifted from `.github/templates/validate-skill.sh` (ADR-006 — edit the canonical, re-vendor into every skill repo) |
 | 11 | Submodule pointers | Recorded commit differs from `origin/main` of submodule |
 | 12 | Release archive naming *(planned)* | Latest release assets match `<name>-v<version>-<os>-<arch>.<ext>`; darwin is zip & arm64-only (no darwin-amd64, no `.dmg`/`.tar.gz` for darwin) |
+| 13 | Language mirrors | A document with no counterpart (`README.md` ↔ `README.ja.md`, `docs/en/x.md` ↔ `docs/ja/x.ja.md`), a Japanese document without the `.ja.md` suffix, or (as a warning) a document in a flat `docs/` tree (§Documentation structure) |
+| 14 | Document references | A relative markdown link, in a tracked `.md`/`.toml`, pointing at a path that does not exist — resolved from the linking document's own directory. Code spans, external schemes, absolute paths, anchors and vendored copies are exempt |
 
 **Org-level checks (outside the series loop):**
 
