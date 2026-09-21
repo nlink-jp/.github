@@ -425,5 +425,37 @@ printf 'see [nothing](README.ijg)\n' > "$LINKS/third_party/upstream/LICENSE.md"
 git -C "$LINKS" add -A >/dev/null 2>&1
 is 'a vendored document is skipped' "$(broken_links "$LINKS")" ''
 
+# ---- tap currency: the release a formula/cask points at ---------------------
+# A release nobody receives is not a release: `brew upgrade` reads the formula,
+# and one tool sat two releases behind with every check green, because check 10
+# compares the vendored tap-generation scripts and never asks what the formula
+# targets.
+printf '%s\n' 'cask "x" do' '  version "0.11.1"' '  sha256 "abc"' \
+  '  url "https://github.com/nlink-jp/x/releases/download/v#{version}/x-v#{version}-darwin-arm64.zip"' 'end' > "$TMP/cask.rb"
+is 'a cask version stanza is read' "$(brew_version "$TMP/cask.rb")" '0.11.1'
+
+printf '%s\n' 'class X < Formula' \
+  '  url "https://github.com/nlink-jp/x/releases/download/v1.9.0/x-v1.9.0-darwin-arm64.zip"' \
+  '  sha256 "abc"' 'end' > "$TMP/formula.rb"
+is 'a formula tag in the url is read' "$(brew_version "$TMP/formula.rb")" '1.9.0'
+
+# The url form must not win over an explicit stanza, or a cask whose url
+# interpolates #{version} would read as whatever the url happens to spell.
+printf '%s\n' 'cask "x" do' '  version "2.0.0"' \
+  '  url "https://github.com/nlink-jp/x/releases/download/v1.0.0/x.zip"' 'end' > "$TMP/both.rb"
+is 'the version stanza wins over the url' "$(brew_version "$TMP/both.rb")" '2.0.0'
+
+# A commented-out version is not the version.
+printf '%s\n' 'cask "x" do' '  # version "9.9.9" (was)' '  version "0.1.0"' 'end' > "$TMP/comment.rb"
+is 'a commented version is not read' "$(brew_version "$TMP/comment.rb")" '0.1.0'
+
+# Unreadable must come back empty so the caller can report it. Returning
+# something plausible here would hide exactly the drift this check exists for.
+printf '%s\n' 'cask "x" do' '  name "x"' 'end' > "$TMP/none.rb"
+is 'an unreadable version is empty, not a guess' "$(brew_version "$TMP/none.rb")" ''
+
+printf '%s\n' 'class X < Formula' '  version "1.2"' 'end' > "$TMP/short.rb"
+is 'a two-part version is not accepted as X.Y.Z' "$(brew_version "$TMP/short.rb")" ''
+
 echo "passed: $pass   failed: $fail"
 [ "$fail" -eq 0 ]

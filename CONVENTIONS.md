@@ -2116,7 +2116,12 @@ Before tagging a release, verify every item:
 7. For tap-eligible tools (Go CLI → formula, notarized GUI `.app` → cask),
    run `make brew` to generate this release's formula/cask from the built
    darwin-arm64 zip and push it to `nlink-jp/homebrew-tap`
-   (see §Homebrew Tap Distribution)
+   (see §Homebrew Tap Distribution). **Skipping this publishes a release
+   nobody receives**: `brew upgrade` reads the formula, so the tag, the
+   assets and every gate can be green while installs stay on the previous
+   version. One tool sat two releases behind this way. `check-org.sh` now
+   compares each tap entry against its repository's latest release, which
+   is what catches the omission after the fact
 8. Update umbrella submodule pointer
 9. Update `nlink-jp/.github/profile/README.md` if new tool (keep the tool list
    alphabetical). Tool additions, archivals, and description changes must also
@@ -2166,6 +2171,7 @@ submodule updates, and scaffold creation.
 | Check | What it catches |
 |-------|-----------------|
 | `knowledge` standalone repo | Missing local clone; `docs/en` / `docs/ja` file sets drifting apart; a document without a catalog row in `README.md` / `README.ja.md` (ADR-015) |
+| `homebrew-tap` currency | A formula or cask pointing at anything other than its repository's latest release — i.e. a release step 7 (`make brew`) that was skipped, so `brew upgrade` still installs the previous version. Also fails on a formula whose version cannot be read. Needs `gh`; a repo with no visible release is not drift |
 
 **Exit code:** `0` if all checks pass, `1` if any check fails.
 

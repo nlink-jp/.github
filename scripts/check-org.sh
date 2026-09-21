@@ -312,6 +312,31 @@ broken_links() {
   done < <(cd "$dir" && git ls-files '*.md' '*.toml' 2>/dev/null)
 }
 
+# --- tap currency --------------------------------------------------------------
+# A release is not delivered until the tap points at it: `brew upgrade` reads the
+# formula, so a formula left on the previous version means the release exists and
+# nobody receives it. This went unnoticed for two releases of one tool while
+# every check was green — check 10 compares the *vendored tap-generation scripts*
+# against the templates and never asks what the formula targets. The release
+# checklist's `make brew` step is the fix; this is the check that catches a
+# release where it was skipped.
+
+# brew_version FILE -> the release a formula or cask points at, without the "v".
+# A cask states `version "X.Y.Z"` and interpolates it into the url; a formula
+# carries the tag in the url itself. An unreadable version is reported by the
+# caller rather than treated as a match — silence here would hide the drift the
+# check exists for.
+brew_version() {
+  local f="$1" v
+  v=$( { grep -oE '^[[:space:]]*version "[0-9]+\.[0-9]+\.[0-9]+"' "$f" 2>/dev/null |
+           head -1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+'; } || true)
+  if [ -z "$v" ]; then
+    v=$( { grep -oE 'releases/download/v?[0-9]+\.[0-9]+\.[0-9]+' "$f" 2>/dev/null |
+             head -1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+'; } || true)
+  fi
+  printf '%s' "$v"
+}
+
 # --- Makefile build-output resolution ---------------------------------------
 # The convention is that `make build` writes into dist/. What matters is the
 # resolved *value* of the output path, not the variable name used to spell it:
@@ -858,6 +883,47 @@ else
   done
   if [ "$kerr" -eq 0 ]; then
     echo "    $PASS knowledge: en/ja mirror and catalog consistent"
+  else
+    errors=$((errors + 1))
+  fi
+fi
+echo ""
+
+# Tap currency: the formula/cask a user installs from must point at the current
+# release (see brew_version above).
+echo "==> homebrew-tap (standalone)"
+tdir="$DEST/homebrew-tap"
+if [ ! -d "$tdir/.git" ]; then
+  echo "    $WARN not found locally (git clone https://github.com/nlink-jp/homebrew-tap) — NOT checked"
+  skipped=$((skipped + 1))
+elif ! command -v gh >/dev/null 2>&1; then
+  echo "    $WARN gh not available — cannot read latest releases, NOT checked"
+  skipped=$((skipped + 1))
+else
+  terr=0 tcount=0
+  for f in "$tdir"/Formula/*.rb "$tdir"/Casks/*.rb; do
+    [ -f "$f" ] || continue
+    tname=$(basename "$f" .rb)
+    tcount=$((tcount + 1))
+    tver=$(brew_version "$f")
+    if [ -z "$tver" ]; then
+      echo "    $FAIL homebrew-tap: cannot read the version out of $(basename "$(dirname "$f")")/$tname.rb"
+      terr=1
+      continue
+    fi
+    rver=$(gh release view --repo "nlink-jp/$tname" --json tagName --jq .tagName 2>/dev/null || true)
+    if [ -z "$rver" ]; then
+      # No release visible: a renamed, private or unreleased repo. Not drift.
+      continue
+    fi
+    if [ "$tver" != "${rver#v}" ]; then
+      echo "    $FAIL homebrew-tap: $tname points at $tver, latest release is $rver"
+      echo "         run 'make brew' in that repo (CONVENTIONS.md §Release Checklist step 7)"
+      terr=1
+    fi
+  done
+  if [ "$terr" -eq 0 ]; then
+    echo "    $PASS homebrew-tap: $tcount entr(ies) point at their latest release"
   else
     errors=$((errors + 1))
   fi
