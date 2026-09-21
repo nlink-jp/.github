@@ -31,9 +31,18 @@ if echo "$STAGED_DIFF" | grep -qE '\.iam\.gserviceaccount\.com'; then
 fi
 
 # ── 2. Slack tokens ──
-if echo "$STAGED_DIFF" | grep -qE 'xoxb-[0-9]{10,}|xoxp-[0-9]{10,}|xoxe\.xoxp-|xapp-'; then
+# Each prefix carries a shape, so a placeholder in a setup guide passes and a
+# real token does not. `xapp-` had no shape: it matched its own bare prefix, so
+# no document that explains an App-Level Token could ever be committed — found
+# on 2026-09-21 when a Slack setup guide was blocked by its own placeholders,
+# `xapp-YOUR-APP-TOKEN` among them. A real app token is
+# `xapp-<version>-<app id>-<digits>-<hex>`; requiring a digit-hyphen after the
+# prefix is enough to tell the two apart. `xoxe.xoxp-` (a refresh token) keeps
+# its own rule: the prefix itself is specific enough to be worth stopping.
+slack_token_re='xoxb-[0-9]{10,}|xoxp-[0-9]{10,}|xoxe\.xoxp-|xapp-[0-9]+-'
+if echo "$STAGED_DIFF" | grep -qE "$slack_token_re"; then
   echo -e "${RED}BLOCKED:${NC} Slack token detected in staged files."
-  echo "$STAGED_DIFF" | grep --color=always -E 'xoxb-|xoxp-|xoxe\.|xapp-' | head -5
+  echo "$STAGED_DIFF" | grep --color=always -E "$slack_token_re" | head -5
   echo ""
   errors=$((errors + 1))
 fi
