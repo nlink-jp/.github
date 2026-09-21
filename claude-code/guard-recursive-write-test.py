@@ -156,6 +156,32 @@ CASES = [
     ('grep "$pattern" /abs/f', False),
     # The existing read-only case must stay allowed.
     ("grep -rn 'foo' .", False),
+
+    # ---- separators inside quotes -------------------------------------------
+    # The command that got through: a `;` inside the sed script cut the segment
+    # mid-quote, shlex refused the piece, and the piece was skipped unjudged.
+    ("git status | wc -l; sed -i.orig 's/placeholder; do/deferred; do/; s#run7#run8#' /abs/s.sh 2>/dev/null; echo rc=$?", True),
+    ("sed -i 's/x/y/; s/p/q/' /abs/f", True),
+    ("sed -i 's/a|b/c/' /abs/f", True),
+    ("sed -i 's/a && b/c/' /abs/f", True),
+    ("grep -c 'a;$b' /abs/f", True),
+    ("prettier --write 'src;x'", True),           # family 1 had the same hole
+    # A segment the shell would reject (unbalanced quote) is judged on its words.
+    ("sed -i 's/a/b/ /abs/f", True),
+    # `&` runs the next command in the same line; `2>&1` and `&>` are not separators.
+    ("sleep 1 & sed -i 's/a/b/' /abs/f", True),
+    ("make test >/abs/log 2>&1; echo rc=$?", False),
+    ("make test &>/abs/log", False),
+    # Quote-aware splitting must not invent commands out of quoted text.
+    ("sed -n 's/a;b/c/p' /abs/f", False),
+    ("echo 'a; sed -i x'", False),
+    ('echo "done; black ."', False),
+    ("python3 -c \"import sys; print('a|b')\"", False),
+    # A heredoc body with an apostrophe must not swallow the command after it...
+    ("cat > /abs/n.md <<'EOF'\ndon't\nEOF\ngofmt -w .", True),
+    ("cat > /abs/n.md <<'EOF'\ndon't\nEOF\nsed -i 's/a/b/' /abs/f", True),
+    # ...and a body line that reads like a command is not one.
+    ("cat > /abs/n.md <<'EOF'\nblack .\nEOF", False),
 ]
 
 failures = []

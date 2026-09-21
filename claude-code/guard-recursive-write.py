@@ -93,8 +93,63 @@ XCRUN_FIND_OPTIONS = ("-f", "--find")
 # Tokens that are options rather than paths.
 OPTION_RE = re.compile(r"^-")
 
-# Shell operators that separate independent commands.
-SEGMENT_SPLIT_RE = re.compile(r"&&|\|\||;|\||\n")
+def split_segments(command):
+    """The independent commands in a line: split at `&&`, `||`, `;`, `|`, `&`
+    and newlines, but never inside '...' or "..." — the shell does not.
+
+    A splitter that ignored quotes cut `sed -i 's/a/b/; s/c/d/' FILE` at the
+    `;` inside the script; the piece had an unbalanced quote, shlex refused
+    it, and the piece was skipped — so the one command that mattered was never
+    judged. `&` separates only when it is not part of `&&`, `>&` or `&>`.
+    """
+    segments, cur, quote, i, n = [], [], None, 0, len(command)
+    while i < n:
+        c = command[i]
+        if quote:
+            cur.append(c)
+            if c == "\\" and quote == '"' and i + 1 < n:
+                cur.append(command[i + 1])
+                i += 2
+                continue
+            if c == quote:
+                quote = None
+            i += 1
+            continue
+        if c == "\\" and i + 1 < n:
+            cur.append(command[i:i + 2])
+            i += 2
+            continue
+        if c in ("'", '"'):
+            quote = c
+        elif command.startswith("&&", i) or command.startswith("||", i):
+            segments.append("".join(cur))
+            cur = []
+            i += 2
+            continue
+        elif c in ";|\n" or (
+            c == "&" and not (i > 0 and command[i - 1] in "<>")
+            and not command.startswith("&>", i)
+        ):
+            segments.append("".join(cur))
+            cur = []
+            i += 1
+            continue
+        cur.append(c)
+        i += 1
+    segments.append("".join(cur))
+    return [s.strip() for s in segments if s.strip()]
+
+
+def words(segment):
+    """shlex's reading of a segment, or — when shlex refuses it (an unbalanced
+    quote the shell would also reject) — a plain whitespace split. Never
+    nothing: a segment the guard cannot read is judged on its words, not
+    waved through.
+    """
+    try:
+        return shlex.split(segment)
+    except ValueError:
+        return segment.split()
 
 
 def is_absolute(token):
@@ -258,14 +313,8 @@ def footguns(command):
             "without a pipe: `cmd >log 2>&1; rc=$?`"
         )
 
-    for segment in SEGMENT_SPLIT_RE.split(body):
-        segment = segment.strip()
-        if not segment:
-            continue
-        try:
-            tokens = shlex.split(segment)
-        except ValueError:
-            continue
+    for segment in split_segments(body):
+        tokens = words(segment)
         if not tokens:
             continue
         tool = tokens[0].rsplit("/", 1)[-1]
@@ -292,14 +341,16 @@ def footguns(command):
                     "anchor, so the literal is never matched. Use `grep -F` for a literal, or "
                     "escape it as `\\$`"
                 )
-    return reasons
+    return list(dict.fromkeys(reasons))  # one line per reason, however many hits
 
 
 def anchored_by_cd(command):
     """True when the command starts with `cd <absolute path>`."""
-    first = SEGMENT_SPLIT_RE.split(command, maxsplit=1)[0].strip()
+    segments = split_segments(command)
+    if not segments:
+        return False
     try:
-        toks = shlex.split(first)
+        toks = shlex.split(segments[0])
     except ValueError:
         return False
     return len(toks) >= 2 and toks[0] == "cd" and is_absolute(toks[1])
@@ -320,16 +371,11 @@ def main():
 
     reasons = []
     if not anchored_by_cd(command):
-        for segment in SEGMENT_SPLIT_RE.split(command):
-            segment = segment.strip()
-            if not segment:
-                continue
-            try:
-                tokens = shlex.split(segment)
-            except ValueError:
-                continue
-            hit, why = dangerous(tokens)
-            if hit:
+        # Heredoc bodies are data. They are also where a stray apostrophe
+        # ("don't") would open a quote that swallows the commands after it.
+        for segment in split_segments(strip_heredocs(command)):
+            hit, why = dangerous(words(segment))
+            if hit and why not in reasons:
                 reasons.append(why)
 
     if not reasons and not footgun_reasons:
