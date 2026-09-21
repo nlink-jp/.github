@@ -457,5 +457,37 @@ is 'an unreadable version is empty, not a guess' "$(brew_version "$TMP/none.rb")
 printf '%s\n' 'class X < Formula' '  version "1.2"' 'end' > "$TMP/short.rb"
 is 'a two-part version is not accepted as X.Y.Z' "$(brew_version "$TMP/short.rb")" ''
 
+# ---- release-gate form: the open recipe must be recognised ------------------
+# The open form accepts three of six states (another tag, does not unpack, does
+# not run); 59 repos carried it. The template is fixed, so what is left to
+# guard is a hand-edited or pasted copy.
+cat > "$TMP/open.mk" <<'EOF'
+verify-release:
+	@test -f "dist/$(BINARY)-$(VERSION)-darwin-arm64.zip.notarized" || exit 1
+	@tmp=$$(mktemp -d) && 		unzip -oq "dist/$(BINARY)-$(VERSION)-darwin-arm64.zip" -d "$$tmp" && 		"$$tmp/$(BINARY)" --version && 		spctl -a -vv -t install "$$tmp/$(BINARY)" 2>&1 | head -2 || true; 		rm -rf "$$tmp"
+EOF
+case "$(open_release_gate "$TMP/open.mk")" in
+  *"|| true"*) ok 'the open release gate is recognised' ;;
+  *) no 'the open release gate is recognised' ;;
+esac
+
+cat > "$TMP/closed.mk" <<'EOF'
+verify-release:
+	@tmp=$$(mktemp -d); rc=0; 		if ! unzip -oq "dist/x.zip" -d "$$tmp"; then rc=1; 		else spctl -a -vv -t install "$$tmp/x" 2>&1 | head -2 || true; 		fi; 		rm -rf "$$tmp"; 		exit $$rc
+EOF
+is 'the closed gate is silent' "$(open_release_gate "$TMP/closed.mk")" ''
+
+# A GUI gate is a different recipe (stapler validate, no `|| true`) and must not
+# be reported — the sweep deliberately left those alone.
+printf '%s
+' 'verify-release:' '	@xcrun stapler validate $(APP_BUNDLE)' > "$TMP/gui.mk"
+is 'a GUI gate is silent' "$(open_release_gate "$TMP/gui.mk")" ''
+
+# No verify-release target at all: nothing to say.
+printf '%s
+' 'build:' '	go build ./...' > "$TMP/none.mk"
+is 'a Makefile without the target is silent' "$(open_release_gate "$TMP/none.mk")" ''
+is 'a missing Makefile is silent' "$(open_release_gate "$TMP/absent.mk")" ''
+
 echo "passed: $pass   failed: $fail"
 [ "$fail" -eq 0 ]

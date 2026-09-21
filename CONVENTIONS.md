@@ -1120,6 +1120,21 @@ verify-release:
 	@echo "verify-release: OK ($(VERSION), notarized, unpacks, runs, reports its version)"
 ```
 
+Two scripts in `.github/scripts/` exist for this recipe.
+`close-verify-release-gate.py --check|--apply <Makefile>...` converts the open
+form deterministically: it takes the zip path and the in-zip binary path from
+the matched block and refuses to touch a Makefile whose block does not match
+exactly once, so a gate is never rewritten on a guess.
+`exercise-release-gate.sh <repo>` drives one repo's gate through six states
+with a stand-in shell script as the packaged binary, so it needs no build: no
+marker, **correct**, a build from another tag, a zip that does not unpack, a
+binary that does not run, and a marker older than its zip. The open form
+accepts three of those six. Keep the correct row: a table of failures alone
+shows only that the gate refuses something, not that it still accepts what it
+should — an earlier run of this exercise had every row failing at the freshness
+gate because the zip and its marker were created in the same second, and it
+looked like a working comparison.
+
 The marker is written by `notarize-darwin.sh` only on `status: Accepted`
 (and cleared at script start). The `-nt` freshness test is the CLI's
 second gate: bare zips cannot be stapled, so unlike GUI bundles there is
@@ -2174,6 +2189,7 @@ submodule updates, and scaffold creation.
 | 11 | Submodule pointers | Recorded commit differs from `origin/main` of submodule |
 | 12 | Release archive naming *(planned)* | Latest release assets match `<name>-v<version>-<os>-<arch>.<ext>`; darwin is zip & arm64-only (no darwin-amd64, no `.dmg`/`.tar.gz` for darwin) |
 | 13 | Language mirrors | A document with no counterpart (`README.md` ↔ `README.ja.md`, `docs/en/x.md` ↔ `docs/ja/x.ja.md`), a Japanese document without the `.ja.md` suffix, or (as a warning) a document in a flat `docs/` tree (§Documentation structure) |
+| 15 | Release gate form | A `verify-release` recipe that chains unzip / `--version` / `spctl` into one statement ending in `|| true`, so a zip that does not unpack exits 0 and the release uploads it. All 59 repositories carrying it were converted on 2026-09-21; this catches a hand-edited or pasted copy. GUI (`.app`) gates are a different recipe and are not reported |
 | 14 | Document references | A relative markdown link, in a tracked `.md`/`.toml`, pointing at a path that does not exist — resolved from the linking document's own directory. Code spans, external schemes, absolute paths, anchors and vendored copies are exempt |
 
 **Org-level checks (outside the series loop):**

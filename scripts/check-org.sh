@@ -312,6 +312,34 @@ broken_links() {
   done < <(cd "$dir" && git ls-files '*.md' '*.toml' 2>/dev/null)
 }
 
+# --- release-gate form ---------------------------------------------------------
+# The CLI release gate's last block used to chain unzip, the packaged binary's
+# --version and spctl into one statement ending in `|| true`. The escape covered
+# all of it: a zip that did not unpack, or a binary that did not run, exited 0
+# and the release uploaded it. Measured against both forms with a six-state
+# exercise, the open form accepts three of the six (another tag, does not
+# unpack, does not run).
+#
+# 59 repositories carried it; all were converted on 2026-09-21
+# (scripts/close-verify-release-gate.py, exercised by
+# scripts/exercise-release-gate.sh). This check exists so a hand-edited recipe,
+# or one pasted from an old copy, cannot bring it back: the template it would
+# come from is already fixed, so what is left to guard is the copy.
+
+# open_release_gate MAKEFILE — non-empty when the file has a verify-release
+# target whose recipe still ends its check chain in `|| true` instead of
+# judging each step and exiting on rc. GUI (.app) gates are a different recipe
+# — stapler validate, no `|| true` — and are silent here.
+open_release_gate() {
+  local f="$1"
+  [ -f "$f" ] || return 0
+  grep -q '^verify-release:' "$f" || return 0
+  grep -qF 'exit $$rc' "$f" && return 0
+  grep -qF 'head -2 || true' "$f" || return 0
+  echo "verify-release chains its checks into one statement ending in '|| true'"
+}
+
+# --- running images (this machine) is NOT here; see scripts/stale-running-images.sh
 # --- tap currency --------------------------------------------------------------
 # A release is not delivered until the tap points at it: `brew upgrade` reads the
 # formula, so a formula left on the previous version means the release exists and
@@ -777,6 +805,20 @@ check_series() {
       echo "        $WARN $name: $(printf '%s\n' "$layout" | wc -l | tr -d ' ') document(s) outside docs/en and docs/ja"
       printf '%s\n' "$layout" | sed 's/^/            /'
       skipped=$((skipped + 1))
+    fi
+  done < <(git -C "$dir" submodule foreach --quiet 'echo "        $displaypath"')
+
+  # 15. The release gate fails closed (see open_release_gate above).
+  echo "    release gate:"
+  while IFS= read -r subpath; do
+    subpath="${subpath#        }"
+    name=$(basename "$subpath")
+    why=$(open_release_gate "$dir/$subpath/Makefile")
+    if [ -n "$why" ]; then
+      echo "        $FAIL $name: $why"
+      echo "             run .github/scripts/close-verify-release-gate.py --apply on its Makefile,"
+      echo "             then .github/scripts/exercise-release-gate.sh to prove it"
+      errors=$((errors + 1))
     fi
   done < <(git -C "$dir" submodule foreach --quiet 'echo "        $displaypath"')
 
