@@ -2144,7 +2144,13 @@ Before tagging a release, verify every item:
    catalog has multiple surfaces and they drift independently
 10. Feed any new reusable engineering knowledge from this work back to
     `nlink-jp/knowledge` (see §Consult and feed the knowledge base)
-11. Run `check-org.sh` to verify all green
+11. Run `check-org.sh` to verify all green. **If the tool you released is a
+    CLI that a GUI bundles** (`CLI_BIN ?= ../<cli>/dist/...` in the GUI's
+    Makefile — six GUIs do), the release is not delivered to that GUI's users
+    until the GUI is rebuilt and released too: bump its `CLI_VERSION`, build
+    it right after the CLI's `make package`, and release it. Check 16 fails
+    until you do. Decide this from the GUI's packaging step, not from whether
+    its code happens to call the CLI dynamically
 
 A release is complete when the artifact is published, installable at the
 version it claims, and the umbrella and catalogs say so. **Which machine is
@@ -2189,6 +2195,7 @@ submodule updates, and scaffold creation.
 | 11 | Submodule pointers | Recorded commit differs from `origin/main` of submodule |
 | 12 | Release archive naming *(planned)* | Latest release assets match `<name>-v<version>-<os>-<arch>.<ext>`; darwin is zip & arm64-only (no darwin-amd64, no `.dmg`/`.tar.gz` for darwin) |
 | 13 | Language mirrors | A document with no counterpart (`README.md` ↔ `README.ja.md`, `docs/en/x.md` ↔ `docs/ja/x.ja.md`), a Japanese document without the `.ja.md` suffix, or (as a warning) a document in a flat `docs/` tree (§Documentation structure) |
+| 16 | Bundled CLI | A GUI that copies a sibling CLI into its bundle must pin it (`CLI_VERSION`), and the pin must equal the CLI's latest release. A release build resolves the bundled copy first, so a CLI fix reaches that GUI's users only through a GUI release — this is what catches the follow-up being forgotten. Needs `gh` |
 | 15 | Release gate form | A `verify-release` recipe that chains unzip / `--version` / `spctl` into one statement ending in `|| true`, so a zip that does not unpack exits 0 and the release uploads it. All 59 repositories carrying it were converted on 2026-09-21; this catches a hand-edited or pasted copy. GUI (`.app`) gates are a different recipe and are not reported |
 | 14 | Document references | A relative markdown link, in a tracked `.md`/`.toml`, pointing at a path that does not exist — resolved from the linking document's own directory. Code spans, external schemes, absolute paths, anchors and vendored copies are exempt |
 

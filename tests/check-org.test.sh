@@ -489,5 +489,20 @@ printf '%s
 is 'a Makefile without the target is silent' "$(open_release_gate "$TMP/none.mk")" ''
 is 'a missing Makefile is silent' "$(open_release_gate "$TMP/absent.mk")" ''
 
+# ---- bundled CLI: the pin a GUI declares for the CLI inside it --------------
+printf '%s\n' 'CLI_BIN ?= ../active-lens/dist/active-lens' 'CLI_VERSION ?= v0.3.1' > "$TMP/gui1.mk"
+is 'a plain CLI_BIN and a pin are read' "$(bundled_cli_pin "$TMP/gui1.mk")" 'active-lens v0.3.1'
+
+printf '%s\n' 'CLI_BIN ?= $(firstword $(wildcard ../sensor-lens/dist/sensor-lens-darwin-arm64 ../sensor-lens/dist/sensor-lens))' \
+  'CLI_VERSION ?= v0.1.0   # the release it ships' > "$TMP/gui2.mk"
+is 'the fallback CLI_BIN form still names the CLI' "$(bundled_cli_pin "$TMP/gui2.mk")" 'sensor-lens v0.1.0'
+
+printf '%s\n' 'CLI_BIN ?= ../task-clock/dist/task-clock' > "$TMP/gui3.mk"
+is 'a bundler without a pin is reported as unpinned' "$(bundled_cli_pin "$TMP/gui3.mk")" 'task-clock -'
+
+printf '%s\n' 'BINARY := tool' 'build:' '	go build -o dist/tool .' > "$TMP/cli.mk"
+is 'a Makefile that bundles nothing is silent' "$(bundled_cli_pin "$TMP/cli.mk")" ''
+is 'a missing Makefile is silent' "$(bundled_cli_pin "$TMP/nope.mk")" ''
+
 echo "passed: $pass   failed: $fail"
 [ "$fail" -eq 0 ]

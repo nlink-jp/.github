@@ -340,6 +340,30 @@ open_release_gate() {
 }
 
 # --- running images (this machine) is NOT here; see scripts/stale-running-images.sh
+# --- bundled CLI (GUI apps that ship a sibling CLI inside them) ----------------
+# Six GUIs copy a sibling CLI into Contents/Resources, and a release build
+# resolves that bundled copy first — no environment variable can redirect it. So
+# a CLI release reaches those GUIs' users only when the GUI is rebuilt and
+# released too. That follow-up was missed twice in one day (image-forge-gui,
+# active-lens-gui), both times caught by the maintainer rather than by anything
+# here. Each bundler's Makefile now pins the CLI it ships (CLI_VERSION, enforced
+# by its own verify-release); this compares the pin with the CLI's latest release.
+#
+# Limit, stated: the pin says what the next GUI build will bundle, not what the
+# published GUI contains. A pin that was bumped but never released reads green
+# here; the tap-currency check and the release checklist cover that half.
+
+# bundled_cli_pin MAKEFILE -> "<cli> <pin>" for a GUI that bundles a sibling
+# CLI, "<cli> -" when it bundles one without a pin, and nothing otherwise.
+bundled_cli_pin() {
+  local f="$1" cli pin
+  [ -f "$f" ] || return 0
+  cli=$(sed -n -E 's|^CLI_BIN[[:space:]]*[?:]?=.*\.\./([a-z0-9-]+)/dist/.*|\1|p' "$f" | head -1)
+  [ -n "$cli" ] || return 0
+  pin=$(sed -n -E 's/^CLI_VERSION[[:space:]]*[?:]?=[[:space:]]*([^[:space:]#]+).*/\1/p' "$f" | head -1)
+  printf '%s %s\n' "$cli" "${pin:--}"
+}
+
 # --- tap currency --------------------------------------------------------------
 # A release is not delivered until the tap points at it: `brew upgrade` reads the
 # formula, so a formula left on the previous version means the release exists and
@@ -807,6 +831,31 @@ check_series() {
       skipped=$((skipped + 1))
     fi
   done < <(git -C "$dir" submodule foreach --quiet 'echo "        $displaypath"')
+
+  # 16. A GUI that bundles a CLI ships the CLI's current release.
+  if command -v gh >/dev/null 2>&1; then
+    echo "    bundled CLI:"
+    while IFS= read -r subpath; do
+      subpath="${subpath#        }"
+      name=$(basename "$subpath")
+      ref=$(bundled_cli_pin "$dir/$subpath/Makefile")
+      [ -n "$ref" ] || continue
+      bcli="${ref%% *}"; bpin="${ref#* }"
+      if [ "$bpin" = "-" ]; then
+        echo "        $FAIL $name: bundles $bcli but does not pin it (set CLI_VERSION; see image-forge-gui)"
+        errors=$((errors + 1))
+        continue
+      fi
+      brel=$(gh release view --repo "nlink-jp/$bcli" --json tagName --jq .tagName 2>/dev/null || true)
+      [ -n "$brel" ] || continue
+      if [ "$bpin" != "$brel" ]; then
+        echo "        $FAIL $name: bundles $bcli $bpin, but $bcli $brel is released"
+        echo "             bump CLI_VERSION, rebuild with the release CLI and release $name —"
+        echo "             its users cannot get the CLI fix any other way"
+        errors=$((errors + 1))
+      fi
+    done < <(git -C "$dir" submodule foreach --quiet 'echo "        $displaypath"')
+  fi
 
   # 15. The release gate fails closed (see open_release_gate above).
   echo "    release gate:"
