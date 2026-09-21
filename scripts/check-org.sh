@@ -187,6 +187,74 @@ cask_macos_floor() {
   sed -n -E 's/^[[:space:]]*depends_on[[:space:]]+macos:[[:space:]]*"?(>=[[:space:]]*)?(:[a-z_]+)"?.*/\2/p' "$1" 2>/dev/null | head -1
 }
 
+# --- language mirrors -------------------------------------------------------
+# CONVENTIONS.md separates documents by language: README.md paired with
+# README.ja.md, docs/en/x.md paired with docs/ja/x.ja.md, and no flat docs/
+# tree. Nothing held any series member to that, and a sweep on 2026-09-21 found
+# 24 documents with no counterpart, 22 Japanese files without the .ja.md
+# suffix, and one repository whose Japanese records were filed under docs/en.
+# A rule nobody checks is a rule that drifts.
+
+# ja_counterpart PATH -> where the Japanese counterpart of an English document
+# belongs. README.md pairs with README.ja.md at the root; docs/en/<rel>.md pairs
+# with docs/ja/<rel>.ja.md.
+ja_counterpart() {
+  case "$1" in
+    README.md) echo "README.ja.md" ;;
+    docs/en/*.md) echo "docs/ja/${1#docs/en/}" | sed -E 's/\.md$/.ja.md/' ;;
+  esac
+}
+
+# en_counterpart PATH -> the English counterpart of a Japanese document.
+en_counterpart() {
+  case "$1" in
+    README.ja.md) echo "README.md" ;;
+    docs/ja/*.ja.md) echo "docs/en/${1#docs/ja/}" | sed -E 's/\.ja\.md$/.md/' ;;
+  esac
+}
+
+# mirror_problems REPO_DIR — one line per document whose counterpart is missing,
+# whose name lacks the .ja.md suffix, or which sits in a flat docs/ tree.
+# Silent when the repository is consistent.
+#
+# The listing is classified here rather than by pathspec on purpose: in a git
+# pathspec `*` matches slashes as well, so `docs/*.md` also selects
+# docs/en/adr/0001-x.md and every document looks misfiled.
+mirror_problems() {
+  local dir="$1" rel want
+  [ -d "$dir" ] || return 0
+  while IFS= read -r rel; do
+    [ -n "$rel" ] || continue
+    case "$rel" in
+      *.md) ;;
+      *) continue ;;
+    esac
+    case "$rel" in
+      README.md|docs/en/*)
+        want=$(ja_counterpart "$rel")
+        [ -n "$want" ] || continue
+        [ -f "$dir/$want" ] || echo "$rel: no Japanese counterpart at $want"
+        ;;
+      README.ja.md|docs/ja/*)
+        case "$rel" in
+          *.ja.md)
+            want=$(en_counterpart "$rel")
+            [ -z "$want" ] || [ -f "$dir/$want" ] || echo "$rel: no English counterpart at $want"
+            ;;
+          *) echo "$rel: a Japanese document needs the .ja.md suffix" ;;
+        esac
+        ;;
+      docs/*)
+        # A layout warning, not a missing document: the text exists and reads
+        # fine, it is only filed where the convention does not put it. Held
+        # apart so a repository that satisfies the pairing rules can still be
+        # green while the org works through the layout.
+        echo "WARN $rel: documents are separated by language (docs/en, docs/ja)"
+        ;;
+    esac
+  done < <(cd "$dir" && git ls-files README.md README.ja.md docs 2>/dev/null)
+}
+
 # --- Makefile build-output resolution ---------------------------------------
 # The convention is that `make build` writes into dist/. What matters is the
 # resolved *value* of the output path, not the variable name used to spell it:
@@ -607,7 +675,30 @@ check_series() {
     done < <(git -C "$dir" submodule foreach --quiet 'echo "        $displaypath"')
   fi
 
-  # 13. Submodule pointers vs origin/main
+  # 13. Language mirrors (CONVENTIONS.md §Documentation structure)
+  echo "    language mirrors:"
+  while IFS= read -r subpath; do
+    subpath="${subpath#        }"
+    name=$(basename "$subpath")
+    problems=$(mirror_problems "$dir/$subpath")
+    if [ -z "$problems" ]; then
+      continue
+    fi
+    missing=$(printf '%s\n' "$problems" | grep -v '^WARN ' || true)
+    layout=$(printf '%s\n' "$problems" | grep '^WARN ' | sed 's/^WARN //' || true)
+    if [ -n "$missing" ]; then
+      echo "        $FAIL $name:"
+      printf '%s\n' "$missing" | sed 's/^/            /'
+      errors=$((errors + 1))
+    fi
+    if [ -n "$layout" ]; then
+      echo "        $WARN $name: $(printf '%s\n' "$layout" | wc -l | tr -d ' ') document(s) outside docs/en and docs/ja"
+      printf '%s\n' "$layout" | sed 's/^/            /'
+      skipped=$((skipped + 1))
+    fi
+  done < <(git -C "$dir" submodule foreach --quiet 'echo "        $displaypath"')
+
+  # 14. Submodule pointers vs origin/main
   #     (was check 11 before the home-path and release-status checks)
   if [ ! -f "$dir/.gitmodules" ]; then
     return

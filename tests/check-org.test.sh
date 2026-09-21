@@ -300,5 +300,60 @@ is 'a comparison is read as its symbol' "$(cask_macos_floor "$TMP/x.rb")" ':sono
 printf '%s\n' 'cask "x" do' '  depends_on arch: :arm64' 'end' > "$TMP/x.rb"
 is 'no macos line is no floor' "$(cask_macos_floor "$TMP/x.rb")" ''
 
+# ---- language mirrors: the pairing rules fail, the layout only warns
+is 'README.md pairs with README.ja.md' "$(ja_counterpart README.md)" 'README.ja.md'
+is 'docs/en/x.md pairs with docs/ja/x.ja.md' \
+   "$(ja_counterpart docs/en/adr/0001-x.md)" 'docs/ja/adr/0001-x.ja.md'
+is 'a path outside the two shapes pairs with nothing' "$(ja_counterpart docs/notes.md)" ''
+is 'docs/ja/x.ja.md pairs back to docs/en/x.md' \
+   "$(en_counterpart docs/ja/adr/0001-x.ja.md)" 'docs/en/adr/0001-x.md'
+is 'README.ja.md pairs back to README.md' "$(en_counterpart README.ja.md)" 'README.md'
+
+mirror_repo() {  # builds a repo under $TMP/mirror and echoes its path
+  local dir="$TMP/mirror"
+  rm -rf "$dir"; mkdir -p "$dir/docs/en/adr" "$dir/docs/ja/adr"
+  git -C "$dir" init -q 2>/dev/null || git init -q "$dir"
+  printf 'x\n' > "$dir/README.md"
+  printf 'x\n' > "$dir/README.ja.md"
+  printf 'x\n' > "$dir/docs/en/adr/0001-x.md"
+  printf 'x\n' > "$dir/docs/ja/adr/0001-x.ja.md"
+  git -C "$dir" add -A >/dev/null 2>&1
+  echo "$dir"
+}
+
+MIRROR=$(mirror_repo)
+is 'a consistent repository is silent' "$(mirror_problems "$MIRROR")" ''
+
+rm "$MIRROR/docs/ja/adr/0001-x.ja.md"; git -C "$MIRROR" add -A >/dev/null 2>&1
+case "$(mirror_problems "$MIRROR")" in
+  *"no Japanese counterpart at docs/ja/adr/0001-x.ja.md"*) ok 'a missing Japanese counterpart is named' ;;
+  *) no 'a missing Japanese counterpart is named' ;;
+esac
+
+MIRROR=$(mirror_repo)
+mv "$MIRROR/docs/ja/adr/0001-x.ja.md" "$MIRROR/docs/ja/adr/0001-x.md"
+git -C "$MIRROR" add -A >/dev/null 2>&1
+case "$(mirror_problems "$MIRROR")" in
+  *"needs the .ja.md suffix"*) ok 'a Japanese document without the suffix is named' ;;
+  *) no 'a Japanese document without the suffix is named' ;;
+esac
+
+MIRROR=$(mirror_repo)
+printf 'x\n' > "$MIRROR/docs/design.md"; git -C "$MIRROR" add -A >/dev/null 2>&1
+out=$(mirror_problems "$MIRROR")
+case "$out" in
+  WARN*"docs/design.md"*) ok 'a flat document warns rather than fails' ;;
+  *) no 'a flat document warns rather than fails' ;;
+esac
+case "$out" in
+  *"no Japanese counterpart"*|*"no English counterpart"*) no 'the layout warning is not also a pairing failure' ;;
+  *) ok 'the layout warning is not also a pairing failure' ;;
+esac
+# A pathspec would have matched docs/en/** for docs/*.md; the classification must not.
+case "$(mirror_problems "$MIRROR")" in
+  *"docs/en/adr/0001-x.md: documents are separated"*) no 'a document under docs/en is not called flat' ;;
+  *) ok 'a document under docs/en is not called flat' ;;
+esac
+
 echo "passed: $pass   failed: $fail"
 [ "$fail" -eq 0 ]

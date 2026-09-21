@@ -703,6 +703,11 @@ silently dropping one is as much an abdication as merging one.
 - When behaviour changes, update `README.md`, `docs/`, and any affected translations
   in the same commit or PR.
 - Japanese translations must be kept in sync with every English change.
+`check-org.sh` enforces the pairing: a document with no counterpart, or a
+Japanese document without the `.ja.md` suffix, is a failure. A document filed
+outside `docs/en` and `docs/ja` is a warning — the text is there, only its
+place is wrong — so a repository that pairs correctly can still be green while
+the layout is worked through.
 
 ### Documentation structure
 
