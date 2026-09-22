@@ -52,11 +52,33 @@ NEW_DOC = ('## verify-release: refuse to release a zip that is un-notarized, sta
            '## fails closed; only the spctl line is informational.\n')
 
 
+def recipe(text, target):
+    """The recipe of TARGET as make reads it: the tab-indented lines after its
+    rule line, and their continuations. Blank and comment-only lines between
+    them are skipped rather than taken as the end — make ignores them there too.
+    """
+    out, inside, cont = [], False, False
+    for line in text.split('\n'):
+        if inside:
+            if cont or line.startswith('\t'):
+                out.append(line)
+                cont = line.endswith('\\')
+                continue
+            if not line.strip() or line.lstrip().startswith('#'):
+                continue
+            inside = False
+        if line.startswith(target + ':'):
+            inside, cont = True, False
+    return '\n'.join(out)
+
+
 def convert(text):
     """Return (new_text, note). new_text is None when nothing was changed."""
     if 'verify-release:' not in text:
         return None, 'no verify-release target'
-    if 'exit $$rc' in text:
+    # Read from the verify-release recipe alone: web-fetch's e2e target ends in
+    # `exit $$rc`, and a whole-file test called its open gate closed.
+    if 'exit $$rc' in recipe(text, 'verify-release'):
         return None, 'already closed'
     hits = list(OPEN.finditer(text))
     if len(hits) != 1:
