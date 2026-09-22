@@ -1055,6 +1055,15 @@ else
       printf '%s\n' "$copies" | sed "s|^$DEST/|      |"
       pgerr=1
     fi
+    # A path's place is pathguard.Where. The last of Forms is a middle hop
+    # when a chain of links returns to an earlier spelling (pathguard v0.3.0),
+    # and six consumers had taken it for the place.
+    formsers=$(grep -rlF 'pathguard.Forms(' --include='*.go' "$cdir" 2>/dev/null | grep -v '_test\.go$' | grep -v '/vendor/' || true)
+    if [ -n "$formsers" ]; then
+      echo "    $FAIL $cname calls pathguard.Forms (use pathguard.Where for a path's place):"
+      printf '%s\n' "$formsers" | sed "s|^$DEST/|      |"
+      pgerr=1
+    fi
   done
   # The runtimes' list is pathguard's list (testdata/runtime-lists.json).
   if command -v go >/dev/null 2>&1; then
@@ -1073,7 +1082,7 @@ else
     echo "    $WARN go not available — the runtimes' lists are NOT compared"
   fi
   if [ "$pgerr" -eq 0 ]; then
-    echo "    $PASS pathguard: $pgcount consumer(s) on $pglatest, no copy of the list, runtimes' lists match"
+    echo "    $PASS pathguard: $pgcount consumer(s) on $pglatest, no copy of the list, no Forms-as-place, runtimes' lists match"
   else
     errors=$((errors + 1))
   fi

@@ -137,6 +137,7 @@ Enforcement is:
   migration;
 - **`check-org.sh`'s pathguard section**: every consumer requires the latest
   pathguard tag; no consumer spells a floor entry in its own non-test Go code;
+  no consumer calls `Forms` (a path's place is `Where`, added in v0.3.0);
   and the runtimes' lists equal pathguard's copy, read with `go/ast`
   (`scripts/runtime-lists.go`) so a reformatted declaration neither fails nor
   hides a change.
@@ -179,22 +180,24 @@ carries a path, `additionalProperties: false`) stays as it was.
 
 | Server | Release | Project ADR |
 |---|---|---|
-| voice-scribe | v0.5.0; v0.5.1 judges the workspace directory; v0.5.2: a refused path gets the same answer whether or not it exists | ADR-0013 |
-| gem-scribe | v0.5.0; v0.5.1 judges the workspace directory; v0.5.2: a refused path gets the same answer whether or not it exists | ADR-0004 |
-| image-forge | v0.29.0 (also judges caller-named model paths); image-forge-gui v0.12.1 bundles it; v0.29.1 judges an input image before looking for it (image-forge-gui v0.12.2) | ADR-0010 |
-| voice-studio-mcp | v0.6.0; v0.6.1: the workspace judges every read | ADR-0014 |
-| video-studio-mcp | v0.6.0; v0.6.1: the workspace judges every read, pages are re-verified at the spawn, a `%` path is refused | ADR-0009 |
-| data-toolbox-mcp | v0.8.0; v0.8.1: a refused path gets the same answer whether or not it exists, `attach_files` judged | ADR-0012 |
-| pcap-analyzer-mcp | v0.6.0; v0.6.1: a refused path gets the same answer whether or not it exists | ADR-0010 |
-| chrome-pilot-mcp | v0.9.0 (uploads Outbound) | ADR-0007 |
-| slack-mcp-extender | v0.5.0 (uploads Outbound; a file's directory may not be a system directory or the home itself; a refused path gets the same answer whether or not it exists) | ADR-0004 |
+| voice-scribe | v0.5.0; v0.5.1 judges the workspace directory; v0.5.2: a refused path gets the same answer whether or not it exists; v0.5.3: a path's place is pathguard's `Where` | ADR-0013 |
+| gem-scribe | v0.5.0; v0.5.1 judges the workspace directory; v0.5.2: a refused path gets the same answer whether or not it exists; v0.5.3: `Where`, and why `audio` stays on the Local policy although it is sent to Google (the operator's own project) | ADR-0004 |
+| image-forge | v0.29.0 (also judges caller-named model paths); image-forge-gui v0.12.1 bundles it; v0.29.1 judges an input image before looking for it (image-forge-gui v0.12.2); v0.29.2 pathguard v0.3.0 (image-forge-gui v0.12.3) | ADR-0010 |
+| voice-studio-mcp | v0.6.0; v0.6.1: the workspace judges every read; v0.6.2: pathguard v0.3.0, and what ffmpeg writes and reads back is made outside the workspace (under the user cache directory, which the runtimes' write lanes cannot write), each concat entry WAV only | ADR-0014 |
+| video-studio-mcp | v0.6.0; v0.6.1: the workspace judges every read, pages are re-verified at the spawn, a `%` path is refused; v0.6.2: pathguard v0.3.0, ffmpeg's inputs have their format pinned (images decoded in Go first), and what ffmpeg writes and reads back is made outside the workspace, under the user cache directory | ADR-0009 |
+| data-toolbox-mcp | v0.8.0; v0.8.1: a refused path gets the same answer whether or not it exists, `attach_files` judged; v0.8.2: `Where` | ADR-0012 |
+| pcap-analyzer-mcp | v0.6.0; v0.6.1: a refused path gets the same answer whether or not it exists; v0.6.2: `Where` | ADR-0010 |
+| chrome-pilot-mcp | v0.9.0 (uploads Outbound); v0.10.0: `file://` only inside the call's `work_dir` (ADR-0008); v0.10.1: `Where` | ADR-0007 |
+| slack-mcp-extender | v0.5.0 (uploads Outbound; a file's directory may not be a system directory or the home itself; a refused path gets the same answer whether or not it exists); v0.5.1: `Where` | ADR-0004 |
 
 The existence sweep of 2026-09-22 (the v0.5.2 / v0.8.1 / v0.6.1 / v0.29.1 releases above) left gaps
-that live in pathguard itself — a `..` walk out through an entry of a credential directory, the last
-of `Forms` not always being the end of the walk, `work_dir` validated not-found-before-denied (§4),
-the cost of preparing the places on every check, hard links into credential directories, Unicode
-normalisation. Each server's project ADR lists them under its 2026-09-22 amendment; they are for
-pathguard's next release.
+that live in pathguard itself. pathguard v0.3.0 fixed one — the last of `Forms` is not always the end
+of the walk, so six consumers judged containment at a middle hop — with `Where`, which every consumer
+now uses; `check-org.sh` fails a consumer that calls `Forms`. The rest were weighed on an overall
+risk assessment (none reads a credential; a fix would re-release every consumer) and are recorded as
+accepted limits in pathguard's README: a `..` walk out through an entry of a credential directory,
+`work_dir` validated not-found-before-denied (§4), the cost of preparing the places on every check,
+hard links into credential directories, Unicode normalisation of link targets.
 
 ## References
 
