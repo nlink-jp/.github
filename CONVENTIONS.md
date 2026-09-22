@@ -947,6 +947,15 @@ Every release asset is named:
   the repo and on the release page. The `.app`'s internal display name is not
   normalized; only the archive name is.
 - **One archive per (os, arch).** No parallel `.dmg` beside the zip.
+- **No macOS file metadata in a Linux archive.** macOS `tar` writes each file's
+  extended attributes (`com.apple.provenance`; a Dropbox attribute in a synced
+  tree) into a `.tar.gz` twice: as `._` AppleDouble members, which GNU tar
+  extracts as stray files, and as `LIBARCHIVE.xattr.*` / `SCHILY.xattr.*` pax
+  headers, which it reports as unknown keywords. Archive with
+  `COPYFILE_DISABLE=1 tar --no-xattrs` — each setting stops one of the two —
+  and let `verify-release` judge the result (see §Code Signing → Verifying a
+  release). A plain `tar -t` on macOS folds `._` members away; list with
+  `tar --options 'tar:!mac-ext' -tzf` to see them.
 
 ### darwin architecture policy (effective 2026-07-12)
 
@@ -1079,6 +1088,8 @@ build-all:
 
 # Archive: <name>-v<version>-<os>-<arch>.<ext>  (darwin/windows = zip, linux = tar.gz)
 # The in-archive binary is the canonical <name>; README.md + LICENSE are bundled.
+# linux tar needs both settings: COPYFILE_DISABLE=1 stops ._ AppleDouble members,
+# --no-xattrs stops extended attributes written as pax headers.
 package: build-all
 	@cd dist && for p in $(PLATFORMS); do os=$${p%/*}; arch=$${p#*/}; \
 		ext=""; [ "$$os" = windows ] && ext=".exe"; \
@@ -1086,15 +1097,16 @@ package: build-all
 		cp "$(BINARY)-$$os-$$arch$$ext" "$$stage/$(BINARY)$$ext"; \
 		cp ../README.md ../LICENSE $$stage/; \
 		base="$(BINARY)-$(VERSION)-$$os-$$arch"; \
-		if [ "$$os" = linux ]; then ( cd $$stage && tar -czf "../$$base.tar.gz" * ); \
+		if [ "$$os" = linux ]; then ( cd $$stage && COPYFILE_DISABLE=1 tar --no-xattrs -czf "../$$base.tar.gz" * ); \
 		else ( cd $$stage && zip -q "../$$base.zip" * ); fi; \
 		rm -rf $$stage; \
 	done
 	@scripts/notarize-darwin.sh dist/$(BINARY)-$(VERSION)-darwin-arm64.zip "$(NOTARY_PROFILE)"
 
 ## verify-release: refuse to release a zip that is un-notarized, stale, does
-## not unpack, does not run, or holds a build from another tag. Every step
-## fails closed; only the spctl line is informational.
+## not unpack, does not run, or holds a build from another tag, and a linux
+## archive that carries macOS metadata or anything but its canonical files.
+## Every step fails closed; only the spctl line is informational.
 verify-release:
 	@test -f "dist/$(BINARY)-$(VERSION)-darwin-arm64.zip.notarized" || { \
 		echo "verify-release: FAIL — $(BINARY)-$(VERSION)-darwin-arm64.zip has no notarization marker."; \
@@ -1118,7 +1130,24 @@ verify-release:
 		fi; \
 		rm -rf "$$tmp"; \
 		exit $$rc
-	@echo "verify-release: OK ($(VERSION), notarized, unpacks, runs, reports its version)"
+	@for p in $(PLATFORMS); do os=$${p%/*}; arch=$${p#*/}; \
+		[ "$$os" = linux ] || continue; \
+		f="dist/$(BINARY)-$(VERSION)-$$os-$$arch.tar.gz"; \
+		names=$$(tar --options 'tar:!mac-ext' -tzf "$$f") || { echo "verify-release: FAIL — $$f does not list."; exit 1; }; \
+		if printf '%s\n' "$$names" | grep -qE '(^|/)(\._|PaxHeader|__MACOSX)'; then \
+			echo "verify-release: FAIL — $$f carries macOS metadata entries."; \
+			echo "  macOS tar writes ._ members unless COPYFILE_DISABLE=1 is set, and lists them only with !mac-ext."; \
+			exit 1; fi; \
+		if gzip -dc "$$f" | grep -qa -e 'LIBARCHIVE.xattr' -e 'SCHILY.xattr'; then \
+			echo "verify-release: FAIL — $$f carries extended attributes as pax headers."; \
+			echo "  macOS tar writes them unless called with --no-xattrs; COPYFILE_DISABLE alone does not."; \
+			exit 1; fi; \
+		got=$$(printf '%s\n' "$$names" | LC_ALL=C sort | tr '\n' ' '); \
+		want=$$(printf '%s\n' "$(BINARY)" README.md LICENSE | LC_ALL=C sort | tr '\n' ' '); \
+		if [ "$$got" != "$$want" ]; then \
+			echo "verify-release: FAIL — $$f holds $$got; expected $$want"; exit 1; fi; \
+	done
+	@echo "verify-release: OK ($(VERSION), notarized, unpacks, runs, reports its version, clean linux archives)"
 ```
 
 Two scripts in `.github/scripts/` exist for this recipe.
@@ -1126,13 +1155,19 @@ Two scripts in `.github/scripts/` exist for this recipe.
 form deterministically: it takes the zip path and the in-zip binary path from
 the matched block and refuses to touch a Makefile whose block does not match
 exactly once, so a gate is never rewritten on a guess.
-`exercise-release-gate.sh <repo>` drives one repo's gate through six states
+`exercise-release-gate.sh <repo>` drives one repo's gate through twelve states
 with a stand-in shell script as the packaged binary, so it needs no build: no
 marker, **correct**, a build from another tag, a zip that does not unpack, a
-binary that does not run, and a marker older than its zip. The open form
-accepts three of those six. Keep the correct row: a table of failures alone
-shows only that the gate refuses something, not that it still accepts what it
-should — an earlier run of this exercise had every row failing at the freshness
+binary that does not run, and a marker older than its zip; then, for the last
+Linux archive, `._` members, xattr pax headers, both, an extra entry, a missing
+entry, and no archive. The zip, the archive names and their contents are all
+read from the gate's own refusals, and every Linux fixture is read back with
+Python's `tarfile` (which does not fold `._` members) before the gate sees it.
+It refuses to run over a non-empty `dist/` and removes only what it created.
+The open form accepts three of the first six; a Linux check that lists with a
+plain `tar -tzf` accepts the `._` row. Keep the correct row: a table of
+failures alone shows only that the gate refuses something, not that it still
+accepts what it should — an earlier run of this exercise had every row failing at the freshness
 gate because the zip and its marker were created in the same second, and it
 looked like a working comparison.
 
