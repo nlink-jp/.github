@@ -571,8 +571,9 @@ is 'the closed gate with a linux-archive block is silent' "$(open_release_gate "
 # 61 repos archived with a plain `tar -czf`. COPYFILE_DISABLE=1 stops the ._
 # members and --no-xattrs the pax headers, so either one alone still ships
 # metadata; and a gate listing with a plain `tar -tzf` cannot see ._ members.
-tarmk() { # tarmk FILE TAR-LINE GATE-LIST-LINE
-  printf 'package:\n\t@cd dist && ( cd _pkg && %s "../x.tar.gz" * )\n\nverify-release:\n\t@names=$$(%s "dist/x.tar.gz")\n' "$2" "$3" > "$1"
+tarmk() { # tarmk FILE TAR-LINE GATE-LIST-LINE [GATE-XATTR-LINE]
+  printf 'package:\n\t@cd dist && ( cd _pkg && %s "../x.tar.gz" * )\n\nverify-release:\n\t@names=$$(%s "dist/x.tar.gz"); \\\n\t\t%s\n' \
+    "$2" "$3" "${4:-xh=\$\$(python3 -c 'import sys, tarfile; [m.pax_headers for m in tarfile.open(sys.argv[1])]' dist/x.tar.gz)}" > "$1"
 }
 tarmk "$TMP/tar-both.mk" 'COPYFILE_DISABLE=1 tar --no-xattrs -czf' "tar --options 'tar:!mac-ext' -tzf"
 is 'both settings and a !mac-ext listing are silent' "$(linux_tar_metadata "$TMP/tar-both.mk")" ''
@@ -590,6 +591,17 @@ case "$(linux_tar_metadata "$TMP/tar-blind.mk")" in
   *"tar:!mac-ext"*) ok 'a gate listing with a plain tar -tzf is reported' ;;
   *) no 'a gate listing with a plain tar -tzf is reported' ;;
 esac
+# The xattr check must read pax headers. Grepping the decompressed stream also
+# matches file text: slack-router's bundled CHANGELOG.md names the keywords, and
+# its clean v0.4.0 archives were refused.
+tarmk "$TMP/tar-stream.mk" 'COPYFILE_DISABLE=1 tar --no-xattrs -czf' "tar --options 'tar:!mac-ext' -tzf" \
+  "gzip -dc dist/x.tar.gz | grep -qa -e 'LIBARCHIVE.xattr' -e 'SCHILY.xattr' && exit 1"
+case "$(linux_tar_metadata "$TMP/tar-stream.mk")" in
+  *"pax headers"*) ok 'a gate that greps the decompressed stream is reported' ;;
+  *) no 'a gate that greps the decompressed stream is reported' ;;
+esac
+tarmk "$TMP/tar-noxcheck.mk" 'COPYFILE_DISABLE=1 tar --no-xattrs -czf' "tar --options 'tar:!mac-ext' -tzf" 'true'
+[ -n "$(linux_tar_metadata "$TMP/tar-noxcheck.mk")" ] && ok 'a gate with no xattr check at all is reported' || no 'a gate with no xattr check at all is reported'
 printf 'package:\n\t@( cd _pkg && COPYFILE_DISABLE=1 tar --no-xattrs -czf ../x.tar.gz * )\n' > "$TMP/tar-nogate.mk"
 is 'no verify-release target: only the tar line is judged' "$(linux_tar_metadata "$TMP/tar-nogate.mk")" ''
 printf 'check:\n\t@tar -tzf dist/x.tar.gz >/dev/null\n\t@tar -xzf dist/x.tar.gz -C /tmp/x\n\t@tar -C dist -tzf x.tar.gz\n# old: tar -czf x.tar.gz *\n' > "$TMP/tar-read.mk"

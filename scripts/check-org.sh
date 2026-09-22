@@ -382,7 +382,11 @@ tar_create_lines() {
 
 # linux_tar_metadata MAKEFILE — non-empty when a line creates a tar archive
 # without both COPYFILE_DISABLE=1 and --no-xattrs, or when the file creates one
-# and its verify-release recipe never lists with --options 'tar:!mac-ext'.
+# and its verify-release recipe never lists with --options 'tar:!mac-ext', or
+# never reads the archives' pax headers (python3 tarfile's pax_headers). The
+# first form of that check grepped the decompressed stream for the keywords,
+# which also matches file text: slack-router ships CHANGELOG.md, whose entry
+# names LIBARCHIVE.xattr, and its clean v0.4.0 archives were refused.
 linux_tar_metadata() {
   local f="$1" lines line body
   [ -f "$f" ] || return 0
@@ -400,7 +404,11 @@ linux_tar_metadata() {
   grep -q '^verify-release:' "$f" || return 0
   body=$(recipe_lines "$f" verify-release)
   case "$body" in *"tar:!mac-ext"*) ;; *)
-    echo "verify-release does not list its tar archives with --options 'tar:!mac-ext'" ;;
+    echo "verify-release does not list its tar archives with --options 'tar:!mac-ext'"
+    return 0 ;;
+  esac
+  case "$body" in *pax_headers*) ;; *)
+    echo "verify-release does not read its tar archives' pax headers (a grep of the stream matches file text)" ;;
   esac
 }
 
