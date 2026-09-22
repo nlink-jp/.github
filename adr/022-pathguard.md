@@ -179,15 +179,22 @@ carries a path, `additionalProperties: false`) stays as it was.
 
 | Server | Release | Project ADR |
 |---|---|---|
-| voice-scribe | v0.5.0; v0.5.1 judges the workspace directory | ADR-0013 |
-| gem-scribe | v0.5.0; v0.5.1 judges the workspace directory | ADR-0004 |
-| image-forge | v0.29.0 (also judges caller-named model paths); image-forge-gui v0.12.1 bundles it | ADR-0010 |
-| voice-studio-mcp | v0.6.0 | ADR-0014 |
-| video-studio-mcp | v0.6.0 | ADR-0009 |
-| data-toolbox-mcp | v0.8.0 | ADR-0012 |
-| pcap-analyzer-mcp | v0.6.0 | ADR-0010 |
+| voice-scribe | v0.5.0; v0.5.1 judges the workspace directory; v0.5.2: a refused path gets the same answer whether or not it exists | ADR-0013 |
+| gem-scribe | v0.5.0; v0.5.1 judges the workspace directory; v0.5.2: a refused path gets the same answer whether or not it exists | ADR-0004 |
+| image-forge | v0.29.0 (also judges caller-named model paths); image-forge-gui v0.12.1 bundles it; v0.29.1 judges an input image before looking for it (image-forge-gui v0.12.2) | ADR-0010 |
+| voice-studio-mcp | v0.6.0; v0.6.1: the workspace judges every read | ADR-0014 |
+| video-studio-mcp | v0.6.0; v0.6.1: the workspace judges every read, pages are re-verified at the spawn, a `%` path is refused | ADR-0009 |
+| data-toolbox-mcp | v0.8.0; v0.8.1: a refused path gets the same answer whether or not it exists, `attach_files` judged | ADR-0012 |
+| pcap-analyzer-mcp | v0.6.0; v0.6.1: a refused path gets the same answer whether or not it exists | ADR-0010 |
 | chrome-pilot-mcp | v0.9.0 (uploads Outbound) | ADR-0007 |
-| slack-mcp-extender | v0.5.0 (uploads Outbound; a file's directory may not be a system directory or the home itself; whether a path exists never changes the answer) | ADR-0004 |
+| slack-mcp-extender | v0.5.0 (uploads Outbound; a file's directory may not be a system directory or the home itself; a refused path gets the same answer whether or not it exists) | ADR-0004 |
+
+The existence sweep of 2026-09-22 (the v0.5.2 / v0.8.1 / v0.6.1 / v0.29.1 releases above) left gaps
+that live in pathguard itself — a `..` walk out through an entry of a credential directory, the last
+of `Forms` not always being the end of the walk, `work_dir` validated not-found-before-denied (§4),
+the cost of preparing the places on every check, hard links into credential directories, Unicode
+normalisation. Each server's project ADR lists them under its 2026-09-22 amendment; they are for
+pathguard's next release.
 
 ## References
 
