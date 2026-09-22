@@ -567,6 +567,42 @@ verify-release:
 EOF
 is 'the closed gate with a linux-archive block is silent' "$(open_release_gate "$TMP/closed-linux.mk")" ''
 
+# ---- linux archive metadata: both tar settings, and a gate that can see ._ --
+# 61 repos archived with a plain `tar -czf`. COPYFILE_DISABLE=1 stops the ._
+# members and --no-xattrs the pax headers, so either one alone still ships
+# metadata; and a gate listing with a plain `tar -tzf` cannot see ._ members.
+tarmk() { # tarmk FILE TAR-LINE GATE-LIST-LINE
+  printf 'package:\n\t@cd dist && ( cd _pkg && %s "../x.tar.gz" * )\n\nverify-release:\n\t@names=$$(%s "dist/x.tar.gz")\n' "$2" "$3" > "$1"
+}
+tarmk "$TMP/tar-both.mk" 'COPYFILE_DISABLE=1 tar --no-xattrs -czf' "tar --options 'tar:!mac-ext' -tzf"
+is 'both settings and a !mac-ext listing are silent' "$(linux_tar_metadata "$TMP/tar-both.mk")" ''
+tarmk "$TMP/tar-plain.mk" 'tar -czf' "tar --options 'tar:!mac-ext' -tzf"
+case "$(linux_tar_metadata "$TMP/tar-plain.mk")" in
+  *"without COPYFILE_DISABLE=1 and --no-xattrs"*) ok 'a plain tar -czf is reported' ;;
+  *) no 'a plain tar -czf is reported' ;;
+esac
+tarmk "$TMP/tar-copyfile.mk" 'COPYFILE_DISABLE=1 tar -czf' "tar --options 'tar:!mac-ext' -tzf"
+[ -n "$(linux_tar_metadata "$TMP/tar-copyfile.mk")" ] && ok 'COPYFILE_DISABLE=1 alone is reported (pax headers)' || no 'COPYFILE_DISABLE=1 alone is reported (pax headers)'
+tarmk "$TMP/tar-noxattrs.mk" 'tar --no-xattrs -czf' "tar --options 'tar:!mac-ext' -tzf"
+[ -n "$(linux_tar_metadata "$TMP/tar-noxattrs.mk")" ] && ok '--no-xattrs alone is reported (._ members)' || no '--no-xattrs alone is reported (._ members)'
+tarmk "$TMP/tar-blind.mk" 'COPYFILE_DISABLE=1 tar --no-xattrs -czf' 'tar -tzf'
+case "$(linux_tar_metadata "$TMP/tar-blind.mk")" in
+  *"tar:!mac-ext"*) ok 'a gate listing with a plain tar -tzf is reported' ;;
+  *) no 'a gate listing with a plain tar -tzf is reported' ;;
+esac
+printf 'package:\n\t@( cd _pkg && COPYFILE_DISABLE=1 tar --no-xattrs -czf ../x.tar.gz * )\n' > "$TMP/tar-nogate.mk"
+is 'no verify-release target: only the tar line is judged' "$(linux_tar_metadata "$TMP/tar-nogate.mk")" ''
+printf 'check:\n\t@tar -tzf dist/x.tar.gz >/dev/null\n\t@tar -xzf dist/x.tar.gz -C /tmp/x\n\t@tar -C dist -tzf x.tar.gz\n# old: tar -czf x.tar.gz *\n' > "$TMP/tar-read.mk"
+is 'listing, extracting and a commented-out tar -czf are not creation' "$(linux_tar_metadata "$TMP/tar-read.mk")" ''
+printf 'build:\n\tgo build -o dist/x .\n' > "$TMP/tar-none.mk"
+is 'a Makefile that creates no tar archive is silent' "$(linux_tar_metadata "$TMP/tar-none.mk")" ''
+# The template itself, as the document states it, must pass.
+awk '/^```makefile$/{buf=""; on=1; next} on && /^```$/{if (buf ~ /verify-release:/) {printf "%s", buf; exit} on=0; next} on{buf=buf $0 "\n"}' \
+  "$HERE/../CONVENTIONS.md" > "$TMP/template.mk"
+grep -q 'tar --no-xattrs -czf' "$TMP/template.mk" \
+  && is 'the CONVENTIONS.md template passes' "$(linux_tar_metadata "$TMP/template.mk")" '' \
+  || no 'the CONVENTIONS.md template could be extracted'
+
 # ---- bundled CLI: the pin a GUI declares for the CLI inside it --------------
 printf '%s\n' 'CLI_BIN ?= ../active-lens/dist/active-lens' 'CLI_VERSION ?= v0.3.1' > "$TMP/gui1.mk"
 is 'a plain CLI_BIN and a pin are read' "$(bundled_cli_pin "$TMP/gui1.mk")" 'active-lens v0.3.1'

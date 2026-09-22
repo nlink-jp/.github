@@ -359,6 +359,51 @@ open_release_gate() {
   echo "verify-release chains its checks into one statement ending in '|| true'"
 }
 
+# --- linux archive metadata ----------------------------------------------------
+# macOS tar writes each file's extended attributes into a .tar.gz in two shapes:
+# ._ AppleDouble members, which COPYFILE_DISABLE=1 stops, and LIBARCHIVE.xattr /
+# SCHILY.xattr pax headers, which --no-xattrs stops. GNU tar extracts the first
+# as stray ._ files and reports the second as unknown keywords. 61 repositories
+# archived with a plain `tar -czf`; all were converted on 2026-09-23, and their
+# verify-release lists each Linux archive with --options 'tar:!mac-ext' — a
+# plain listing on macOS folds ._ members away, so a ._ check over it can never
+# fire. As with check 15, the template is fixed and what is left is the copy.
+
+# tar_create_lines MAKEFILE — the non-comment lines that create a tar archive:
+# `tar` followed by a short-option cluster holding c (-czf, -cf, -cJf) or
+# --create. Listing (-tzf) and extraction (-xzf) are not creation.
+tar_create_lines() {
+  awk '
+    /^[ \t]*#/ { next }
+    { l = " " $0 " " }
+    l ~ /[ \t;&|(]tar[ \t]/ && (l ~ /[ \t]-[A-Za-z]*c[A-Za-z]*[ \t]/ || l ~ /[ \t]--create[ \t]/) { print }
+  ' "$1"
+}
+
+# linux_tar_metadata MAKEFILE — non-empty when a line creates a tar archive
+# without both COPYFILE_DISABLE=1 and --no-xattrs, or when the file creates one
+# and its verify-release recipe never lists with --options 'tar:!mac-ext'.
+linux_tar_metadata() {
+  local f="$1" lines line body
+  [ -f "$f" ] || return 0
+  lines=$(tar_create_lines "$f")
+  [ -n "$lines" ] || return 0
+  while IFS= read -r line; do
+    case "$line" in
+      *COPYFILE_DISABLE=1*--no-xattrs*) ;;
+      *)
+        line="${line#"${line%%[![:space:]]*}"}"
+        echo "creates a tar archive without COPYFILE_DISABLE=1 and --no-xattrs: ${line:0:90}"
+        return 0 ;;
+    esac
+  done <<< "$lines"
+  grep -q '^verify-release:' "$f" || return 0
+  body=$(recipe_lines "$f" verify-release)
+  case "$body" in *"tar:!mac-ext"*) ;; *)
+    echo "verify-release does not list its tar archives with --options 'tar:!mac-ext'" ;;
+  esac
+}
+
 # --- running images (this machine) is NOT here; see scripts/stale-running-images.sh
 # --- bundled CLI (GUI apps that ship a sibling CLI inside them) ----------------
 # Six GUIs copy a sibling CLI into Contents/Resources, and a release build
@@ -886,6 +931,22 @@ check_series() {
     if [ -n "$why" ]; then
       echo "        $FAIL $name: $why"
       echo "             run .github/scripts/close-verify-release-gate.py --apply on its Makefile,"
+      echo "             then .github/scripts/exercise-release-gate.sh to prove it"
+      errors=$((errors + 1))
+    fi
+  done < <(git -C "$dir" submodule foreach --quiet 'echo "        $displaypath"')
+
+  # 17. Linux archives carry no macOS metadata (see linux_tar_metadata above).
+  echo "    linux archive metadata:"
+  while IFS= read -r subpath; do
+    subpath="${subpath#        }"
+    name=$(basename "$subpath")
+    is_archived "$name" "$dir" && continue
+    why=$(linux_tar_metadata "$dir/$subpath/Makefile")
+    if [ -n "$why" ]; then
+      echo "        $FAIL $name: $why"
+      echo "             archive with COPYFILE_DISABLE=1 tar --no-xattrs and copy the template's"
+      echo "             Linux-archive block into verify-release (CONVENTIONS.md §Code Signing),"
       echo "             then .github/scripts/exercise-release-gate.sh to prove it"
       errors=$((errors + 1))
     fi
