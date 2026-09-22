@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # exercise-release-gate.sh REPO — drive one repo's `make verify-release`
-# through twelve states and print one line per state. Exits 1 if any line is BAD.
+# through thirteen states and print one line per state. Exits 1 if any line is BAD.
 #
 # No build: the packaged binary is a stand-in shell script that prints a version
 # string, which is all the gate reads. Nothing is guessed: the gate's own first
@@ -31,7 +31,12 @@
 #  10 extra entry        a file beyond the canonical contents
 #  11 missing entry      LICENSE left out
 #  12 no archive         the archive was never built
-# A gate with no Linux block reports rows 7-12 as n/a.
+#  13 keyword in a file  MUST PASS — a clean archive whose files mention
+#                        LIBARCHIVE.xattr / SCHILY.xattr in their text. A gate
+#                        that greps the decompressed stream reads file contents
+#                        as headers and refuses it; slack-router's bundled
+#                        CHANGELOG.md stopped its release that way
+# A gate with no Linux block reports rows 7-13 as n/a.
 #
 # Each Linux fixture is read back with Python's tarfile, which does not fold
 # AppleDouble members, before the gate sees it: a row cannot pass on a fixture
@@ -140,7 +145,8 @@ print(f"ad={int(ad)} pax={int(pax)}")
 PY
 }
 
-# mklinux ARCHIVE MODE — clean | appledouble | pax | neither | extra | missing | absent
+# mklinux ARCHIVE MODE — clean | appledouble | pax | neither | extra | missing | absent | mention
+# (mention: clean, but every file's text names the xattr pax keywords)
 mklinux() {
   local path="$1" mode="$2" s name root e shape expect members=()
   track "$path"
@@ -153,7 +159,11 @@ mklinux() {
   for e in "${want[@]}" EXTRA; do
     [ "$e" = EXTRA ] && [ "$mode" != extra ] && continue
     [ "$mode" = missing ] && [ "$e" = "$drop" ] && continue
-    printf 'exercise fixture\n' > "$root/$e"
+    if [ "$mode" = mention ]; then
+      printf 'exercise fixture: macOS tar writes LIBARCHIVE.xattr.* and SCHILY.xattr.* pax headers\n' > "$root/$e"
+    else
+      printf 'exercise fixture\n' > "$root/$e"
+    fi
     xattr -w org.nlink-jp.exercise 1 "$root/$e"
     members+=("$e")
   done
@@ -173,6 +183,11 @@ mklinux() {
   esac
   shape=$(fixture_shape "$top/$path")
   [ "$shape" = "$expect" ] || { say BAD "fixture" "the $mode fixture reads $shape, not $expect — its row would prove nothing"; return 1; }
+  # The mention row proves something only if the keywords really are in the
+  # decompressed stream — that is exactly where a stream grep finds them.
+  if [ "$mode" = mention ] && ! gzip -dc "$top/$path" | grep -qa -e 'LIBARCHIVE.xattr' -e 'SCHILY.xattr'; then
+    say BAD "fixture" "the mention fixture does not carry the keywords — its row would prove nothing"; return 1
+  fi
 }
 
 # Calibrate: each "does not list" refusal names the next archive. The first one
@@ -264,5 +279,16 @@ lrow "9-neither-flag"  neither     "carries macOS metadata entries"
 lrow "10-extra-entry"  extra       "holds"
 lrow "11-missing-entry" missing    "holds"
 lrow "12-no-archive"   absent      "does not list"
+
+# 13. the second must-pass row: clean headers, keywords in the file text.
+if [ ${#linux[@]} -eq 0 ] || [ "$calibrated" != ok ]; then
+  [ ${#linux[@]} -eq 0 ] && [ "$calibrated" = ok ] && say n/a "13-keyword-in-file" "the gate checks no Linux archive" || say BAD "13-keyword-in-file" "not run: calibration failed"
+else
+  last=${linux[${#linux[@]}-1]}
+  if mklinux "$last" mention; then
+    run "13-keyword-in-file" ok
+  fi
+  mklinux "$last" clean
+fi
 
 exit "$bad"

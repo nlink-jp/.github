@@ -955,7 +955,10 @@ Every release asset is named:
   `COPYFILE_DISABLE=1 tar --no-xattrs` — each setting stops one of the two —
   and let `verify-release` judge the result (see §Code Signing → Verifying a
   release). A plain `tar -t` on macOS folds `._` members away; list with
-  `tar --options 'tar:!mac-ext' -tzf` to see them.
+  `tar --options 'tar:!mac-ext' -tzf` to see them. Read the pax headers
+  themselves (Python's `tarfile`), not the decompressed stream: a grep of the
+  stream also matches a bundled file that mentions the keywords, and
+  slack-router's CHANGELOG.md stopped its release that way.
 
 ### darwin architecture policy (effective 2026-07-12)
 
@@ -1138,8 +1141,10 @@ verify-release:
 			echo "verify-release: FAIL — $$f carries macOS metadata entries."; \
 			echo "  macOS tar writes ._ members unless COPYFILE_DISABLE=1 is set, and lists them only with !mac-ext."; \
 			exit 1; fi; \
-		if gzip -dc "$$f" | grep -qa -e 'LIBARCHIVE.xattr' -e 'SCHILY.xattr'; then \
-			echo "verify-release: FAIL — $$f carries extended attributes as pax headers."; \
+		xh=$$(python3 -c 'import sys, tarfile; print(" ".join(m.name for m in tarfile.open(sys.argv[1]) if any(k.startswith(("LIBARCHIVE.xattr.", "SCHILY.xattr.")) for k in m.pax_headers)))' "$$f") || { \
+			echo "verify-release: FAIL — $$f cannot be read for its pax headers (python3 tarfile)."; exit 1; }; \
+		if [ -n "$$xh" ]; then \
+			echo "verify-release: FAIL — $$f carries extended attributes as pax headers ($$xh)."; \
 			echo "  macOS tar writes them unless called with --no-xattrs; COPYFILE_DISABLE alone does not."; \
 			exit 1; fi; \
 		got=$$(printf '%s\n' "$$names" | LC_ALL=C sort | tr '\n' ' '); \
@@ -1155,17 +1160,19 @@ Two scripts in `.github/scripts/` exist for this recipe.
 form deterministically: it takes the zip path and the in-zip binary path from
 the matched block and refuses to touch a Makefile whose block does not match
 exactly once, so a gate is never rewritten on a guess.
-`exercise-release-gate.sh <repo>` drives one repo's gate through twelve states
+`exercise-release-gate.sh <repo>` drives one repo's gate through thirteen states
 with a stand-in shell script as the packaged binary, so it needs no build: no
 marker, **correct**, a build from another tag, a zip that does not unpack, a
 binary that does not run, and a marker older than its zip; then, for the last
 Linux archive, `._` members, xattr pax headers, both, an extra entry, a missing
-entry, and no archive. The zip, the archive names and their contents are all
+entry, no archive, and — **must pass** — clean headers with the xattr keywords
+in the files' text. The zip, the archive names and their contents are all
 read from the gate's own refusals, and every Linux fixture is read back with
 Python's `tarfile` (which does not fold `._` members) before the gate sees it.
 It refuses to run over a non-empty `dist/` and removes only what it created.
 The open form accepts three of the first six; a Linux check that lists with a
-plain `tar -tzf` accepts the `._` row. Keep the correct row: a table of
+plain `tar -tzf` accepts the `._` row, and one that greps the decompressed
+stream for the xattr keywords refuses the last. Keep the correct rows: a table of
 failures alone shows only that the gate refuses something, not that it still
 accepts what it should — an earlier run of this exercise had every row failing at the freshness
 gate because the zip and its marker were created in the same second, and it
