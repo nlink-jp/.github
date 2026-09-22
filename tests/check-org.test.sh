@@ -489,6 +489,84 @@ printf '%s
 is 'a Makefile without the target is silent' "$(open_release_gate "$TMP/none.mk")" ''
 is 'a missing Makefile is silent' "$(open_release_gate "$TMP/absent.mk")" ''
 
+# The markers are read from the verify-release recipe alone. web-fetch's open
+# gate passed while the check read the whole file, because its e2e target keeps
+# the Go suite's status with `exit $$rc`.
+cat > "$TMP/open-e2e.mk" <<'EOF'
+e2e: build
+	@go test -tags e2e ./e2e/... > dist/e2e-go.log 2>&1; rc=$$?; \
+		exit $$rc
+
+## verify-release: refuse to release an un-notarized zip (marker gate)
+verify-release:
+	@test -f "dist/x.zip.notarized" || exit 1
+	@tmp=$$(mktemp -d) && \
+		unzip -oq "dist/x.zip" -d "$$tmp" && \
+		"$$tmp/x" --version && \
+		spctl -a -vv -t install "$$tmp/x" 2>&1 | head -2 || true; \
+		rm -rf "$$tmp"
+	@echo "verify-release: OK ($(VERSION), notarization marker present)"
+EOF
+case "$(open_release_gate "$TMP/open-e2e.mk")" in
+  *"|| true"*) ok 'an exit $$rc in an earlier target does not close the gate' ;;
+  *) no 'an exit $$rc in an earlier target does not close the gate' ;;
+esac
+
+# The recipe ends at the next rule, past blank and comment lines.
+cat > "$TMP/open-later.mk" <<'EOF'
+verify-release:
+	@tmp=$$(mktemp -d) && \
+		unzip -oq "dist/x.zip" -d "$$tmp" && \
+		"$$tmp/x" --version && \
+		spctl -a -vv -t install "$$tmp/x" 2>&1 | head -2 || true; \
+		rm -rf "$$tmp"
+
+## release: upload
+release:
+	@scripts/upload.sh; rc=$$?; exit $$rc
+EOF
+case "$(open_release_gate "$TMP/open-later.mk")" in
+  *"|| true"*) ok 'an exit $$rc in a later target does not close the gate' ;;
+  *) no 'an exit $$rc in a later target does not close the gate' ;;
+esac
+
+# Blank and comment lines inside the recipe do not end it (make skips them), and
+# a continuation line counts whatever its indentation. Stopping early would
+# read too little and let an open block below the gap through.
+cat > "$TMP/open-gap.mk" <<'EOF'
+verify-release:
+	@test -f "dist/x.zip.notarized" || exit 1
+
+# open the zip the way a user would
+	@tmp=$$(mktemp -d) && \
+    unzip -oq "dist/x.zip" -d "$$tmp" && \
+    "$$tmp/x" --version && \
+    spctl -a -vv -t install "$$tmp/x" 2>&1 | head -2 || true; \
+    rm -rf "$$tmp"
+EOF
+case "$(open_release_gate "$TMP/open-gap.mk")" in
+  *"|| true"*) ok 'a blank line, a comment and space-indented continuations are read through' ;;
+  *) no 'a blank line, a comment and space-indented continuations are read through' ;;
+esac
+
+# The closed gate followed by the Linux-archive block (which exits 1, not on rc)
+# and its longer OK line.
+cat > "$TMP/closed-linux.mk" <<'EOF'
+verify-release:
+	@tmp=$$(mktemp -d); rc=0; \
+		if ! unzip -oq "dist/x.zip" -d "$$tmp"; then rc=1; \
+		else spctl -a -vv -t install "$$tmp/x" 2>&1 | head -2 || true; \
+		fi; \
+		rm -rf "$$tmp"; \
+		exit $$rc
+	@for p in $(PLATFORMS); do os=$${p%/*}; \
+		[ "$$os" = linux ] || continue; \
+		gzip -dc "dist/x-$$os.tar.gz" | grep -qa 'LIBARCHIVE.xattr' && exit 1; \
+	done
+	@echo "verify-release: OK ($(VERSION), notarized, unpacks, runs, reports its version, clean linux archives)"
+EOF
+is 'the closed gate with a linux-archive block is silent' "$(open_release_gate "$TMP/closed-linux.mk")" ''
+
 # ---- bundled CLI: the pin a GUI declares for the CLI inside it --------------
 printf '%s\n' 'CLI_BIN ?= ../active-lens/dist/active-lens' 'CLI_VERSION ?= v0.3.1' > "$TMP/gui1.mk"
 is 'a plain CLI_BIN and a pin are read' "$(bundled_cli_pin "$TMP/gui1.mk")" 'active-lens v0.3.1'

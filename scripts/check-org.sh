@@ -326,16 +326,36 @@ broken_links() {
 # or one pasted from an old copy, cannot bring it back: the template it would
 # come from is already fixed, so what is left to guard is the copy.
 
+# recipe_lines MAKEFILE TARGET -> the recipe of TARGET as make reads it: the
+# tab-indented lines after its rule line, and their continuations. Blank and
+# comment-only lines between them are skipped rather than taken as the end —
+# make ignores them there too.
+recipe_lines() {
+  awk -v rule="$2:" '
+    inside {
+      if (cont || /^\t/) { print; cont = /\\$/; next }
+      if (/^[ \t]*(#|$)/) next
+      inside = 0
+    }
+    index($0, rule) == 1 { inside = 1; cont = 0 }
+  ' "$1"
+}
+
 # open_release_gate MAKEFILE — non-empty when the file has a verify-release
 # target whose recipe still ends its check chain in `|| true` instead of
 # judging each step and exiting on rc. GUI (.app) gates are a different recipe
 # — stapler validate, no `|| true` — and are silent here.
+#
+# Both markers are read from the verify-release recipe alone. Read from the
+# whole file, an `exit $$rc` in any other target counted as closing the gate:
+# web-fetch's e2e target carries one, and its open gate passed this check.
 open_release_gate() {
-  local f="$1"
+  local f="$1" body
   [ -f "$f" ] || return 0
   grep -q '^verify-release:' "$f" || return 0
-  grep -qF 'exit $$rc' "$f" && return 0
-  grep -qF 'head -2 || true' "$f" || return 0
+  body=$(recipe_lines "$f" verify-release)
+  case "$body" in *'exit $$rc'*) return 0 ;; esac
+  case "$body" in *'head -2 || true'*) ;; *) return 0 ;; esac
   echo "verify-release chains its checks into one statement ending in '|| true'"
 }
 
