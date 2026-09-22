@@ -1021,6 +1021,65 @@ else
 fi
 echo ""
 
+# Path judgement (organization ADR-022): nlink-jp/pathguard is the one place
+# it lives. What can rot silently: a consumer left on an old pathguard, a
+# consumer growing a copy of the credential list again, and the runtimes'
+# list (gem-agent / lagent internal/sandbox/lane.go, which do not depend on
+# pathguard yet) drifting from pathguard's copy of it.
+echo "==> pathguard (lib-series/pathguard and its consumers)"
+pgdir="$DEST/lib-series/pathguard"
+if [ ! -e "$pgdir/.git" ]; then  # a submodule's .git is a file
+  echo "    $WARN lib-series/pathguard not found locally — NOT checked"
+  skipped=$((skipped + 1))
+else
+  pgerr=0 pgcount=0
+  pglatest=$(git -C "$pgdir" describe --tags --abbrev=0 2>/dev/null || true)
+  for gm in "$DEST"/*/*/go.mod; do
+    [ -f "$gm" ] || continue
+    pgver=$(grep -o 'github.com/nlink-jp/pathguard v[0-9][0-9.]*' "$gm" | awk '{print $2}' || true)
+    [ -n "$pgver" ] || continue
+    pgcount=$((pgcount + 1))
+    cdir=$(dirname "$gm")
+    cname="${cdir#"$DEST"/}"
+    # Every consumer on the latest tag: a fix to the judgement reaches a
+    # server only through its dependency.
+    if [ -n "$pglatest" ] && [ "$pgver" != "$pglatest" ]; then
+      echo "    $FAIL $cname requires pathguard $pgver, latest is $pglatest"
+      pgerr=1
+    fi
+    # No copy of the list: a floor entry spelled in a consumer's own code is
+    # how the nine copies this module replaced began.
+    copies=$(grep -rlF -e '"Library/Keychains"' -e '".config/gcloud"' -e '".gnupg"' --include='*.go' "$cdir" 2>/dev/null | grep -v '_test\.go$' | grep -v '/vendor/' || true)
+    if [ -n "$copies" ]; then
+      echo "    $FAIL $cname spells a credential-floor entry in its own code (pathguard holds the list):"
+      printf '%s\n' "$copies" | sed "s|^$DEST/|      |"
+      pgerr=1
+    fi
+  done
+  # The runtimes' list is pathguard's list (testdata/runtime-lists.json).
+  if command -v go >/dev/null 2>&1; then
+    for lane in "$DEST/cli-series/gem-agent/internal/sandbox/lane.go" "$DEST/lab-series/lagent/internal/sandbox/lane.go"; do
+      if [ ! -f "$lane" ]; then
+        echo "    $WARN ${lane#"$DEST"/} not found — NOT compared"
+        continue
+      fi
+      if ! out=$(go run "$SCRIPT_DIR/runtime-lists.go" -lane "$lane" -fixture "$pgdir/testdata/runtime-lists.json" 2>&1); then
+        echo "    $FAIL ${lane#"$DEST"/} differs from pathguard's runtime-lists.json:"
+        printf '%s\n' "$out" | sed 's/^/      /'
+        pgerr=1
+      fi
+    done
+  else
+    echo "    $WARN go not available — the runtimes' lists are NOT compared"
+  fi
+  if [ "$pgerr" -eq 0 ]; then
+    echo "    $PASS pathguard: $pgcount consumer(s) on $pglatest, no copy of the list, runtimes' lists match"
+  else
+    errors=$((errors + 1))
+  fi
+fi
+echo ""
+
 # Machine-level agent guards. Repo conventions cannot enforce these — they
 # live in ~/.claude — so audit them here instead of trusting that whoever
 # set the machine up remembered.

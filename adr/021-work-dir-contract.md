@@ -2,7 +2,7 @@
 
 | Field | Value |
 |-------|-------|
-| Status | **Accepted** — implemented and released across the fleet on 2026-09-13 (voice-scribe was the reference, project ADR-0010) |
+| Status | **Accepted** — implemented and released across the fleet on 2026-09-13 (voice-scribe was the reference, project ADR-0010); §4, §7 and §10 **amended by [ADR-022](022-pathguard.md)** (2026-09-22: one module, nlink-jp/pathguard, holds the judgement) |
 | Date | 2026-09-13 |
 | Binds | organization |
 | Decision makers | nlink-jp maintainers |
@@ -146,6 +146,11 @@ was withdrawn on 2026-09-14 for the same reason splunk's and pcap's spills were
 
 ### 4. Validation — a closed list
 
+> **Amended by [ADR-022](022-pathguard.md) §4:** the order is now denied
+> before not writable, the denied list is nlink-jp/pathguard's (compared by
+> file identity and folded name), `work_dir_denied` carries `details.reason`,
+> and an unknown home refuses every call.
+
 Every server applies exactly these, in order, and returns a structured
 `{code, message, details}` error:
 
@@ -180,6 +185,12 @@ caller that had its work directory injected via `_meta` learns the destination f
 the result, not from its own request.
 
 ### 7. Inputs: no operator allowlist, a blacklist floor, and writes stay inside
+
+> **Amended by [ADR-022](022-pathguard.md) §2–§3:** the list below is
+> superseded by the runtimes' list, held in nlink-jp/pathguard; reads and
+> writes are judged by its Local policy and uploads by its Outbound policy
+> (secret and credential names anywhere); the `.env` templates are allowed;
+> every hop of a chain of links is judged.
 
 The operator allowlists (`allowed_paths`, `allowed_roots`) are deleted, not renamed.
 They could not express what they were meant to express: the matcher is a
@@ -247,6 +258,11 @@ path the caller cannot open is the one prohibited outcome.
   parameter stays available and unused.
 
 ### 10. Enforcement is a test, not a convention
+
+> **Amended by [ADR-022](022-pathguard.md) §1, §6:** there is now one shared
+> module, nlink-jp/pathguard; transplanting is retired, and `check-org.sh`
+> checks that every consumer is on its latest tag, holds no copy of the list,
+> and that the runtimes' list matches. The schema arch test below stays.
 
 There is no shared Go module across these servers — each is self-contained and the
 skeleton is transplanted — so the contract is enforced per repository:
