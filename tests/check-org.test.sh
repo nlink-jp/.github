@@ -630,6 +630,21 @@ printf '%s\n' 'BINARY := tool' 'build:' '	go build -o dist/tool .' > "$TMP/cli.m
 is 'a Makefile that bundles nothing is silent' "$(bundled_cli_pin "$TMP/cli.mk")" ''
 is 'a missing Makefile is silent' "$(bundled_cli_pin "$TMP/nope.mk")" ''
 
+# ---- the organization listing: one gh call answers archived, shipped, latest --
+# gh_repo_list is the script's only call to GitHub for this; a canned listing
+# stands in for it.
+gh_repo_list() { printf 'alpha\tfalse\tv1.2.0\nbeta\ttrue\t\ngamma\tfalse\t\n'; }
+org_repos_loaded=0
+load_org_repos
+is 'latest_release reads the tag' "$(latest_release alpha)" 'v1.2.0'
+is 'a repository without a release has no tag' "$(latest_release gamma)" ''
+is 'a repository missing from the listing has no tag' "$(latest_release delta)" ''
+is 'a name is matched whole, not as a prefix' "$(latest_release alph)" ''
+if is_archived beta "$TMP/none"; then ok 'archived is read from the listing'; else no 'archived is read from the listing'; fi
+if is_archived alpha "$TMP/none"; then no 'a live repository is not archived'; else ok 'a live repository is not archived'; fi
+if has_release alpha; then ok 'a released repository has a release'; else no 'a released repository has a release'; fi
+if has_release gamma; then no 'an unreleased repository has none'; else ok 'an unreleased repository has none'; fi
+
 # ---- fetching: every repository up front, each fetch writing only its own ---
 # Local bare repositories stand in for GitHub. protocol.file.allow=always lets a
 # submodule be fetched over a file path at all: without it the umbrella's

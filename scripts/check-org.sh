@@ -61,28 +61,54 @@ verdict() {
   return 1
 }
 
-# --- archived repositories ---------------------------------------------------
-# GitHub is the authority: an archived repo is read-only, so it can never take
-# a template update and must not be judged against live templates. One org
-# listing serves the whole run. When gh is unavailable (offline, or no auth)
-# the umbrella catalog's "(archived)" marker stands in — best effort rather
-# than a hard dependency, since this script is otherwise fully offline.
-archived_list=""
-archived_loaded=0
+# --- the organization's repositories, as GitHub lists them --------------------
+# GitHub is the authority on which repositories are archived, which have
+# shipped, and what each one's latest release is. One `gh repo list` serves the
+# whole run. The checks used to ask per repository — `gh release view` 92 times
+# for the tap alone, about 40 s of the run, measured 2026-09-23 — and the
+# listing's latestRelease gave the same answer for every one of them.
+ORG_LIST_LIMIT=300
+org_repos=""        # name<TAB>isArchived<TAB>latest release tag, one per repo
+org_repos_loaded=0
+archived_list=""    # names, one per line
+released_list=""
 
-load_archived() {
-  [ "$archived_loaded" -eq 1 ] && return 0
-  archived_loaded=1
-  command -v gh >/dev/null 2>&1 || return 0
-  archived_list=$(gh repo list nlink-jp --limit 300 --json name,isArchived \
-    --jq '.[] | select(.isArchived) | .name' 2>/dev/null) || archived_list=""
+# gh_repo_list — the raw listing, in org_repos' shape; fails when gh is absent.
+# The only place this script lists the organization; tests replace it.
+gh_repo_list() {
+  command -v gh >/dev/null 2>&1 || return 1
+  gh repo list nlink-jp --limit "$ORG_LIST_LIMIT" --json name,isArchived,latestRelease \
+    --jq '.[] | [.name, (.isArchived | tostring), (.latestRelease.tagName // "")] | @tsv'
+}
+
+# load_org_repos — list once per run. When gh is unavailable (absent, offline,
+# or no auth) everything below reads as empty.
+load_org_repos() {
+  [ "$org_repos_loaded" -eq 1 ] && return 0
+  org_repos_loaded=1
+  org_repos=$(gh_repo_list 2>/dev/null) || org_repos=""
+  archived_list=$(printf '%s\n' "$org_repos" | awk -F'\t' '$2 == "true" { print $1 }')
+  released_list=$(printf '%s\n' "$org_repos" | awk -F'\t' '$3 != "" { print $1 }')
   return 0
 }
+
+# latest_release NAME -> the repository's latest release tag; empty when it has
+# none, is not in the listing, or the listing is unavailable.
+latest_release() {
+  load_org_repos
+  printf '%s\n' "$org_repos" | awk -F'\t' -v n="$1" '$1 == n { print $3; exit }'
+}
+
+# --- archived repositories ---------------------------------------------------
+# An archived repo is read-only, so it can never take a template update and
+# must not be judged against live templates. When the listing is unavailable
+# the umbrella catalog's "(archived)" marker stands in — best effort rather
+# than a hard dependency, since this script is otherwise fully offline.
 
 # is_archived NAME UMBRELLA_DIR
 is_archived() {
   local name="$1" dir="$2"
-  load_archived
+  load_org_repos
   if [ -n "$archived_list" ]; then
     printf '%s\n' "$archived_list" | grep -qx -- "$name"
     return $?
@@ -91,26 +117,14 @@ is_archived() {
 }
 
 # --- released repositories ---------------------------------------------------
-# Same shape as the archived listing: one org query, cached for the run, and
-# absent when gh is unavailable. Used to catch a README that still calls a
-# shipped tool unreleased — a claim that is true when written and only becomes
-# false at the first release, which is why nothing catches it otherwise.
-released_list=""
-released_loaded=0
+# Used to catch a README that still calls a shipped tool unreleased — a claim
+# that is true when written and only becomes false at the first release, which
+# is why nothing catches it otherwise.
 
-load_released() {
-  [ "$released_loaded" -eq 1 ] && return 0
-  released_loaded=1
-  command -v gh >/dev/null 2>&1 || return 0
-  released_list=$(gh repo list nlink-jp --limit 300 --json name,latestRelease \
-    --jq '.[] | select(.latestRelease != null) | .name' 2>/dev/null) || released_list=""
-  return 0
-}
-
-# has_release NAME — false when gh is unavailable, so the check stays quiet
-# rather than accusing every repo of lying.
+# has_release NAME — false when the listing is unavailable, so the check stays
+# quiet rather than accusing every repo of lying.
 has_release() {
-  load_released
+  load_org_repos
   [ -n "$released_list" ] || return 1
   printf '%s\n' "$released_list" | grep -qx -- "$1"
 }
@@ -693,7 +707,7 @@ check_series() {
   # from the filesystem. This is the inverse of the skip in check 10: name the
   # misfiling rather than work around it. Silent when gh is unavailable.
   if [ -f "$dir/.gitmodules" ]; then
-    load_archived
+    load_org_repos
     if [ -n "$archived_list" ]; then
       local misfiled=""
       while IFS= read -r subpath; do
@@ -971,7 +985,7 @@ check_series() {
         errors=$((errors + 1))
         continue
       fi
-      brel=$(gh release view --repo "nlink-jp/$bcli" --json tagName --jq .tagName 2>/dev/null || true)
+      brel=$(latest_release "$bcli")
       [ -n "$brel" ] || continue
       if [ "$bpin" != "$brel" ]; then
         echo "        $FAIL $name: bundles $bcli $bpin, but $bcli $brel is released"
@@ -1074,6 +1088,10 @@ if [ -n "$repos" ]; then
   echo ""
 fi
 
+# Loaded here, in this shell, so the checks that read it inside $(...) do not
+# each list the organization again.
+load_org_repos
+
 for series in "${SERIES[@]}"; do
   target="$DEST/$series"
   if [ ! -d "$target/.git" ]; then
@@ -1149,7 +1167,7 @@ else
       terr=1
       continue
     fi
-    rver=$(gh release view --repo "nlink-jp/$tname" --json tagName --jq .tagName 2>/dev/null || true)
+    rver=$(latest_release "$tname")
     if [ -z "$rver" ]; then
       # No release visible: a renamed, private or unreleased repo. Not drift.
       continue
