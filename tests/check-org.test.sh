@@ -732,13 +732,15 @@ is 'series_repos lists a cloned umbrella, then its submodules; an absent series 
 # By default a fetch in an umbrella also fetches every submodule whose recorded
 # commit moved. Run beside that submodule's own fetch, that is two processes
 # writing one repository.
-printf '%s\n' "$F/dest/a-series" | fetch_all 2
+failed=$(printf '%s\n' "$F/dest/a-series" | fetch_all 2)
+is 'a fetch that works is not named as failed' "$failed" ''
 is 'fetch_all fetches the umbrella' "$(git -C "$F/dest/a-series" rev-parse origin/main)" "$new_umb"
 is 'the umbrella fetch leaves its submodule to its own fetch' \
    "$(git -C "$F/dest/a-series/sub" rev-parse origin/main)" "$old_sub"
 
-printf '%s\n' "$F/dest/a-series/sub" "$F/no-such-repo" "$F/dest/solo" | fetch_all 2; rc=$?
+failed=$(printf '%s\n' "$F/dest/a-series/sub" "$F/no-such-repo" "$F/dest/solo" | fetch_all 2); rc=$?
 is 'a repository that cannot be fetched does not fail fetch_all' "$rc" 0
+is 'fetch_all names the repository it could not fetch, and only that one' "$failed" "$F/no-such-repo"
 is 'the submodule is fetched by its own entry' "$(git -C "$F/dest/a-series/sub" rev-parse origin/main)" "$new_sub"
 is 'the entries after a failed fetch are fetched' "$(git -C "$F/dest/solo" rev-parse origin/main)" "$new_solo"
 
@@ -755,6 +757,48 @@ is 'no argument fetches nothing' "$(git -C "$F/dest/solo" rev-parse origin/main)
 ( cd "$F/dest/solo" && sh -c "$fetch_one" _ "$F/dest/solo" )
 is 'the same repository named explicitly is fetched' \
    "$(git -C "$F/dest/solo" rev-parse origin/main)" "$(git -C "$F/solo.git" rev-parse main)"
+
+# ---- a stale or missing remote ref is not compared ---------------------------
+fetch_failed_list="$F/dest/a-series/sub"
+if fetch_failed "$F/dest/a-series/sub"; then ok 'fetch_failed knows a listed repository'; else no 'fetch_failed knows a listed repository'; fi
+if fetch_failed "$F/dest/a-series"; then no 'a prefix of a failed path is not failed'; else ok 'a prefix of a failed path is not failed'; fi
+fetch_failed_list=""
+if fetch_failed "$F/dest/solo"; then no 'nothing failed: nothing is failed'; else ok 'nothing failed: nothing is failed'; fi
+
+is 'origin_ref reads an existing ref' "$(origin_ref "$F/dest/solo" origin/main)" "$(git -C "$F/solo.git" rev-parse main)"
+is 'origin_ref prints nothing for a missing ref (not its name)' "$(origin_ref "$F/dest/solo" origin/nope)" ''
+is 'origin_ref falls back to the next ref' "$(origin_ref "$F/dest/solo" origin/nope origin/main)" "$(git -C "$F/solo.git" rev-parse main)"
+
+# Through check_series itself: the umbrella's origin/main is ahead of its HEAD
+# and the submodule's ahead of the recorded commit, so both would fail if
+# compared — a NOT checked line is the only way to pass these.
+series_run() {  # LABEL WANT-SKIPPED WANT-LINE REFUSED-LINE — check_series in this shell
+  errors=0; skipped=0
+  check_series a-series "$F/dest/a-series" > "$TMP/series.out" 2>&1
+  if [ "$skipped" = "$2" ] && grep -qF -- "$3" "$TMP/series.out" && ! grep -qF -- "$4" "$TMP/series.out"; then ok "$1"; else
+    no "$1"; printf '        skipped=%s\n' "$skipped" >&2; grep -E 'remote|sub:' "$TMP/series.out" >&2
+  fi
+}
+fetch_failed_list="$F/dest/a-series/sub"
+series_run 'a submodule whose fetch failed is NOT checked, not compared' 1 \
+  'sub: could not fetch origin — NOT checked' 'sub: out of sync'
+fetch_failed_list="$F/dest/a-series"
+series_run 'an umbrella whose fetch failed is NOT checked, not compared' 1 \
+  'remote: could not fetch origin — NOT checked' 'remote: local diverged'
+fetch_failed_list=""
+git -C "$F/dest/a-series/sub" update-ref -d refs/remotes/origin/main
+series_run 'a submodule without origin/main is NOT checked, not "out of sync"' 1 \
+  'sub: no origin/main — NOT checked' 'sub: out of sync'
+git -C "$F/dest/a-series" update-ref -d refs/remotes/origin/main
+( set -euo pipefail; check_series a-series "$F/dest/a-series"; echo 'REACHED THE END' ) > "$TMP/series.out" 2>&1
+if grep -qF 'remote: no origin/main or origin/master — NOT checked' "$TMP/series.out" \
+   && grep -qF 'REACHED THE END' "$TMP/series.out"; then
+  ok 'an umbrella without a remote branch is NOT checked, and the run goes on under set -e'
+else
+  no 'an umbrella without a remote branch is NOT checked, and the run goes on under set -e'
+  tail -5 "$TMP/series.out" >&2
+fi
+errors=0; skipped=0
 
 # ---- each_submodule: one listing per series, replayed to every loop ----------
 series_submodules=$'        a\n        b/c'

@@ -650,16 +650,38 @@ series_repos() {
 }
 
 # fetch_one — what fetch_all runs for each repository: `sh -c "$fetch_one" _ DIR`.
-# A failed fetch is silent, as it was when each check fetched for itself: the
-# check then reads whatever origin/main the repository already has. An empty or
-# missing DIR does nothing — GNU xargs runs the command once, with no argument,
-# on empty input (macOS xargs does not) — because `git -C ""` would fetch in the
-# caller's working directory instead.
-fetch_one='[ -n "$1" ] || exit 0; git -C "$1" fetch --quiet --no-recurse-submodules origin 2>/dev/null || true'
+# A failed fetch prints DIR. Silent, it left the checks comparing against the
+# origin/main of the last fetch that worked — a stale ref that can read as in
+# sync. An empty or missing DIR does nothing — GNU xargs runs the command once,
+# with no argument, on empty input (macOS xargs does not) — because `git -C ""`
+# would fetch in the caller's working directory instead.
+fetch_one='[ -n "$1" ] || exit 0; git -C "$1" fetch --quiet --no-recurse-submodules origin >/dev/null 2>&1 || printf "%s\n" "$1"'
 
-# fetch_all JOBS — fetch origin in each repository named on stdin, JOBS at a time.
+# fetch_all JOBS — fetch origin in each repository named on stdin, JOBS at a
+# time; prints the repositories that could not be fetched, one per line.
 fetch_all() {
   tr '\n' '\0' | xargs -0 -n 1 -P "$1" sh -c "$fetch_one" _
+}
+
+# fetch_failed DIR — true when this run's fetch_all could not fetch DIR.
+fetch_failed_list=""
+fetch_failed() {
+  [ -n "$fetch_failed_list" ] || return 1
+  printf '%s\n' "$fetch_failed_list" | grep -qxF -- "$1"
+}
+
+# origin_ref DIR REF... -> the commit of the first REF that exists in DIR;
+# empty when none does. `git rev-parse` without --verify echoes a missing
+# ref's name to stdout and exits 128: check 14 read "origin/main" followed by
+# its own fallback as the latest commit, and check 1's assignment ended the
+# whole run under `set -e`.
+origin_ref() {
+  local dir="$1" ref
+  shift
+  for ref in "$@"; do
+    git -C "$dir" rev-parse --verify --quiet "$ref^{commit}" 2>/dev/null && return 0
+  done
+  return 0
 }
 
 # each_submodule — the current series' submodules, one per line, exactly as
@@ -680,10 +702,18 @@ check_series() {
   # it runs once here; a failure reads as no submodules, as it did in each loop.
   series_submodules=$(git -C "$dir" submodule foreach --quiet 'echo "        $displaypath"') || true
 
-  # 1. Remote sync (origin was fetched up front by fetch_all)
+  # 1. Remote sync (origin was fetched up front by fetch_all). Not compared
+  #    when that fetch failed or there is no remote branch: the ref is stale
+  #    or absent, and either verdict would be a guess.
   local_sha=$(git -C "$dir" rev-parse HEAD)
-  remote_sha=$(git -C "$dir" rev-parse origin/main 2>/dev/null || git -C "$dir" rev-parse origin/master 2>/dev/null)
-  if [ "$local_sha" = "$remote_sha" ]; then
+  remote_sha=$(origin_ref "$dir" origin/main origin/master)
+  if fetch_failed "$dir"; then
+    echo "    $WARN remote: could not fetch origin — NOT checked"
+    skipped=$((skipped + 1))
+  elif [ -z "$remote_sha" ]; then
+    echo "    $WARN remote: no origin/main or origin/master — NOT checked"
+    skipped=$((skipped + 1))
+  elif [ "$local_sha" = "$remote_sha" ]; then
     echo "    $PASS remote: in sync"
   else
     echo "    $FAIL remote: local diverged from origin"
@@ -1120,19 +1150,21 @@ check_series() {
     subpath="${subpath#        }" # strip indent from submodule foreach
     subdir="$dir/$subpath"
 
+    name=$(basename "$subpath")
     # Commit recorded in parent repo
     recorded=$(git -C "$dir" ls-tree HEAD "$subpath" 2>/dev/null | awk '{print $3}')
     # Latest commit on origin/main of submodule (fetched up front by fetch_all)
-    latest=$(git -C "$subdir" rev-parse origin/main 2>/dev/null || echo "unknown")
+    latest=$(origin_ref "$subdir" origin/main)
 
-    if [ "$recorded" = "$latest" ]; then
-      name=$(basename "$subpath")
+    if fetch_failed "$subdir"; then
+      echo "        $WARN $name: could not fetch origin — NOT checked"
+      skipped=$((skipped + 1))
+    elif [ -z "$latest" ]; then
+      echo "        $WARN $name: no origin/main — NOT checked"
+      skipped=$((skipped + 1))
+    elif [ "$recorded" = "$latest" ]; then
       echo "        $PASS $name: up to date ($recorded)"
-    elif [ "$latest" = "unknown" ]; then
-      name=$(basename "$subpath")
-      echo "        $WARN $name: could not fetch origin/main"
     else
-      name=$(basename "$subpath")
       echo "        $FAIL $name: out of sync with origin/main"
       echo "                recorded: $recorded"
       echo "                latest:   $latest"
@@ -1153,7 +1185,7 @@ echo ""
 repos=$(series_repos "$DEST" "${SERIES[@]}")
 if [ -n "$repos" ]; then
   echo "Fetching $(printf '%s\n' "$repos" | wc -l | tr -d ' ') repositories from origin, $FETCH_JOBS at a time..."
-  printf '%s\n' "$repos" | fetch_all "$FETCH_JOBS"
+  fetch_failed_list=$(printf '%s\n' "$repos" | fetch_all "$FETCH_JOBS")
   echo ""
 fi
 

@@ -2222,8 +2222,9 @@ submodule updates, and scaffold creation.
 **Fetching:** before any check runs, every cloned series umbrella and each of
 its submodules is fetched from `origin`, 8 at a time, each fetch writing only
 its own repository (`--no-recurse-submodules`). The remote-sync and
-submodule-pointer checks then read those refs. A fetch that fails is silent: the
-check compares against the `origin/main` the repository already had.
+submodule-pointer checks then read those refs. A repository that could not be
+fetched, or has no remote branch to compare with, is reported as NOT checked and
+the run is INCOMPLETE — it is never compared against a stale or missing ref.
 
 **GitHub listing:** one `gh repo list nlink-jp` answers which repositories are
 archived, which have a release, and each one's latest release tag. When it is
