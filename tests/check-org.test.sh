@@ -630,5 +630,73 @@ printf '%s\n' 'BINARY := tool' 'build:' '	go build -o dist/tool .' > "$TMP/cli.m
 is 'a Makefile that bundles nothing is silent' "$(bundled_cli_pin "$TMP/cli.mk")" ''
 is 'a missing Makefile is silent' "$(bundled_cli_pin "$TMP/nope.mk")" ''
 
+# ---- fetching: every repository up front, each fetch writing only its own ---
+# Local bare repositories stand in for GitHub. protocol.file.allow=always lets a
+# submodule be fetched over a file path at all: without it the umbrella's
+# recursive fetch fails by itself, and the no-recursion test below could not
+# fail. Set through the environment because fetch_all runs plain git.
+export GIT_CONFIG_COUNT=5 \
+  GIT_CONFIG_KEY_0=protocol.file.allow GIT_CONFIG_VALUE_0=always \
+  GIT_CONFIG_KEY_1=user.name           GIT_CONFIG_VALUE_1=t \
+  GIT_CONFIG_KEY_2=user.email          GIT_CONFIG_VALUE_2=t@t \
+  GIT_CONFIG_KEY_3=init.defaultBranch  GIT_CONFIG_VALUE_3=main \
+  GIT_CONFIG_KEY_4=commit.gpgsign      GIT_CONFIG_VALUE_4=false
+
+F="$TMP/fetch"
+mkdir -p "$F/dest"
+commit_push() { git -C "$1" commit -q --allow-empty -m "$2" && git -C "$1" push -q origin HEAD:main; }
+for r in sub umb solo; do git init -q --bare "$F/$r.git"; git clone -q "$F/$r.git" "$F/$r-w" 2>/dev/null; done
+commit_push "$F/sub-w" s1
+commit_push "$F/solo-w" o1
+git -C "$F/umb-w" submodule -q add "$F/sub.git" sub 2>/dev/null
+commit_push "$F/umb-w" u1
+git clone -q --recurse-submodules "$F/umb.git" "$F/dest/a-series" 2>/dev/null
+git clone -q "$F/solo.git" "$F/dest/solo" 2>/dev/null
+
+# The origins move on: a submodule commit, the umbrella recording it, and a
+# commit in the standalone repository.
+commit_push "$F/sub-w" s2
+git -C "$F/umb-w/sub" pull -q origin main
+git -C "$F/umb-w" add sub
+commit_push "$F/umb-w" u2
+commit_push "$F/solo-w" o2
+new_umb=$(git -C "$F/umb.git" rev-parse main)
+new_sub=$(git -C "$F/sub.git" rev-parse main)
+new_solo=$(git -C "$F/solo.git" rev-parse main)
+old_sub=$(git -C "$F/dest/a-series/sub" rev-parse origin/main)
+
+is 'series_repos lists a cloned umbrella, then its submodules; an absent series is skipped' \
+   "$(series_repos "$F/dest" a-series b-series | paste -sd' ' -)" "$F/dest/a-series $F/dest/a-series/sub"
+
+# By default a fetch in an umbrella also fetches every submodule whose recorded
+# commit moved. Run beside that submodule's own fetch, that is two processes
+# writing one repository.
+printf '%s\n' "$F/dest/a-series" | fetch_all 2
+is 'fetch_all fetches the umbrella' "$(git -C "$F/dest/a-series" rev-parse origin/main)" "$new_umb"
+is 'the umbrella fetch leaves its submodule to its own fetch' \
+   "$(git -C "$F/dest/a-series/sub" rev-parse origin/main)" "$old_sub"
+
+printf '%s\n' "$F/dest/a-series/sub" "$F/no-such-repo" "$F/dest/solo" | fetch_all 2; rc=$?
+is 'a repository that cannot be fetched does not fail fetch_all' "$rc" 0
+is 'the submodule is fetched by its own entry' "$(git -C "$F/dest/a-series/sub" rev-parse origin/main)" "$new_sub"
+is 'the entries after a failed fetch are fetched' "$(git -C "$F/dest/solo" rev-parse origin/main)" "$new_solo"
+
+# fetch_one is what xargs runs per entry. Handed an empty argument, or none (GNU
+# xargs runs it once with none on empty input; macOS xargs never does, so this
+# is exercised here directly), it must not become `git -C ""`, which fetches
+# wherever the caller is.
+commit_push "$F/solo-w" o3
+before=$(git -C "$F/dest/solo" rev-parse origin/main)
+( cd "$F/dest/solo" && sh -c "$fetch_one" _ "" )
+is 'an empty argument fetches nothing' "$(git -C "$F/dest/solo" rev-parse origin/main)" "$before"
+( cd "$F/dest/solo" && sh -c "$fetch_one" _ )
+is 'no argument fetches nothing' "$(git -C "$F/dest/solo" rev-parse origin/main)" "$before"
+( cd "$F/dest/solo" && sh -c "$fetch_one" _ "$F/dest/solo" )
+is 'the same repository named explicitly is fetched' \
+   "$(git -C "$F/dest/solo" rev-parse origin/main)" "$(git -C "$F/solo.git" rev-parse main)"
+
+unset GIT_CONFIG_COUNT GIT_CONFIG_KEY_0 GIT_CONFIG_VALUE_0 GIT_CONFIG_KEY_1 GIT_CONFIG_VALUE_1 \
+  GIT_CONFIG_KEY_2 GIT_CONFIG_VALUE_2 GIT_CONFIG_KEY_3 GIT_CONFIG_VALUE_3 GIT_CONFIG_KEY_4 GIT_CONFIG_VALUE_4
+
 echo "passed: $pass   failed: $fail"
 [ "$fail" -eq 0 ]

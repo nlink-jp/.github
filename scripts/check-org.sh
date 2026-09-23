@@ -540,14 +540,54 @@ makefile_build_dirs() {
   done < "$mf"
 }
 
+# --- fetching ------------------------------------------------------------------
+# Checks 1 and 14 compare each repository with its origin, so every one of them
+# is fetched first. Fetched one at a time inside the checks, that was 116 network
+# round trips and about a minute — over a third of the whole run, measured
+# 2026-09-23 — so they are fetched up front, FETCH_JOBS at a time.
+#
+# Each fetch writes its own repository and nothing else (--no-recurse-submodules).
+# By default a fetch in an umbrella also fetches every submodule whose recorded
+# commit moved; run beside that submodule's own fetch, it would write one
+# repository from two processes at once. Every submodule is in the list anyway.
+FETCH_JOBS=8
+
+# series_repos DEST SERIES... — the repositories checks 1 and 14 read origin/main
+# of: each series umbrella that is cloned, then its submodules. One per line,
+# spelled under DEST as the checks spell them — foreach's $toplevel is the
+# physical path, and differs wherever DEST runs through a symlink.
+series_repos() {
+  local dest="$1" series sub
+  shift
+  for series in "$@"; do
+    [ -d "$dest/$series/.git" ] || continue
+    echo "$dest/$series"
+    while IFS= read -r sub; do
+      echo "$dest/$series/$sub"
+    done < <(git -C "$dest/$series" submodule foreach --quiet 'echo "$displaypath"' 2>/dev/null || true)
+  done
+}
+
+# fetch_one — what fetch_all runs for each repository: `sh -c "$fetch_one" _ DIR`.
+# A failed fetch is silent, as it was when each check fetched for itself: the
+# check then reads whatever origin/main the repository already has. An empty or
+# missing DIR does nothing — GNU xargs runs the command once, with no argument,
+# on empty input (macOS xargs does not) — because `git -C ""` would fetch in the
+# caller's working directory instead.
+fetch_one='[ -n "$1" ] || exit 0; git -C "$1" fetch --quiet --no-recurse-submodules origin 2>/dev/null || true'
+
+# fetch_all JOBS — fetch origin in each repository named on stdin, JOBS at a time.
+fetch_all() {
+  tr '\n' '\0' | xargs -0 -n 1 -P "$1" sh -c "$fetch_one" _
+}
+
 check_series() {
   local series="$1"
   local dir="$2"
 
   echo "==> $series"
 
-  # 1. Remote sync
-  git -C "$dir" fetch --quiet origin 2>/dev/null
+  # 1. Remote sync (origin was fetched up front by fetch_all)
   local_sha=$(git -C "$dir" rev-parse HEAD)
   remote_sha=$(git -C "$dir" rev-parse origin/main 2>/dev/null || git -C "$dir" rev-parse origin/master 2>/dev/null)
   if [ "$local_sha" = "$remote_sha" ]; then
@@ -987,8 +1027,7 @@ check_series() {
 
     # Commit recorded in parent repo
     recorded=$(git -C "$dir" ls-tree HEAD "$subpath" 2>/dev/null | awk '{print $3}')
-    # Fetch and get latest commit on origin/main of submodule
-    git -C "$subdir" fetch --quiet origin 2>/dev/null
+    # Latest commit on origin/main of submodule (fetched up front by fetch_all)
     latest=$(git -C "$subdir" rev-parse origin/main 2>/dev/null || echo "unknown")
 
     if [ "$recorded" = "$latest" ]; then
@@ -1015,6 +1054,13 @@ fi
 
 echo "Destination: $DEST"
 echo ""
+
+repos=$(series_repos "$DEST" "${SERIES[@]}")
+if [ -n "$repos" ]; then
+  echo "Fetching $(printf '%s\n' "$repos" | wc -l | tr -d ' ') repositories from origin, $FETCH_JOBS at a time..."
+  printf '%s\n' "$repos" | fetch_all "$FETCH_JOBS"
+  echo ""
+fi
 
 for series in "${SERIES[@]}"; do
   target="$DEST/$series"
