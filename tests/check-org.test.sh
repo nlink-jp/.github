@@ -695,6 +695,13 @@ is 'no argument fetches nothing' "$(git -C "$F/dest/solo" rev-parse origin/main)
 is 'the same repository named explicitly is fetched' \
    "$(git -C "$F/dest/solo" rev-parse origin/main)" "$(git -C "$F/solo.git" rev-parse main)"
 
+# ---- each_submodule: one listing per series, replayed to every loop ----------
+series_submodules=$'        a\n        b/c'
+is 'each_submodule replays the listing line by line' "$(each_submodule | wc -l | tr -d ' ')" 2
+series_submodules=""
+_n=0; while IFS= read -r _l; do _n=$((_n + 1)); done < <(each_submodule)
+is 'a series without submodules runs no loop iteration (not one empty one)' "$_n" 0
+
 unset GIT_CONFIG_COUNT GIT_CONFIG_KEY_0 GIT_CONFIG_VALUE_0 GIT_CONFIG_KEY_1 GIT_CONFIG_VALUE_1 \
   GIT_CONFIG_KEY_2 GIT_CONFIG_VALUE_2 GIT_CONFIG_KEY_3 GIT_CONFIG_VALUE_3 GIT_CONFIG_KEY_4 GIT_CONFIG_VALUE_4
 

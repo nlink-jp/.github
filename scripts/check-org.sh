@@ -581,11 +581,23 @@ fetch_all() {
   tr '\n' '\0' | xargs -0 -n 1 -P "$1" sh -c "$fetch_one" _
 }
 
+# each_submodule — the current series' submodules, one per line, exactly as
+# `git submodule foreach` printed them in check_series; nothing when there are none.
+series_submodules=""
+each_submodule() {
+  [ -z "$series_submodules" ] || printf '%s\n' "$series_submodules"
+}
+
 check_series() {
   local series="$1"
   local dir="$2"
 
   echo "==> $series"
+
+  # Every loop below walks the same list. `git submodule foreach` runs a process
+  # per submodule (0.3 s for util-series) and was called 16 times per series, so
+  # it runs once here; a failure reads as no submodules, as it did in each loop.
+  series_submodules=$(git -C "$dir" submodule foreach --quiet 'echo "        $displaypath"') || true
 
   # 1. Remote sync (origin was fetched up front by fetch_all)
   local_sha=$(git -C "$dir" rev-parse HEAD)
@@ -651,7 +663,7 @@ check_series() {
       subpath="${subpath#        }"
       name=$(basename "$subpath")
       grep -q "github.com/nlink-jp/$name" "$dir/README.md" || missing="$missing $name"
-    done < <(git -C "$dir" submodule foreach --quiet 'echo "        $displaypath"')
+    done < <(each_submodule)
     if [ -z "$missing" ]; then
       echo "    $PASS README.md: every submodule cataloged"
     else
@@ -690,7 +702,7 @@ check_series() {
         if printf '%s\n' "$archived_list" | grep -qx -- "$name"; then
           misfiled="$misfiled $name"
         fi
-      done < <(git -C "$dir" submodule foreach --quiet 'echo "        $displaypath"')
+      done < <(each_submodule)
       if [ -z "$misfiled" ]; then
         echo "    $PASS no archived repository registered here"
       else
@@ -740,7 +752,7 @@ check_series() {
           fi
         fi
       fi
-    done < <(git -C "$dir" submodule foreach --quiet 'echo "        $displaypath"')
+    done < <(each_submodule)
   fi
 
   # 7. Scan for likely secrets in tracked files
@@ -760,7 +772,7 @@ check_series() {
         echo "$secret_hits" | sed 's/^/            /'
         errors=$((errors + 1))
       fi
-    done < <(git -C "$dir" submodule foreach --quiet 'echo "        $displaypath"')
+    done < <(each_submodule)
   fi
 
   # 8. go.mod must not contain local replace directives (leaks local paths)
@@ -778,7 +790,7 @@ check_series() {
         echo "$replace_hits" | sed 's/^/            /'
         errors=$((errors + 1))
       fi
-    done < <(git -C "$dir" submodule foreach --quiet 'echo "        $displaypath"')
+    done < <(each_submodule)
   fi
 
   # 9. .gitmodules must use HTTPS URLs (not SSH)
@@ -824,7 +836,7 @@ check_series() {
           errors=$((errors + 1))
         fi
       done
-    done < <(git -C "$dir" submodule foreach --quiet 'echo "        $displaypath"')
+    done < <(each_submodule)
   fi
 
   # 10b. Vendored skill validator matches canonical (.github/templates).
@@ -844,7 +856,7 @@ check_series() {
         echo "    $FAIL $name: tests/validate-skill.sh drifted from .github/templates/validate-skill.sh (ADR-006)"
         errors=$((errors + 1))
       fi
-    done < <(git -C "$dir" submodule foreach --quiet 'echo "        $displaypath"')
+    done < <(each_submodule)
   fi
 
   # 11. Tracked files must not carry this machine's home directory
@@ -869,7 +881,7 @@ check_series() {
         echo "$home_hits" | sed 's/^/            /'
         errors=$((errors + 1))
       fi
-    done < <(git -C "$dir" submodule foreach --quiet 'echo "        $displaypath"')
+    done < <(each_submodule)
   fi
 
   # 12. A shipped tool's README must not say it has not shipped.
@@ -891,7 +903,7 @@ check_series() {
           errors=$((errors + 1))
         fi
       done
-    done < <(git -C "$dir" submodule foreach --quiet 'echo "        $displaypath"')
+    done < <(each_submodule)
   fi
 
   # 12b. A Swift app's cask states the macOS floor its package declares.
@@ -919,7 +931,7 @@ check_series() {
         echo "         set BREW_MACOS_FLOOR := $want in its Makefile; the template default is :big_sur"
         errors=$((errors + 1))
       fi
-    done < <(git -C "$dir" submodule foreach --quiet 'echo "        $displaypath"')
+    done < <(each_submodule)
   fi
 
   # 13. Language mirrors (CONVENTIONS.md §Documentation structure)
@@ -943,7 +955,7 @@ check_series() {
       printf '%s\n' "$layout" | sed 's/^/            /'
       skipped=$((skipped + 1))
     fi
-  done < <(git -C "$dir" submodule foreach --quiet 'echo "        $displaypath"')
+  done < <(each_submodule)
 
   # 16. A GUI that bundles a CLI ships the CLI's current release.
   if command -v gh >/dev/null 2>&1; then
@@ -967,7 +979,7 @@ check_series() {
         echo "             its users cannot get the CLI fix any other way"
         errors=$((errors + 1))
       fi
-    done < <(git -C "$dir" submodule foreach --quiet 'echo "        $displaypath"')
+    done < <(each_submodule)
   fi
 
   # 15. The release gate fails closed (see open_release_gate above).
@@ -982,7 +994,7 @@ check_series() {
       echo "             then .github/scripts/exercise-release-gate.sh to prove it"
       errors=$((errors + 1))
     fi
-  done < <(git -C "$dir" submodule foreach --quiet 'echo "        $displaypath"')
+  done < <(each_submodule)
 
   # 17. Linux archives carry no macOS metadata (see linux_tar_metadata above).
   echo "    linux archive metadata:"
@@ -998,7 +1010,7 @@ check_series() {
       echo "             then .github/scripts/exercise-release-gate.sh to prove it"
       errors=$((errors + 1))
     fi
-  done < <(git -C "$dir" submodule foreach --quiet 'echo "        $displaypath"')
+  done < <(each_submodule)
 
   # 14. Document references resolve (CONVENTIONS.md §Documentation structure)
   echo "    document references:"
@@ -1012,7 +1024,7 @@ check_series() {
     printf '%s\n' "$problems" | head -8 | sed 's/^/            /'
     [ "$count" -le 8 ] && : || echo "            … and $((count - 8)) more"
     errors=$((errors + 1))
-  done < <(git -C "$dir" submodule foreach --quiet 'echo "        $displaypath"')
+  done < <(each_submodule)
 
   # 14. Submodule pointers vs origin/main
   #     (was check 11 before the home-path and release-status checks)
@@ -1043,7 +1055,7 @@ check_series() {
       echo "                latest:   $latest"
       errors=$((errors + 1))
     fi
-  done < <(git -C "$dir" submodule foreach --quiet 'echo "        $displaypath"')
+  done < <(each_submodule)
 }
 
 # tests/check-org.test.sh sources this script to exercise the helpers above
