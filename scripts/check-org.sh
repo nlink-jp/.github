@@ -5,8 +5,9 @@
 #   ./check-org.sh [DEST_DIR]
 #
 # Exit code: 0 only when every repository was found AND every check
-# passed. 1 when any check fails — or when any repository was not found
-# locally, because a repo that was not examined is not a passing repo.
+# ran AND passed. 1 when any check fails — or when anything was not
+# checked (a repository not found locally, GitHub's listing unavailable),
+# because what was not examined is not passing.
 
 set -euo pipefail
 
@@ -55,7 +56,7 @@ verdict() {
   [ "$errs" -gt 0 ] && msg="$errs check(s) failed."
   if [ "$skips" -gt 0 ]; then
     [ -n "$msg" ] && msg="$msg "
-    msg="${msg}INCOMPLETE — $skips repo(s) not found locally; their checks did not run."
+    msg="${msg}INCOMPLETE — $skips item(s) not checked; see the $WARN lines above."
   fi
   echo "Result: $msg"
   return 1
@@ -67,29 +68,54 @@ verdict() {
 # whole run. The checks used to ask per repository — `gh release view` 92 times
 # for the tap alone, about 40 s of the run, measured 2026-09-23 — and the
 # listing's latestRelease gave the same answer for every one of them.
-ORG_LIST_LIMIT=300
+ORG_LIST_LIMIT=1000
 org_repos=""        # name<TAB>isArchived<TAB>latest release tag, one per repo
 org_repos_loaded=0
+org_repos_state=""  # "ok", or why the listing is unavailable
 archived_list=""    # names, one per line
 released_list=""
 
-# gh_repo_list — the raw listing, in org_repos' shape; fails when gh is absent.
-# The only place this script lists the organization; tests replace it.
+# gh_repo_list — the raw listing, in org_repos' shape; status 127 when gh is
+# absent. The only place this script lists the organization; tests replace it.
 gh_repo_list() {
-  command -v gh >/dev/null 2>&1 || return 1
+  command -v gh >/dev/null 2>&1 || return 127
   gh repo list nlink-jp --limit "$ORG_LIST_LIMIT" --json name,isArchived,latestRelease \
     --jq '.[] | [.name, (.isArchived | tostring), (.latestRelease.tagName // "")] | @tsv'
 }
 
-# load_org_repos — list once per run. When gh is unavailable (absent, offline,
-# or no auth) everything below reads as empty.
+# load_org_repos — list once per run, and judge the listing. It is unusable
+# when gh is absent or fails (offline, no auth), when it is empty, and when it
+# is as long as the limit: gh stops there without saying so, and a repository
+# cut off the end would read as unreleased and unarchived. An unusable listing
+# is emptied, so nothing below can read part of one, and the run reports it
+# once, as not checked.
 load_org_repos() {
+  local rc=0 n
   [ "$org_repos_loaded" -eq 1 ] && return 0
   org_repos_loaded=1
-  org_repos=$(gh_repo_list 2>/dev/null) || org_repos=""
+  org_repos=$(gh_repo_list 2>/dev/null) || rc=$?
+  n=$(printf '%s' "$org_repos" | grep -c . || true)
+  if [ "$rc" -eq 127 ]; then
+    org_repos_state="gh is not installed"
+  elif [ "$rc" -ne 0 ]; then
+    org_repos_state="\`gh repo list nlink-jp\` failed (offline, or not logged in?) — run it by hand to see why"
+  elif [ "$n" -eq 0 ]; then
+    org_repos_state="\`gh repo list nlink-jp\` returned no repositories"
+  elif [ "$n" -ge "$ORG_LIST_LIMIT" ]; then
+    org_repos_state="the listing reached its limit of $ORG_LIST_LIMIT repositories and may be cut short — raise ORG_LIST_LIMIT"
+  else
+    org_repos_state=ok
+  fi
+  [ "$org_repos_state" = ok ] || org_repos=""
   archived_list=$(printf '%s\n' "$org_repos" | awk -F'\t' '$2 == "true" { print $1 }')
   released_list=$(printf '%s\n' "$org_repos" | awk -F'\t' '$3 != "" { print $1 }')
   return 0
+}
+
+# org_repos_ok — true when the listing loaded and can be trusted.
+org_repos_ok() {
+  load_org_repos
+  [ "$org_repos_state" = ok ]
 }
 
 # latest_release NAME -> the repository's latest release tag; empty when it has
@@ -476,6 +502,47 @@ brew_version() {
   printf '%s' "$v"
 }
 
+# check_tap TAP_DIR — each formula and cask points at its repository's latest
+# release; a drift adds one error. Only entries actually compared are counted
+# as pointing at their release: a repository with no visible release (renamed,
+# private or unreleased) is not drift, and not a match either. With the listing
+# unavailable nothing is compared, and it says NOT checked — never OK. (The
+# skip is counted once, where the run reports the listing.)
+check_tap() {
+  local tdir="$1" f tname tver rver terr=0 tcount=0 tnone=0 note=""
+  if ! org_repos_ok; then
+    echo "    $WARN homebrew-tap: GitHub repository listing unavailable (see above) — NOT checked"
+    return 0
+  fi
+  for f in "$tdir"/Formula/*.rb "$tdir"/Casks/*.rb; do
+    [ -f "$f" ] || continue
+    tname=$(basename "$f" .rb)
+    tver=$(brew_version "$f")
+    if [ -z "$tver" ]; then
+      echo "    $FAIL homebrew-tap: cannot read the version out of $(basename "$(dirname "$f")")/$tname.rb"
+      terr=1
+      continue
+    fi
+    rver=$(latest_release "$tname")
+    if [ -z "$rver" ]; then
+      tnone=$((tnone + 1))
+      continue
+    fi
+    tcount=$((tcount + 1))
+    if [ "$tver" != "${rver#v}" ]; then
+      echo "    $FAIL homebrew-tap: $tname points at $tver, latest release is $rver"
+      echo "         run 'make brew' in that repo (CONVENTIONS.md §Release Checklist step 7)"
+      terr=1
+    fi
+  done
+  if [ "$terr" -eq 0 ]; then
+    [ "$tnone" -eq 0 ] || note=" ($tnone with no visible release, not compared)"
+    echo "    $PASS homebrew-tap: $tcount entr(ies) point at their latest release$note"
+  else
+    errors=$((errors + 1))
+  fi
+}
+
 # --- Makefile build-output resolution ---------------------------------------
 # The convention is that `make build` writes into dist/. What matters is the
 # resolved *value* of the output path, not the variable name used to spell it:
@@ -705,7 +772,8 @@ check_series() {
   # because the only authority is GitHub. They belong in nlink-jp/archive-series,
   # whose directory layout makes "is this alive, and what was it?" answerable
   # from the filesystem. This is the inverse of the skip in check 10: name the
-  # misfiling rather than work around it. Silent when gh is unavailable.
+  # misfiling rather than work around it. Silent when the listing is
+  # unavailable; the run reports that once, as not checked.
   if [ -f "$dir/.gitmodules" ]; then
     load_org_repos
     if [ -n "$archived_list" ]; then
@@ -971,30 +1039,31 @@ check_series() {
     fi
   done < <(each_submodule)
 
-  # 16. A GUI that bundles a CLI ships the CLI's current release.
-  if command -v gh >/dev/null 2>&1; then
-    echo "    bundled CLI:"
-    while IFS= read -r subpath; do
-      subpath="${subpath#        }"
-      name=$(basename "$subpath")
-      ref=$(bundled_cli_pin "$dir/$subpath/Makefile")
-      [ -n "$ref" ] || continue
-      bcli="${ref%% *}"; bpin="${ref#* }"
-      if [ "$bpin" = "-" ]; then
-        echo "        $FAIL $name: bundles $bcli but does not pin it (set CLI_VERSION; see image-forge-gui)"
-        errors=$((errors + 1))
-        continue
-      fi
-      brel=$(latest_release "$bcli")
-      [ -n "$brel" ] || continue
-      if [ "$bpin" != "$brel" ]; then
-        echo "        $FAIL $name: bundles $bcli $bpin, but $bcli $brel is released"
-        echo "             bump CLI_VERSION, rebuild with the release CLI and release $name —"
-        echo "             its users cannot get the CLI fix any other way"
-        errors=$((errors + 1))
-      fi
-    done < <(each_submodule)
-  fi
+  # 16. A GUI that bundles a CLI ships the CLI's current release. Whether it
+  #     pins one at all needs no network, so that half runs without gh.
+  echo "    bundled CLI:"
+  while IFS= read -r subpath; do
+    subpath="${subpath#        }"
+    name=$(basename "$subpath")
+    ref=$(bundled_cli_pin "$dir/$subpath/Makefile")
+    [ -n "$ref" ] || continue
+    bcli="${ref%% *}"; bpin="${ref#* }"
+    if [ "$bpin" = "-" ]; then
+      echo "        $FAIL $name: bundles $bcli but does not pin it (set CLI_VERSION; see image-forge-gui)"
+      errors=$((errors + 1))
+      continue
+    fi
+    # Empty when the listing is unavailable (reported once, as not checked)
+    # or the CLI has no release: nothing to compare the pin with.
+    brel=$(latest_release "$bcli")
+    [ -n "$brel" ] || continue
+    if [ "$bpin" != "$brel" ]; then
+      echo "        $FAIL $name: bundles $bcli $bpin, but $bcli $brel is released"
+      echo "             bump CLI_VERSION, rebuild with the release CLI and release $name —"
+      echo "             its users cannot get the CLI fix any other way"
+      errors=$((errors + 1))
+    fi
+  done < <(each_submodule)
 
   # 15. The release gate fails closed (see open_release_gate above).
   echo "    release gate:"
@@ -1090,7 +1159,14 @@ fi
 
 # Loaded here, in this shell, so the checks that read it inside $(...) do not
 # each list the organization again.
-load_org_repos
+if ! org_repos_ok; then
+  echo "==> GitHub repository listing"
+  echo "    $WARN $org_repos_state"
+  echo "         NOT checked: archived repositories still in an umbrella, READMEs calling a"
+  echo "         released tool unreleased, bundled CLI currency, homebrew-tap currency"
+  echo ""
+  skipped=$((skipped + 1))
+fi
 
 for series in "${SERIES[@]}"; do
   target="$DEST/$series"
@@ -1146,43 +1222,14 @@ fi
 echo ""
 
 # Tap currency: the formula/cask a user installs from must point at the current
-# release (see brew_version above).
+# release (see brew_version and check_tap above).
 echo "==> homebrew-tap (standalone)"
 tdir="$DEST/homebrew-tap"
 if [ ! -d "$tdir/.git" ]; then
   echo "    $WARN not found locally (git clone https://github.com/nlink-jp/homebrew-tap) — NOT checked"
   skipped=$((skipped + 1))
-elif ! command -v gh >/dev/null 2>&1; then
-  echo "    $WARN gh not available — cannot read latest releases, NOT checked"
-  skipped=$((skipped + 1))
 else
-  terr=0 tcount=0
-  for f in "$tdir"/Formula/*.rb "$tdir"/Casks/*.rb; do
-    [ -f "$f" ] || continue
-    tname=$(basename "$f" .rb)
-    tcount=$((tcount + 1))
-    tver=$(brew_version "$f")
-    if [ -z "$tver" ]; then
-      echo "    $FAIL homebrew-tap: cannot read the version out of $(basename "$(dirname "$f")")/$tname.rb"
-      terr=1
-      continue
-    fi
-    rver=$(latest_release "$tname")
-    if [ -z "$rver" ]; then
-      # No release visible: a renamed, private or unreleased repo. Not drift.
-      continue
-    fi
-    if [ "$tver" != "${rver#v}" ]; then
-      echo "    $FAIL homebrew-tap: $tname points at $tver, latest release is $rver"
-      echo "         run 'make brew' in that repo (CONVENTIONS.md §Release Checklist step 7)"
-      terr=1
-    fi
-  done
-  if [ "$terr" -eq 0 ]; then
-    echo "    $PASS homebrew-tap: $tcount entr(ies) point at their latest release"
-  else
-    errors=$((errors + 1))
-  fi
+  check_tap "$tdir"
 fi
 echo ""
 

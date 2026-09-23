@@ -2225,6 +2225,14 @@ its own repository (`--no-recurse-submodules`). The remote-sync and
 submodule-pointer checks then read those refs. A fetch that fails is silent: the
 check compares against the `origin/main` the repository already had.
 
+**GitHub listing:** one `gh repo list nlink-jp` answers which repositories are
+archived, which have a release, and each one's latest release tag. When it is
+unusable — `gh` absent, the call failing (offline, not logged in), an empty
+listing, or one as long as its limit (`ORG_LIST_LIMIT`, 1000), where `gh` stops
+without saying so — the run says so once, the checks that need it are NOT
+checked, and the result is INCOMPLETE. They never pass on a listing they did not
+have.
+
 **What it checks (per series):**
 
 | # | Check | What it catches |
@@ -2244,7 +2252,7 @@ check compares against the `origin/main` the repository already had.
 | 11 | Submodule pointers | Recorded commit differs from `origin/main` of submodule |
 | 12 | Release archive naming *(planned)* | Latest release assets match `<name>-v<version>-<os>-<arch>.<ext>`; darwin is zip & arm64-only (no darwin-amd64, no `.dmg`/`.tar.gz` for darwin) |
 | 13 | Language mirrors | A document with no counterpart (`README.md` ↔ `README.ja.md`, `docs/en/x.md` ↔ `docs/ja/x.ja.md`), a Japanese document without the `.ja.md` suffix, or (as a warning) a document in a flat `docs/` tree (§Documentation structure) |
-| 16 | Bundled CLI | A GUI that copies a sibling CLI into its bundle must pin it (`CLI_VERSION`), and the pin must equal the CLI's latest release. A release build resolves the bundled copy first, so a CLI fix reaches that GUI's users only through a GUI release — this is what catches the follow-up being forgotten. Needs `gh` |
+| 16 | Bundled CLI | A GUI that copies a sibling CLI into its bundle must pin it (`CLI_VERSION`), and the pin must equal the CLI's latest release. A release build resolves the bundled copy first, so a CLI fix reaches that GUI's users only through a GUI release — this is what catches the follow-up being forgotten. The pin's presence is checked offline; comparing it needs the GitHub listing |
 | 15 | Release gate form | A `verify-release` recipe that chains unzip / `--version` / `spctl` into one statement ending in `|| true`, so a zip that does not unpack exits 0 and the release uploads it. All 59 repositories carrying it were converted on 2026-09-21; this catches a hand-edited or pasted copy. Read from the `verify-release` recipe alone (its tab-indented lines and their continuations): an `exit $$rc` in another target does not count as closing it — web-fetch's `e2e` target has one, and its open gate passed while the whole Makefile was read. GUI (`.app`) gates are a different recipe and are not reported |
 | 14 | Document references | A relative markdown link, in a tracked `.md`/`.toml`, pointing at a path that does not exist — resolved from the linking document's own directory. Code spans, external schemes, absolute paths, anchors and vendored copies are exempt |
 | 17 | Linux archive metadata | A Makefile line that creates a tar archive without both `COPYFILE_DISABLE=1` (stops `._` AppleDouble members) and `--no-xattrs` (stops xattr pax headers), or a Makefile that creates one while its `verify-release` never lists with `--options 'tar:!mac-ext'` — a plain macOS listing folds `._` members away, so a `._` check over it cannot fire — or never reads the archives' pax headers (`pax_headers`, Python's `tarfile`): a grep of the decompressed stream also matches a bundled file that names the keywords. All 61 repositories archiving Linux builds were converted on 2026-09-23; this catches a pasted copy. Archived repositories are skipped |
@@ -2254,10 +2262,11 @@ check compares against the `origin/main` the repository already had.
 | Check | What it catches |
 |-------|-----------------|
 | `knowledge` standalone repo | Missing local clone; `docs/en` / `docs/ja` file sets drifting apart; a document without a catalog row in `README.md` / `README.ja.md` (ADR-015) |
-| `homebrew-tap` currency | A formula or cask pointing at anything other than its repository's latest release — i.e. a release step 7 (`make brew`) that was skipped, so `brew upgrade` still installs the previous version. Also fails on a formula whose version cannot be read. Needs `gh`; a repo with no visible release is not drift |
+| `homebrew-tap` currency | A formula or cask pointing at anything other than its repository's latest release — i.e. a release step 7 (`make brew`) that was skipped, so `brew upgrade` still installs the previous version. Also fails on a formula whose version cannot be read. Needs the GitHub listing; a repo with no visible release is not drift, and is not counted as pointing at its release either |
 | `pathguard` consumers | A module requiring `nlink-jp/pathguard` at anything other than its latest tag (a fix to the path judgement reaches a server only through its dependency); a consumer spelling a credential-floor entry in its own non-test Go code (a copy of the list, which is how the nine drifting copies began); a consumer calling `pathguard.Forms` (a path's place is `pathguard.Where`: the last of `Forms` is a middle hop when a chain of links returns to an earlier spelling); gem-agent's or lagent's `internal/sandbox/lane.go` lists differing from pathguard's `testdata/runtime-lists.json`, compared with `go/ast` by `scripts/runtime-lists.go` (ADR-022). Needs `go` for the last part |
 
-**Exit code:** `0` if all checks pass, `1` if any check fails.
+**Exit code:** `0` only if every check ran and passed; `1` if any check fails or
+anything was not checked (the summary then says INCOMPLETE).
 
 **Not in `check-org.sh`:** anything about this machine's running processes.
 This script judges repositories — their files, their history, their published

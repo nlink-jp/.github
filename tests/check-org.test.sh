@@ -271,7 +271,7 @@ verdict_is() {
 
 verdict_is 'all found, all passed → green'      0 'all checks passed'            0 0
 verdict_is 'failures fail'                      1 '2 check(s) failed'            2 0
-verdict_is 'skips alone are INCOMPLETE, rc 1'   1 'INCOMPLETE — 3 repo(s)'       0 3
+verdict_is 'skips alone are INCOMPLETE, rc 1'   1 'INCOMPLETE — 3 item(s) not checked' 0 3
 verdict_is 'failures and skips both reported'   1 'INCOMPLETE'                   1 1
 verdict_is 'failures shown alongside skips'     1 '1 check(s) failed'            1 1
 
@@ -644,6 +644,52 @@ if is_archived beta "$TMP/none"; then ok 'archived is read from the listing'; el
 if is_archived alpha "$TMP/none"; then no 'a live repository is not archived'; else ok 'a live repository is not archived'; fi
 if has_release alpha; then ok 'a released repository has a release'; else no 'a released repository has a release'; fi
 if has_release gamma; then no 'an unreleased repository has none'; else ok 'an unreleased repository has none'; fi
+is 'a complete listing is usable' "$org_repos_state" 'ok'
+
+# An unusable listing must read as unusable — never as an organization with
+# nothing released and nothing archived.
+listing_state_is() {  # LABEL WANT-SUBSTRING — after reloading through the stub
+  org_repos_loaded=0; load_org_repos
+  case "$org_repos_state" in
+    *"$2"*) if [ -z "$org_repos$archived_list$released_list" ]; then ok "$1"; else no "$1 (listing not emptied)"; fi ;;
+    *) no "$1"; printf '        state: [%s]\n' "$org_repos_state" >&2 ;;
+  esac
+}
+gh_repo_list() { return 127; }
+listing_state_is 'gh absent: unusable, and says so' 'gh is not installed'
+gh_repo_list() { printf 'alpha\tfalse\tv1.2.0\n'; return 1; }
+listing_state_is 'gh failing: unusable, even with partial output' 'failed'
+gh_repo_list() { :; }
+listing_state_is 'an empty listing is unusable' 'no repositories'
+gh_repo_list() { printf 'alpha\tfalse\tv1.2.0\nbeta\ttrue\t\ngamma\tfalse\t\n'; }
+ORG_LIST_LIMIT=3
+listing_state_is 'a listing as long as the limit may be cut short: unusable' 'limit of 3'
+ORG_LIST_LIMIT=4
+org_repos_loaded=0; load_org_repos
+is 'a listing under the limit is usable' "$org_repos_state" 'ok'
+
+# ---- tap currency: compared entries only, and never OK without the listing --
+mkdir -p "$TMP/tap/Formula" "$TMP/tap/Casks"
+printf 'url "https://github.com/nlink-jp/alpha/releases/download/v1.2.0/alpha.zip"\n' > "$TMP/tap/Formula/alpha.rb"
+printf 'version "0.1.0"\n' > "$TMP/tap/Casks/gamma.rb"
+tap_run() {  # LABEL WANT-ERRORS WANT-SUBSTRING — check_tap in this shell, so errors counts
+  errors=0
+  check_tap "$TMP/tap" > "$TMP/tap.out"
+  if [ "$errors" = "$2" ] && grep -qF -- "$3" "$TMP/tap.out"; then ok "$1"; else
+    no "$1"; printf '        errors=%s out=[%s]\n' "$errors" "$(cat "$TMP/tap.out")" >&2
+  fi
+}
+org_repos_loaded=0
+tap_run 'an entry on its release passes; one with no release is not counted as passing' 0 \
+  '[OK] homebrew-tap: 1 entr(ies) point at their latest release (1 with no visible release, not compared)'
+gh_repo_list() { printf 'alpha\tfalse\tv1.3.0\ngamma\tfalse\t\n'; }
+org_repos_loaded=0
+tap_run 'an entry behind its release fails' 1 'alpha points at 1.2.0, latest release is v1.3.0'
+gh_repo_list() { return 1; }
+org_repos_loaded=0
+tap_run 'without the listing the tap is NOT checked' 0 'NOT checked'
+if grep -qF '[OK]' "$TMP/tap.out"; then no 'without the listing the tap never says OK'; else ok 'without the listing the tap never says OK'; fi
+errors=0
 
 # ---- fetching: every repository up front, each fetch writing only its own ---
 # Local bare repositories stand in for GitHub. protocol.file.allow=always lets a
