@@ -1311,7 +1311,7 @@ else
   done
   # The runtimes' list is pathguard's list (testdata/runtime-lists.json).
   if command -v go >/dev/null 2>&1; then
-    for lane in "$DEST/cli-series/gem-agent/internal/sandbox/lane.go" "$DEST/lab-series/lagent/internal/sandbox/lane.go"; do
+    for lane in "$DEST/cli-series/gem-agent/internal/sandbox/lane.go" "$DEST/cli-series/lagent/internal/sandbox/lane.go"; do
       if [ ! -f "$lane" ]; then
         echo "    $WARN ${lane#"$DEST"/} not found — NOT compared"
         continue
