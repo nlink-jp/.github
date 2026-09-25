@@ -121,7 +121,10 @@ CONVENTIONS.md changes:
 3. **Phase 1, item 3 — the cost of an OS-managed role (G).** Taking on a role
    the OS manages (keyboard/HID, audio, input methods, …) lists what OS
    behaviour comes with it and asks whether the main purpose needs it.
-4. **Development Policy — machine state is borrowed (C).** Trying files
+4. **Security — machine state is borrowed (C).** Placed in the Security
+   section at the maintainer's direction, of the same rank as never committing
+   protected information: an unannounced change to a machine's state is a
+   security concern, not hygiene. Trying files
    anywhere, `/tmp` included, is fine. Anything that changes settings or
    registers something — local or remote — is announced first with a removal
    method that has been checked to work, recorded when made, and removed and

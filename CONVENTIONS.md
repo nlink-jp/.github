@@ -86,7 +86,7 @@ redirect behind, because release notes and changelogs already link to it.
 | [020](adr/020-records-repositories.md) | Accepted | Records repositories hold review submissions outside the series taxonomy — organization-owned, private, one immutable dated directory per submission, written in the review's language with no en/ja mirror, exempt from `check-org.sh` |
 | [021](adr/021-work-dir-contract.md) | Accepted | The work-directory contract for file-mediated MCP servers — one argument name `work_dir` meaning a directory the **caller** can read back, resolved argument → `_meta["jp.nlink/work_dir"]` → error with no server-owned default; operator allowlists replaced by a fixed credential blacklist; a server whose product is data returns it in the response, capped and counted (the test is what the product is, not how big a response happens to be). §4, §7, §10 amended by 022 |
 | [022](adr/022-pathguard.md) | Accepted | One path judgement for the fleet — `nlink-jp/pathguard` (lib-series) holds the list and the comparison (file identity plus disk-style case folding, every link hop), Local vs Outbound policies (uploads refuse secret and credential names anywhere), `CheckBeneath` for the workspace directory; transplanting retired; `check-org.sh` checks consumers are on the latest tag, hold no copy, and the runtimes' list matches |
-| [023](adr/023-documentation-not-conjecture.md) | Accepted | Design from the documentation, never from conjecture — read the API's or standard's documentation before designing and observe what it leaves open; a tool that is a protocol endpoint or an OS-facing device writes its state machine against the specifications in Phase 1; machine state (local or remote) is changed only with an announced, working removal; learned from the m5-notify-deck withdrawal |
+| [023](adr/023-documentation-not-conjecture.md) | Accepted | Design from the documentation, never from conjecture — read the API's or standard's documentation before designing and observe what it leaves open; a tool that is a protocol endpoint or an OS-facing device writes its state machine against the specifications in Phase 1; machine state (local or remote) is changed only with an announced, working removal — a Security-section rule; learned from the m5-notify-deck withdrawal |
 
 ---
 
@@ -724,35 +724,10 @@ verifier whose only job is cross-checking has no design to be attached to.
 - Never store credentials in source code.
 - Validate inputs at system boundaries (user input, external APIs, file I/O).
 - Keep dependencies up to date; run vulnerability scanners as part of the quality gate.
+- Never change a machine's state — registrations, permissions, system settings,
+  on this machine or a borrowed one — without announcing it and a checked
+  removal; see [Machine state is borrowed](#machine-state-is-borrowed).
 - See [Security](#security) for specifics.
-
-### Machine state is borrowed
-
-The machines we work on — this one, a test machine reached over SSH, a VM — are
-borrowed. **What can be done and what may be done are different questions.**
-Trying files anywhere, `/tmp` included, is fine. Anything that changes a
-setting or registers something — launching an app (Launch Services), a
-permission (TCC), `defaults`, a login item, a Bluetooth pairing, a system
-preference — is done only after:
-
-- **announcing** what will change and how it will be removed, with a removal
-  method checked to work (`tccutil reset <service> <bundle id>` resolves the id
-  through Launch Services, so it fails once the app is unregistered or lives in
-  `/tmp`);
-- **recording** it when it is made;
-- **removing** it at the end of the test — not the end of the project — and
-  verifying that it is gone: for a macOS app, the permission, then the
-  registration, then the files.
-
-"Harmless" is not a reason to leave something: a record left behind changes
-behaviour for whatever later matches it, and a discarded project leaves no
-trail to diagnose it by.
-
-Why (2026-09-25): m5-notify-deck left Launch Services registrations, Bluetooth
-permissions and a keyboard-type record on the development Mac, and a signed
-app, its logs, its registration and its permission on the test MacBook Air —
-none announced, none recorded, found only because the project's withdrawal
-forced a clean-up, which then failed on the order of removal (ADR-023).
 
 ### Design and implement for testability
 
@@ -1949,6 +1924,40 @@ printed its own `brew install` two lines below the banner.
 `check-org.sh` (check 12) fails when a repo has a GitHub release and its README
 still claims otherwise. "Pre-release gates" and "pre-release smoke test" name a
 procedure, not a status, and deliberately do not trip it.
+
+### Machine state is borrowed
+
+**This is a security rule, of the same rank as never committing protected
+information.** A change to a machine's state that nobody announced is state
+its owner cannot account for — a registration, a permission, a device record
+that will act on whatever later matches it. It is not hygiene, and it is not
+undone by being cleaned up later.
+
+The machines we work on — this one, a test machine reached over SSH, a VM — are
+borrowed. **What can be done and what may be done are different questions.**
+Trying files anywhere, `/tmp` included, is fine. Anything that changes a
+setting or registers something — launching an app (Launch Services), a
+permission (TCC), `defaults`, a login item, a Bluetooth pairing, a system
+preference — is done only after:
+
+- **announcing** what will change and how it will be removed, with a removal
+  method checked to work (`tccutil reset <service> <bundle id>` resolves the id
+  through Launch Services, so it fails once the app is unregistered or lives in
+  `/tmp`);
+- **recording** it when it is made;
+- **removing** it at the end of the test — not the end of the project — and
+  verifying that it is gone: for a macOS app, the permission, then the
+  registration, then the files.
+
+"Harmless" is not a reason to leave something: a record left behind changes
+behaviour for whatever later matches it, and a discarded project leaves no
+trail to diagnose it by.
+
+Why (2026-09-25): m5-notify-deck left Launch Services registrations, Bluetooth
+permissions and a keyboard-type record on the development Mac, and a signed
+app, its logs, its registration and its permission on the test MacBook Air —
+none announced, none recorded, found only because the project's withdrawal
+forced a clean-up, which then failed on the order of removal (ADR-023).
 
 ### Incident response for accidental secret exposure
 
