@@ -86,6 +86,7 @@ redirect behind, because release notes and changelogs already link to it.
 | [020](adr/020-records-repositories.md) | Accepted | Records repositories hold review submissions outside the series taxonomy — organization-owned, private, one immutable dated directory per submission, written in the review's language with no en/ja mirror, exempt from `check-org.sh` |
 | [021](adr/021-work-dir-contract.md) | Accepted | The work-directory contract for file-mediated MCP servers — one argument name `work_dir` meaning a directory the **caller** can read back, resolved argument → `_meta["jp.nlink/work_dir"]` → error with no server-owned default; operator allowlists replaced by a fixed credential blacklist; a server whose product is data returns it in the response, capped and counted (the test is what the product is, not how big a response happens to be). §4, §7, §10 amended by 022 |
 | [022](adr/022-pathguard.md) | Accepted | One path judgement for the fleet — `nlink-jp/pathguard` (lib-series) holds the list and the comparison (file identity plus disk-style case folding, every link hop), Local vs Outbound policies (uploads refuse secret and credential names anywhere), `CheckBeneath` for the workspace directory; transplanting retired; `check-org.sh` checks consumers are on the latest tag, hold no copy, and the runtimes' list matches |
+| [023](adr/023-documentation-not-conjecture.md) | Accepted | Design from the documentation, never from conjecture — read the API's or standard's documentation before designing and observe what it leaves open; a tool that is a protocol endpoint or an OS-facing device writes its state machine against the specifications in Phase 1; machine state (local or remote) is changed only with an announced, working removal; learned from the m5-notify-deck withdrawal |
 
 ---
 
@@ -113,6 +114,11 @@ Before any code is written, produce and get sign-off on the following:
    - Why this language/framework?
    - What existing tools does it complement? (e.g. swrite works with stail and slack-router)
    - What is explicitly out of scope?
+   - **What role managed by the OS does it take on, if any?** A device that
+     becomes a keyboard, an audio device or an input method inherits the OS's
+     behaviour for that role — automatic reconnection, setup assistants,
+     system lists, the role's own specification. List what comes with the role
+     and decide whether the main purpose needs it (ADR-023).
 
 4. **Development plan** — Break the work into phases with milestones:
    - Phase 1: core functionality + tests
@@ -164,6 +170,25 @@ Before any code is written, produce and get sign-off on the following:
    platforms (Slack, AWS, GCP, etc.), investigate their API limitations,
    rate limits, and UI rendering constraints **before** implementing.
    Discovering a platform limitation during development leads to rework.
+
+   **A tool that plays a role in a protocol or appears to an OS as a device or
+   service** (Bluetooth, USB/HID, a network protocol, …) also settles, before
+   implementing, from the documents themselves: the governing specifications
+   and the host OS's documented expectations for a thing of its kind, and its
+   externally visible behaviour as a **state machine** — state × event → what
+   the OS and the user see — each row citing its source. By default it behaves
+   like an ordinary device or service of its kind; every deviation carries a
+   reason. The owner reviews the state machine before implementation starts,
+   and what the user sees (screens, prompts, messages) is derived from the
+   state, never from the mechanism behind it.
+
+   Why (2026-09-25): m5-notify-deck, a Bluetooth sub-display, was withdrawn
+   after two days that did not converge. Its pairing and advertising were
+   built by trial on the device instead of from the Bluetooth specifications;
+   it showed up in the Mac's lists while refusing to pair, asked for a PIN it
+   never displayed, and told the user to delete "its" entry on the Mac. The
+   state machine written against the specifications came 30 hours in and
+   showed the deviations within hours (ADR-023).
 
 The planning artifacts can be lightweight (a GitHub issue, a markdown file in
 `docs/design/`, or a conversation summary) — the format matters less than the
@@ -631,7 +656,39 @@ best-effort:
   contribute it to `nlink-jp/knowledge` as part of completing that work, not
   deferred. Entries follow **symptom → why → how to apply**, Japanese authored
   first with English in the same commit, and pass the sanitization gate (no
-  environment-specific values, no personal names).
+  environment-specific values, no personal names). **Each claim says how it is
+  known** — measured, read in a source, or inferred — and a behaviour that was
+  not observed is never written as an instruction (ADR-023: an inferred
+  pairing-refusal method was published as a how-to and had to be corrected).
+
+### Design from the documentation, not from conjecture
+
+Development that uses an API or a standard **always checks that API's or
+standard's documentation first** — the specification, the API reference, the
+platform's guidelines — and names what the design relies on. Design and
+implementation never proceed on conjecture.
+
+- **What the documentation leaves open is observed, not guessed.** Where the
+  documentation is silent, or it is uncertain whether an implementation
+  behaves as documented — a library's defaults, a stack's callbacks, an OS's
+  reactions — observe it on the real system with the actual events logged
+  before relying on it. Reading source code yields a hypothesis, not a fact —
+  above all when a security property rests on it.
+- **A test names the mechanism it observes** and rules out any other mechanism
+  that would produce the same observation (knowledge, testing: "A gate that
+  cannot name the layer it observes has only proved the layer below"; "When
+  two defences cover one failure, an observation explained by either is
+  evidence for neither").
+
+Why (2026-09-25): m5-notify-deck refused pairing outside its pairing window
+through a BLE library callback — a behaviour inferred from reading the library
+and never observed. The library in fact asks every connecting central to pair
+(a default nobody had read), the stack then accepts without calling the
+callback, and any Mac that connected got a PIN prompt. The release gate passed
+the refusal because the PIN was never displayed and unencrypted links were
+dropped after 10 s — another defence producing the same observation. The
+Bluetooth specifications were read only after the maintainer asked for them
+(ADR-023).
 
 ### Verify with an independent pass
 
@@ -646,6 +703,10 @@ context** check it:
   workspace memory, and the reference projects' `CLAUDE.md`/`AGENTS.md` —
   "which recorded lesson does this violate?" — reporting each violation with
   the entry cited and the affected location.
+- **Specification verification**: a design that implements a protocol role
+  or builds on an external API is also checked against the fetched
+  specification or reference and the platform's guidelines. The knowledge base
+  cannot contain a premise nobody has tested (ADR-023).
 - **Implementation verification**: a review pass over the change (the
   code-review tooling or a reviewer agent) before release. Findings are
   triaged by the author, never auto-applied.
@@ -664,6 +725,34 @@ verifier whose only job is cross-checking has no design to be attached to.
 - Validate inputs at system boundaries (user input, external APIs, file I/O).
 - Keep dependencies up to date; run vulnerability scanners as part of the quality gate.
 - See [Security](#security) for specifics.
+
+### Machine state is borrowed
+
+The machines we work on — this one, a test machine reached over SSH, a VM — are
+borrowed. **What can be done and what may be done are different questions.**
+Trying files anywhere, `/tmp` included, is fine. Anything that changes a
+setting or registers something — launching an app (Launch Services), a
+permission (TCC), `defaults`, a login item, a Bluetooth pairing, a system
+preference — is done only after:
+
+- **announcing** what will change and how it will be removed, with a removal
+  method checked to work (`tccutil reset <service> <bundle id>` resolves the id
+  through Launch Services, so it fails once the app is unregistered or lives in
+  `/tmp`);
+- **recording** it when it is made;
+- **removing** it at the end of the test — not the end of the project — and
+  verifying that it is gone: for a macOS app, the permission, then the
+  registration, then the files.
+
+"Harmless" is not a reason to leave something: a record left behind changes
+behaviour for whatever later matches it, and a discarded project leaves no
+trail to diagnose it by.
+
+Why (2026-09-25): m5-notify-deck left Launch Services registrations, Bluetooth
+permissions and a keyboard-type record on the development Mac, and a signed
+app, its logs, its registration and its permission on the test MacBook Air —
+none announced, none recorded, found only because the project's withdrawal
+forced a clean-up, which then failed on the order of removal (ADR-023).
 
 ### Design and implement for testability
 
@@ -684,6 +773,13 @@ the root cause, close the class structurally, and pin it with a test that
 names the class. A symptomatic patch is acceptable only as a stopgap whose
 root cause and closing plan are written down (ADR or issue). "Smallest
 change" bounds the diff, not the analysis.
+
+**Stop on-device iteration at the second fix.** When a behaviour seen on real
+hardware — connection, pairing, reconnection, … — needs a second fix in the
+same area, stop patching and return to the design: the state machine and the
+specification (Phase 1 item 7). Symptoms on a device rarely look alike, so
+"three of a kind" does not fire in time. A test procedure that makes the owner
+repeat manual steps is itself a sign of a design problem (ADR-023).
 
 **Reviewers observe; contributors decide.** A reviewer's finding is local by
 nature and is evidence, not a fix. The contributor takes the fact — the

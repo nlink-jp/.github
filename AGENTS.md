@@ -64,6 +64,31 @@ This is the **highest priority rule**. All repositories are public.
 
 Full details: [`CONVENTIONS.md` → Security](CONVENTIONS.md#security)
 
+### Design from the documentation, never from conjecture
+
+- Before designing or implementing against an API, a protocol or a standard,
+  read its documentation (specification, API reference, platform guidelines)
+  and name what the design relies on.
+- What the documentation leaves open — a library's defaults, a stack's
+  callbacks, an OS's reactions — is observed on the real system with the
+  actual events logged. Reading source code gives a hypothesis, not a fact.
+- A tool that is a protocol endpoint or appears to an OS as a device writes its
+  state machine against the specifications before implementation (Phase 1
+  item 7).
+
+Full details: [`CONVENTIONS.md` → Design from the documentation, not from conjecture](CONVENTIONS.md#design-from-the-documentation-not-from-conjecture) (ADR-023)
+
+### Machine state is borrowed — announce, record, remove
+
+- Trying files anywhere (`/tmp` included) is fine. Changing a setting or
+  registering something — app registrations, TCC permissions, `defaults`,
+  login items, pairings — locally or on a remote machine, is announced first
+  with a removal method checked to work.
+- Record it when made; remove it at the end of the test and verify (macOS apps:
+  permission → Launch Services → files). "Harmless" is not a reason to leave it.
+
+Full details: [`CONVENTIONS.md` → Machine state is borrowed](CONVENTIONS.md#machine-state-is-borrowed) (ADR-023)
+
 ### Commits must be small and typed
 
 Format: `<type>: <short imperative description>`
