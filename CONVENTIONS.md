@@ -1346,6 +1346,16 @@ fail-open path with everything green (the screen locked mid-run and the
 keychain probe failed). Run `make verify-release` after `make package`,
 before any `gh release upload`.
 
+A GUI's `verify-release` also calls `scripts/verify-app-icon.sh` on the
+release zip — the vendored copy of `templates/verify-app-icon.sh`. It passes
+only when the zip holds exactly one top-level `.app` whose `Info.plist` names a
+`CFBundleIconFile` and whose `Contents/Resources/` holds that file (whole entry
+name, so an AppleDouble `._AppIcon.icns` does not count) as an icns. Signing and
+notarization pass without an icon, and a menu-bar app never shows in the Dock,
+so nothing else notices: m5-system-panel v0.1.0 shipped iconless with every
+other gate green. `.github/scripts/exercise-app-icon-gate.sh [zip...]` drives
+the script through its passing and refusing states and over real zips.
+
 ### Why no stapling for CLI binaries
 
 `stapler staple` only works on app bundles, `.dmg`, and `.pkg`.
@@ -1378,6 +1388,7 @@ because:
 | `codesign-darwin-app.sh` | Deep-sign an `.app` with Hardened Runtime + timestamp + optional entitlements. Skips gracefully without an identity. |
 | `notarize-darwin-app.sh` | Submit `.app` (wrapped in temp zip), wait, then `stapler staple` the bundle. |
 | `entitlements-wails.plist` | Minimal WebKit-JIT entitlements: `allow-jit` + `allow-unsigned-executable-memory`. Used by both Wails and Tauri. |
+| `verify-app-icon.sh` | Refuse a release zip whose `.app` has no icon (`CFBundleIconFile` → `Contents/Resources/<file>`, an icns). Called from `verify-release`; byte-identical copies (check-org 10, 18). |
 
 **Universal rules across all frameworks**:
 
@@ -1456,6 +1467,7 @@ verify-release:
         @xcrun stapler validate dist/$(APP).app
         @test -f "dist/$(APP)-$(VERSION)-darwin-arm64.zip" || { \
                 echo "verify-release: FAIL — release zip missing"; exit 1; }
+        @scripts/verify-app-icon.sh "dist/$(APP)-$(VERSION)-darwin-arm64.zip"
         @echo "verify-release: OK ($(VERSION) — marker present, ticket stapled)"
 ```
 
@@ -1654,7 +1666,8 @@ the same minimal sequence regardless of framework:
    mkdir -p scripts
    cp ~/works/nlink-jp/.github/templates/codesign-darwin-app.sh scripts/
    cp ~/works/nlink-jp/.github/templates/notarize-darwin-app.sh  scripts/
-   chmod +x scripts/codesign-darwin-app.sh scripts/notarize-darwin-app.sh
+   cp ~/works/nlink-jp/.github/templates/verify-app-icon.sh      scripts/
+   chmod +x scripts/codesign-darwin-app.sh scripts/notarize-darwin-app.sh scripts/verify-app-icon.sh
    # WebKit-based frameworks only:
    cp ~/works/nlink-jp/.github/templates/entitlements-wails.plist scripts/entitlements.plist
    ```
@@ -2274,7 +2287,8 @@ Before tagging a release, verify every item:
    upload. For CLI zips it then unpacks the zip, runs the packaged
    binary, and requires its `--version` to contain the tag; any of the
    three failing stops the release. For GUI bundles `spctl --assess`
-   must return `source=Notarized Developer ID`
+   must return `source=Notarized Developer ID`, and `verify-app-icon.sh`
+   must find the app icon inside the release zip
 6. Upload zips one by one (`gh release upload`)
 7. For tap-eligible tools (Go CLI → formula, notarized GUI `.app` → cask),
    run `make brew` to generate this release's formula/cask from the built
@@ -2353,7 +2367,7 @@ have.
 | 7 | Secret scanning | Tracked files containing likely secrets (service accounts, tokens, API keys) |
 | 8 | go.mod local replace | `replace` directives with local filesystem paths (leaks username/directory structure) |
 | 9 | HTTPS URLs | `.gitmodules` using SSH instead of HTTPS |
-| 10 | Vendored release-tooling assets | A repo's vendored `scripts/gen-brew.sh` (or the formula/cask template, `release-brew.mk`, `notarize-darwin-app.sh`, or `notarize-darwin.sh` — the latter two also under `build-tools/`) drifted from `.github/templates/` (see §Homebrew Tap Distribution and §Code Signing → Verifying a release) |
+| 10 | Vendored release-tooling assets | A repo's vendored `scripts/gen-brew.sh` (or the formula/cask template, `release-brew.mk`, `notarize-darwin-app.sh`, `notarize-darwin.sh` — the latter two also under `build-tools/` — or `verify-app-icon.sh`) drifted from `.github/templates/` (see §Homebrew Tap Distribution and §Code Signing → Verifying a release) |
 | 10b | Vendored skill validator | A skill repo's `tests/validate-skill.sh` drifted from `.github/templates/validate-skill.sh` (ADR-006 — edit the canonical, re-vendor into every skill repo) |
 | 11 | Submodule pointers | Recorded commit differs from `origin/main` of submodule |
 | 12 | Release archive naming *(planned)* | Latest release assets match `<name>-v<version>-<os>-<arch>.<ext>`; darwin is zip & arm64-only (no darwin-amd64, no `.dmg`/`.tar.gz` for darwin) |
@@ -2362,6 +2376,7 @@ have.
 | 15 | Release gate form | A `verify-release` recipe that chains unzip / `--version` / `spctl` into one statement ending in `|| true`, so a zip that does not unpack exits 0 and the release uploads it. All 59 repositories carrying it were converted on 2026-09-21; this catches a hand-edited or pasted copy. Read from the `verify-release` recipe alone (its tab-indented lines and their continuations): an `exit $$rc` in another target does not count as closing it — web-fetch's `e2e` target has one, and its open gate passed while the whole Makefile was read. GUI (`.app`) gates are a different recipe and are not reported |
 | 14 | Document references | A relative markdown link, in a tracked `.md`/`.toml`, pointing at a path that does not exist — resolved from the linking document's own directory. Code spans, external schemes, absolute paths, anchors and vendored copies are exempt |
 | 17 | Linux archive metadata | A Makefile line that creates a tar archive without both `COPYFILE_DISABLE=1` (stops `._` AppleDouble members) and `--no-xattrs` (stops xattr pax headers), or a Makefile that creates one while its `verify-release` never lists with `--options 'tar:!mac-ext'` — a plain macOS listing folds `._` members away, so a `._` check over it cannot fire — or never reads the archives' pax headers (`pax_headers`, Python's `tarfile`): a grep of the decompressed stream also matches a bundled file that names the keywords. All 61 repositories archiving Linux builds were converted on 2026-09-23; this catches a pasted copy. Archived repositories are skipped |
+| 18 | App icon gate | A Makefile that builds an `.app` (it runs `stapler validate`) whose `verify-release` recipe does not call `verify-app-icon.sh` on the release zip, or that has no `verify-release` at all. All 19 GUI repositories were given the call on 2026-09-27; this is what makes a new GUI carry it — m5-system-panel shipped iconless as a new repository, which a sweep of existing ones cannot reach. Read from the recipe alone, as in 15. Archived repositories are skipped |
 
 **Org-level checks (outside the series loop):**
 

@@ -452,6 +452,31 @@ linux_tar_metadata() {
   esac
 }
 
+# --- app icon gate -------------------------------------------------------------
+# Signing and notarization pass without an app icon, and a menu-bar app never
+# shows in the Dock: m5-system-panel v0.1.0 shipped with no icon and every gate
+# green. templates/verify-app-icon.sh reads the release zip for the icon; all 19
+# GUI repositories called it from verify-release on 2026-09-27. This check is
+# what makes a new GUI carry it too — the repository that shipped without an
+# icon was a new one, which a sweep of the existing repositories cannot reach.
+
+# missing_app_icon_gate MAKEFILE — non-empty when the Makefile builds an .app
+# (it runs `stapler validate` somewhere) but its verify-release recipe does not
+# call verify-app-icon.sh. The call is looked for in the recipe alone, for the
+# reason open_release_gate gives: a marker in another target is not the gate.
+missing_app_icon_gate() {
+  local f="$1" body
+  [ -f "$f" ] || return 0
+  grep -q 'stapler validate' "$f" || return 0
+  if ! grep -q '^verify-release:' "$f"; then
+    echo "builds an .app but has no verify-release target"
+    return 0
+  fi
+  body=$(recipe_lines "$f" verify-release)
+  case "$body" in *verify-app-icon.sh*) return 0 ;; esac
+  echo "verify-release does not call scripts/verify-app-icon.sh on the release zip"
+}
+
 # --- running images (this machine) is NOT here; see scripts/stale-running-images.sh
 # --- bundled CLI (GUI apps that ship a sibling CLI inside them) ----------------
 # Six GUIs copy a sibling CLI into Contents/Resources, and a release build
@@ -929,7 +954,7 @@ check_series() {
       if is_archived "$name" "$dir"; then
         continue
       fi
-      for f in gen-brew.sh formula.rb.tmpl cask.rb.tmpl release-brew.mk notarize-darwin-app.sh notarize-darwin.sh; do
+      for f in gen-brew.sh formula.rb.tmpl cask.rb.tmpl release-brew.mk notarize-darwin-app.sh notarize-darwin.sh verify-app-icon.sh; do
         vend="$subdir/scripts/$f"
         [ -f "$vend" ] || continue
         if ! cmp -s "$vend" "$tpl/$f"; then
@@ -1121,6 +1146,21 @@ check_series() {
       echo "             archive with COPYFILE_DISABLE=1 tar --no-xattrs and copy the template's"
       echo "             Linux-archive block into verify-release (CONVENTIONS.md §Code Signing),"
       echo "             then .github/scripts/exercise-release-gate.sh to prove it"
+      errors=$((errors + 1))
+    fi
+  done < <(each_submodule)
+
+  # 18. A GUI's release gate checks the app icon (see missing_app_icon_gate above).
+  echo "    app icon gate:"
+  while IFS= read -r subpath; do
+    subpath="${subpath#        }"
+    name=$(basename "$subpath")
+    is_archived "$name" "$dir" && continue
+    why=$(missing_app_icon_gate "$dir/$subpath/Makefile")
+    if [ -n "$why" ]; then
+      echo "        $FAIL $name: $why"
+      echo "             copy .github/templates/verify-app-icon.sh to scripts/ and call it in verify-release"
+      echo "             on the release zip (CONVENTIONS.md §Code Signing → Verifying a release)"
       errors=$((errors + 1))
     fi
   done < <(each_submodule)
