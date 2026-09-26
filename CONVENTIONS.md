@@ -1013,7 +1013,9 @@ Every release asset is named:
   inside the archive) + `README.md` + `LICENSE`. Extra license notices
   (`FONTS_LICENSE`, etc.) are allowed when warranted.
 - **GUI archive:** the notarized + stapled `<Name>.app`, archived with
-  `ditto -c -k --keepParent` to preserve the bundle signature. Nothing else is
+  `ditto --norsrc --noextattr -c -k --keepParent` (see §Code Signing → GUI app
+  signing: without the two flags the zip carries `._` entries that break the
+  seal when unpacked with `unzip`). Nothing else is
   bundled — extra files would disturb the signed bundle; README/LICENSE live in
   the repo and on the release page. The `.app`'s internal display name is not
   normalized; only the archive name is.
@@ -1346,15 +1348,24 @@ fail-open path with everything green (the screen locked mid-run and the
 keychain probe failed). Run `make verify-release` after `make package`,
 before any `gh release upload`.
 
-A GUI's `verify-release` also calls `scripts/verify-app-icon.sh` on the
-release zip — the vendored copy of `templates/verify-app-icon.sh`. It passes
-only when the zip holds exactly one top-level `.app` whose `Info.plist` names a
-`CFBundleIconFile` and whose `Contents/Resources/` holds that file (whole entry
-name, so an AppleDouble `._AppIcon.icns` does not count) as an icns. Signing and
-notarization pass without an icon, and a menu-bar app never shows in the Dock,
-so nothing else notices: m5-system-panel v0.1.0 shipped iconless with every
-other gate green. `.github/scripts/exercise-app-icon-gate.sh [zip...]` drives
-the script through its passing and refusing states and over real zips.
+A GUI's `verify-release` also calls `scripts/verify-app-zip.sh` on the
+release zip — the vendored copy of `templates/verify-app-zip.sh`. It judges the
+zip users download, on two things that passed every other gate while wrong:
+
+- **No macOS metadata:** no entry named `._*` at any depth and nothing under
+  `__MACOSX/`. A plain `ditto -c -k` stores extended attributes as `._` entries;
+  unpacked with `unzip` they become files inside the bundle, and codesign and
+  Gatekeeper then refuse it ("a sealed resource is missing or invalid"). Finder,
+  `ditto -x -k` and Homebrew merge them back, so nothing noticed — 18 of 19 GUI
+  releases carried them (measured 2026-09-27).
+- **An app icon:** exactly one top-level `.app` whose `Info.plist` names a
+  `CFBundleIconFile`, and that file in `Contents/Resources/` (whole entry name)
+  as an icns. Signing and notarization pass without an icon, and a menu-bar app
+  never shows in the Dock: m5-system-panel v0.1.0 shipped iconless.
+
+`.github/scripts/exercise-app-zip-gate.sh [zip...]` drives the script through
+its passing and refusing states and over real zips (`fail:<zip>` expects a
+refusal).
 
 ### Why no stapling for CLI binaries
 
@@ -1388,21 +1399,26 @@ because:
 | `codesign-darwin-app.sh` | Deep-sign an `.app` with Hardened Runtime + timestamp + optional entitlements. Skips gracefully without an identity. |
 | `notarize-darwin-app.sh` | Submit `.app` (wrapped in temp zip), wait, then `stapler staple` the bundle. |
 | `entitlements-wails.plist` | Minimal WebKit-JIT entitlements: `allow-jit` + `allow-unsigned-executable-memory`. Used by both Wails and Tauri. |
-| `verify-app-icon.sh` | Refuse a release zip whose `.app` has no icon (`CFBundleIconFile` → `Contents/Resources/<file>`, an icns). Called from `verify-release`; byte-identical copies (check-org 10, 18). |
+| `verify-app-zip.sh` | Refuse an `.app` release zip that carries macOS metadata (`._*`, `__MACOSX/`) or whose app has no icon (`CFBundleIconFile` → `Contents/Resources/<file>`, an icns). Called from `verify-release`; byte-identical copies (check-org 10, 18). |
 
 **Universal rules across all frameworks**:
 
-- **`ditto`, not `cp -r`**: bundle signatures are stored in
-  extended attributes; `cp -r` strips them and the launched binary
-  aborts with "SIGKILL (Code Signature Invalid)". Use `ditto` for
-  any bundle move/copy and `ditto -c -k --keepParent <app>.app
-  <out>.zip` for distribution zips.
+- **`ditto`, not `cp -r`**, for any bundle move or copy: a `cp -r`
+  copy has aborted at launch with "SIGKILL (Code Signature Invalid)".
+  The seal of an `.app` is files (`_CodeSignature/`, the stapled
+  ticket, the signature inside each Mach-O), not extended attributes:
+  zipped with `ditto --norsrc --noextattr -c -k --keepParent <app>.app
+  <out>.zip`, all 19 GUI apps kept `codesign --verify --deep --strict`,
+  `stapler validate` and `source=Notarized Developer ID` through a plain
+  `unzip` (measured 2026-09-27). Without those two flags, ditto writes
+  each file's extended attributes into the zip as `._` entries, and a
+  plain `unzip` puts them inside the bundle and breaks the seal.
 - **Sign first, staple second**: notarize before stapling, and
   staple the **same** `.app` file you ship. Stapling rewrites
   `_CodeSignature/` resources — never re-zip from a different
   `.app` after stapling.
 - **Distribution format**: every GUI framework ships a zipped `.app`
-  (`ditto -c -k --keepParent`), named `<name>-v<version>-darwin-arm64.zip`
+  (`ditto --norsrc --noextattr -c -k --keepParent`), named `<name>-v<version>-darwin-arm64.zip`
   per §Release Archive Standard. **No `.dmg`** — Tauri is configured with
   `--bundles app` so it never emits one. (`.app` and `.dmg` both support
   `stapler staple`; CLI Mach-O binaries do not.)
@@ -1456,7 +1472,7 @@ build:
 
 package: build
         @$(NOTARIZE_SCRIPT) dist/$(APP).app "$(NOTARY_PROFILE)"
-        cd dist && /usr/bin/ditto -c -k --keepParent \
+        cd dist && /usr/bin/ditto --norsrc --noextattr -c -k --keepParent \
                 $(APP).app $(APP)-$(VERSION)-darwin-arm64.zip
 
 verify-release:
@@ -1467,7 +1483,7 @@ verify-release:
         @xcrun stapler validate dist/$(APP).app
         @test -f "dist/$(APP)-$(VERSION)-darwin-arm64.zip" || { \
                 echo "verify-release: FAIL — release zip missing"; exit 1; }
-        @scripts/verify-app-icon.sh "dist/$(APP)-$(VERSION)-darwin-arm64.zip"
+        @scripts/verify-app-zip.sh "dist/$(APP)-$(VERSION)-darwin-arm64.zip"
         @echo "verify-release: OK ($(VERSION) — marker present, ticket stapled)"
 ```
 
@@ -1528,7 +1544,7 @@ build:
 package: build
         @$(NOTARIZE_SCRIPT) $(APP_PATH) "$(NOTARY_PROFILE)"
         @mkdir -p dist
-        @cd $(dir $(APP_PATH)) && /usr/bin/ditto -c -k --keepParent \
+        @cd $(dir $(APP_PATH)) && /usr/bin/ditto --norsrc --noextattr -c -k --keepParent \
                 $(APP).app "$(CURDIR)/dist/$(APP)-v$(VERSION)-darwin-arm64.zip"
 
 verify-release:
@@ -1539,6 +1555,7 @@ verify-release:
         @xcrun stapler validate $(APP_PATH)
         @test -f "dist/$(APP)-v$(VERSION)-darwin-arm64.zip" || { \
                 echo "verify-release: FAIL — release zip missing"; exit 1; }
+        @scripts/verify-app-zip.sh "dist/$(APP)-v$(VERSION)-darwin-arm64.zip"
         @echo "verify-release: OK (v$(VERSION) — marker present, ticket stapled)"
 ```
 
@@ -1622,7 +1639,7 @@ build-app: build
 
 package: build-app
         @$(NOTARIZE_SCRIPT) $(APP_BUNDLE) "$(NOTARY_PROFILE)"
-        @cd $(DIST_DIR) && /usr/bin/ditto -c -k --keepParent \
+        @cd $(DIST_DIR) && /usr/bin/ditto --norsrc --noextattr -c -k --keepParent \
                 $(APP_NAME).app $(NAME)-$(VERSION)-darwin-arm64.zip
 
 verify-release:
@@ -1633,6 +1650,7 @@ verify-release:
         @xcrun stapler validate $(APP_BUNDLE)
         @test -f "$(DIST_DIR)/$(NAME)-$(VERSION)-darwin-arm64.zip" || { \
                 echo "verify-release: FAIL — release zip missing"; exit 1; }
+        @scripts/verify-app-zip.sh "$(DIST_DIR)/$(NAME)-$(VERSION)-darwin-arm64.zip"
         @echo "verify-release: OK ($(VERSION) — marker present, ticket stapled)"
 ```
 
@@ -1666,8 +1684,8 @@ the same minimal sequence regardless of framework:
    mkdir -p scripts
    cp ~/works/nlink-jp/.github/templates/codesign-darwin-app.sh scripts/
    cp ~/works/nlink-jp/.github/templates/notarize-darwin-app.sh  scripts/
-   cp ~/works/nlink-jp/.github/templates/verify-app-icon.sh      scripts/
-   chmod +x scripts/codesign-darwin-app.sh scripts/notarize-darwin-app.sh scripts/verify-app-icon.sh
+   cp ~/works/nlink-jp/.github/templates/verify-app-zip.sh       scripts/
+   chmod +x scripts/codesign-darwin-app.sh scripts/notarize-darwin-app.sh scripts/verify-app-zip.sh
    # WebKit-based frameworks only:
    cp ~/works/nlink-jp/.github/templates/entitlements-wails.plist scripts/entitlements.plist
    ```
@@ -2208,8 +2226,10 @@ extra, never a per-release gate. The notarization ticket is stapled (`.app`) or
 checked online by Apple (CLI), so Gatekeeper's verdict does not depend on the
 signing keys being absent from the machine.
 
-- **GUI (`.app`)**: extract the shipped zip with `ditto -x -k` (not `unzip`,
-  which mangles the seal), then `xcrun stapler validate` and
+- **GUI (`.app`)**: extract the shipped zip with `ditto -x -k` (Finder and
+  Homebrew unpack the same way; a zip made without `--norsrc --noextattr`
+  also breaks under a plain `unzip`, which `verify-app-zip.sh` refuses), then
+  `xcrun stapler validate` and
   `spctl -a -t exec -vv` → `accepted, source=Notarized Developer ID`.
 - **CLI**: `spctl -a -t exec` rejects bare binaries by design ("not an app"), so
   check `codesign --verify --strict` + a Developer ID authority. To exercise the
@@ -2287,8 +2307,8 @@ Before tagging a release, verify every item:
    upload. For CLI zips it then unpacks the zip, runs the packaged
    binary, and requires its `--version` to contain the tag; any of the
    three failing stops the release. For GUI bundles `spctl --assess`
-   must return `source=Notarized Developer ID`, and `verify-app-icon.sh`
-   must find the app icon inside the release zip
+   must return `source=Notarized Developer ID`, and `verify-app-zip.sh`
+   must find the release zip free of `._` entries and holding the app icon
 6. Upload zips one by one (`gh release upload`)
 7. For tap-eligible tools (Go CLI → formula, notarized GUI `.app` → cask),
    run `make brew` to generate this release's formula/cask from the built
@@ -2367,7 +2387,7 @@ have.
 | 7 | Secret scanning | Tracked files containing likely secrets (service accounts, tokens, API keys) |
 | 8 | go.mod local replace | `replace` directives with local filesystem paths (leaks username/directory structure) |
 | 9 | HTTPS URLs | `.gitmodules` using SSH instead of HTTPS |
-| 10 | Vendored release-tooling assets | A repo's vendored `scripts/gen-brew.sh` (or the formula/cask template, `release-brew.mk`, `notarize-darwin-app.sh`, `notarize-darwin.sh` — the latter two also under `build-tools/` — or `verify-app-icon.sh`) drifted from `.github/templates/` (see §Homebrew Tap Distribution and §Code Signing → Verifying a release) |
+| 10 | Vendored release-tooling assets | A repo's vendored `scripts/gen-brew.sh` (or the formula/cask template, `release-brew.mk`, `notarize-darwin-app.sh`, `notarize-darwin.sh` — the latter two also under `build-tools/` — or `verify-app-zip.sh`) drifted from `.github/templates/` (see §Homebrew Tap Distribution and §Code Signing → Verifying a release) |
 | 10b | Vendored skill validator | A skill repo's `tests/validate-skill.sh` drifted from `.github/templates/validate-skill.sh` (ADR-006 — edit the canonical, re-vendor into every skill repo) |
 | 11 | Submodule pointers | Recorded commit differs from `origin/main` of submodule |
 | 12 | Release archive naming *(planned)* | Latest release assets match `<name>-v<version>-<os>-<arch>.<ext>`; darwin is zip & arm64-only (no darwin-amd64, no `.dmg`/`.tar.gz` for darwin) |
@@ -2376,7 +2396,8 @@ have.
 | 15 | Release gate form | A `verify-release` recipe that chains unzip / `--version` / `spctl` into one statement ending in `|| true`, so a zip that does not unpack exits 0 and the release uploads it. All 59 repositories carrying it were converted on 2026-09-21; this catches a hand-edited or pasted copy. Read from the `verify-release` recipe alone (its tab-indented lines and their continuations): an `exit $$rc` in another target does not count as closing it — web-fetch's `e2e` target has one, and its open gate passed while the whole Makefile was read. GUI (`.app`) gates are a different recipe and are not reported |
 | 14 | Document references | A relative markdown link, in a tracked `.md`/`.toml`, pointing at a path that does not exist — resolved from the linking document's own directory. Code spans, external schemes, absolute paths, anchors and vendored copies are exempt |
 | 17 | Linux archive metadata | A Makefile line that creates a tar archive without both `COPYFILE_DISABLE=1` (stops `._` AppleDouble members) and `--no-xattrs` (stops xattr pax headers), or a Makefile that creates one while its `verify-release` never lists with `--options 'tar:!mac-ext'` — a plain macOS listing folds `._` members away, so a `._` check over it cannot fire — or never reads the archives' pax headers (`pax_headers`, Python's `tarfile`): a grep of the decompressed stream also matches a bundled file that names the keywords. All 61 repositories archiving Linux builds were converted on 2026-09-23; this catches a pasted copy. Archived repositories are skipped |
-| 18 | App icon gate | A Makefile that builds an `.app` (it runs `stapler validate`) whose `verify-release` recipe does not call `verify-app-icon.sh` on the release zip, or that has no `verify-release` at all. All 19 GUI repositories were given the call on 2026-09-27; this is what makes a new GUI carry it — m5-system-panel shipped iconless as a new repository, which a sweep of existing ones cannot reach. Read from the recipe alone, as in 15. Archived repositories are skipped |
+| 18 | App zip gate | A Makefile that builds an `.app` (it runs `stapler validate`) whose `verify-release` recipe does not call `verify-app-zip.sh` on the release zip, or that has no `verify-release` at all. All 19 GUI repositories were given the call on 2026-09-27; this is what makes a new GUI carry it — m5-system-panel shipped iconless as a new repository, which a sweep of existing ones cannot reach. Read from the recipe alone, as in 15. Archived repositories are skipped |
+| 19 | App zip metadata | A non-comment line of an `.app`-building Makefile that zips with `ditto` (`-c` and `-k`) without both `--norsrc` and `--noextattr`: the zip then carries `._` entries that break the bundle's seal under a plain `unzip` (18 of 19 GUI releases did; converted 2026-09-27). The producing-side counterpart of 18, as 17 is for tar. The temporary zip `notarize-darwin-app.sh` sends to Apple is not shipped and not checked. Archived repositories are skipped |
 
 **Org-level checks (outside the series loop):**
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# exercise-app-icon-gate.sh [ZIP...] — drive templates/verify-app-icon.sh through
-# ten built states, then over any real release zips given as arguments, and
+# exercise-app-zip-gate.sh [ZIP...] — drive templates/verify-app-zip.sh through
+# twelve built states, then over any real release zips given as arguments, and
 # print one line per case. Exits 1 if any line is BAD.
 #
 # Built states (a stand-in .app zipped with /usr/bin/zip; the icon is only the
@@ -16,12 +16,16 @@
 #   8 not icns           the file exists but is not an icns (empty/other format)
 #   9 two apps           two top-level .app bundles
 #  10 no zip             the zip does not exist
+#  11 AppleDouble        a "._Info.plist" entry beside a correct icon (ditto
+#                        without --norsrc --noextattr)
+#  12 __MACOSX           a __MACOSX/ tree (ditto --sequesterRsrc)
 #
-# Real zips: every one given must pass (the published releases all carry icons).
+# Real zips: each is expected to pass unless its name is prefixed with "fail:"
+# (e.g. fail:/path/old-release.zip), which expects a refusal.
 set -uo pipefail
 
 here=$(cd "$(dirname "$0")" && pwd)
-gate="$here/../templates/verify-app-icon.sh"
+gate="$here/../templates/verify-app-zip.sh"
 [ -x "$gate" ] || { echo "not executable: $gate" >&2; exit 2; }
 
 work=$(mktemp -d)
@@ -72,12 +76,19 @@ make_app "$work/8" "Stand.app" "AppIcon" "AppIcon.icns" "PNG";              row 
 make_app "$work/9" "Stand.app" "AppIcon" "AppIcon.icns" "$ICNS"
 make_app "$work/9" "Other.app" "AppIcon" "AppIcon.icns" "$ICNS";            row 9 "two apps" fail
 row 10 "no zip" fail
+make_app "$work/11" "Stand.app" "AppIcon" "AppIcon.icns" "$ICNS"
+printf 'x' > "$work/11/Stand.app/Contents/._Info.plist";                    row 11 "AppleDouble" fail
+make_app "$work/12" "Stand.app" "AppIcon" "AppIcon.icns" "$ICNS"
+mkdir -p "$work/12/__MACOSX/Stand.app" && printf 'x' > "$work/12/__MACOSX/Stand.app/._Info.plist"; row 12 "__MACOSX" fail
 
-for real in "$@"; do
-  if out=$("$gate" "$real" 2>&1); then
-    printf 'ok   real %s  %s\n' "$(basename "$real")" "$out"
+for arg in "$@"; do
+  expect=pass real="$arg"
+  case "$arg" in fail:*) expect=fail real="${arg#fail:}" ;; esac
+  if out=$("$gate" "$real" 2>&1); then got=pass; else got=fail; fi
+  if [ "$got" = "$expect" ]; then
+    printf 'ok   real %-4s %s  %s\n' "$got" "$(basename "$real")" "$out"
   else
-    printf 'BAD  real %s  %s\n' "$(basename "$real")" "$out"
+    printf 'BAD  real %-4s (expected %s) %s  %s\n' "$got" "$expect" "$(basename "$real")" "$out"
     bad=1
   fi
 done

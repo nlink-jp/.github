@@ -452,17 +452,18 @@ linux_tar_metadata() {
   esac
 }
 
-# --- app icon gate -------------------------------------------------------------
-# Signing and notarization pass without an app icon, and a menu-bar app never
-# shows in the Dock: m5-system-panel v0.1.0 shipped with no icon and every gate
-# green. templates/verify-app-icon.sh reads the release zip for the icon; all 19
-# GUI repositories called it from verify-release on 2026-09-27. This check is
-# what makes a new GUI carry it too — the repository that shipped without an
-# icon was a new one, which a sweep of the existing repositories cannot reach.
+# --- app zip gate --------------------------------------------------------------
+# templates/verify-app-zip.sh judges the .app release zip users download: no
+# "._" AppleDouble entries (a plain `unzip` puts them inside the bundle and
+# breaks its seal — 18 of 19 GUI releases carried them) and an app icon
+# (m5-system-panel v0.1.0 shipped without one). Both passed every other gate.
+# All 19 GUI repositories call it from verify-release since 2026-09-27; this
+# check is what makes a new GUI carry it too — the iconless release was a new
+# repository, which a sweep of the existing ones cannot reach.
 
 # missing_app_icon_gate MAKEFILE — non-empty when the Makefile builds an .app
 # (it runs `stapler validate` somewhere) but its verify-release recipe does not
-# call verify-app-icon.sh. The call is looked for in the recipe alone, for the
+# call verify-app-zip.sh. The call is looked for in the recipe alone, for the
 # reason open_release_gate gives: a marker in another target is not the gate.
 missing_app_icon_gate() {
   local f="$1" body
@@ -473,8 +474,24 @@ missing_app_icon_gate() {
     return 0
   fi
   body=$(recipe_lines "$f" verify-release)
-  case "$body" in *verify-app-icon.sh*) return 0 ;; esac
-  echo "verify-release does not call scripts/verify-app-icon.sh on the release zip"
+  case "$body" in *verify-app-zip.sh*) return 0 ;; esac
+  echo "verify-release does not call scripts/verify-app-zip.sh on the release zip"
+}
+
+# app_zip_metadata MAKEFILE — the lines of an .app-building Makefile that zip
+# with ditto (-c and -k) without both --norsrc and --noextattr. Without them
+# ditto stores extended attributes as "._" entries; the gate above refuses the
+# result, and this names the line that makes it, as check 17 does for tar.
+app_zip_metadata() {
+  local f="$1"
+  [ -f "$f" ] || return 0
+  grep -q 'stapler validate' "$f" || return 0
+  awk '
+    /^[ \t]*#/ { next }
+    { l = " " $0 " " }
+    l ~ /[ \t\/]ditto[ \t]/ && l ~ /[ \t]-c[ \t]/ && l ~ /[ \t]-k[ \t]/ &&
+      !(l ~ /[ \t]--norsrc[ \t]/ && l ~ /[ \t]--noextattr[ \t]/) { print }
+  ' "$f"
 }
 
 # --- running images (this machine) is NOT here; see scripts/stale-running-images.sh
@@ -954,7 +971,7 @@ check_series() {
       if is_archived "$name" "$dir"; then
         continue
       fi
-      for f in gen-brew.sh formula.rb.tmpl cask.rb.tmpl release-brew.mk notarize-darwin-app.sh notarize-darwin.sh verify-app-icon.sh; do
+      for f in gen-brew.sh formula.rb.tmpl cask.rb.tmpl release-brew.mk notarize-darwin-app.sh notarize-darwin.sh verify-app-zip.sh; do
         vend="$subdir/scripts/$f"
         [ -f "$vend" ] || continue
         if ! cmp -s "$vend" "$tpl/$f"; then
@@ -1150,8 +1167,8 @@ check_series() {
     fi
   done < <(each_submodule)
 
-  # 18. A GUI's release gate checks the app icon (see missing_app_icon_gate above).
-  echo "    app icon gate:"
+  # 18. A GUI's release gate checks its zip (see missing_app_icon_gate above).
+  echo "    app zip gate:"
   while IFS= read -r subpath; do
     subpath="${subpath#        }"
     name=$(basename "$subpath")
@@ -1159,8 +1176,22 @@ check_series() {
     why=$(missing_app_icon_gate "$dir/$subpath/Makefile")
     if [ -n "$why" ]; then
       echo "        $FAIL $name: $why"
-      echo "             copy .github/templates/verify-app-icon.sh to scripts/ and call it in verify-release"
+      echo "             copy .github/templates/verify-app-zip.sh to scripts/ and call it in verify-release"
       echo "             on the release zip (CONVENTIONS.md §Code Signing → Verifying a release)"
+      errors=$((errors + 1))
+    fi
+  done < <(each_submodule)
+
+  # 19. A GUI's release zip is made without macOS metadata (see app_zip_metadata above).
+  echo "    app zip metadata:"
+  while IFS= read -r subpath; do
+    subpath="${subpath#        }"
+    name=$(basename "$subpath")
+    is_archived "$name" "$dir" && continue
+    lines=$(app_zip_metadata "$dir/$subpath/Makefile")
+    if [ -n "$lines" ]; then
+      echo "        $FAIL $name: ditto zips without --norsrc --noextattr (\"._\" entries break the seal under unzip):"
+      printf '%s\n' "$lines" | sed 's/^[[:space:]]*/             /'
       errors=$((errors + 1))
     fi
   done < <(each_submodule)
