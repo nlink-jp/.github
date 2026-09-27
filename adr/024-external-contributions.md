@@ -56,6 +56,11 @@ expecting a merge the policy rules out.
 
 - One change per pull request, linked to its issue.
 - Tests for new behaviour, and `README.md` and `README.ja.md` updated together.
+- The repository's whole test suite run before sending (usually `make test`),
+  with every test passing — not only the new ones.
+- A note in the pull request on how it was checked: OS and version, the
+  settings and inputs tried, and what was not tried — beyond the contributor's
+  own everyday use.
 - No AI-agent working files (`.claude/`, `.kilo/`, `.cursor/`, plans, notes).
   Changes prepared with AI tools are fine; review them yourself first.
 - No CI workflows (`.github/workflows/`): releases are built, signed and
@@ -72,6 +77,13 @@ none of its own (GitHub documentation: *Creating a default community health
 file*; the `.github` repository must be public, which it is). Repositories
 with their own `CONTRIBUTING.md` link to the organization's policy for
 contributions.
+
+The last two items were added on 2026-09-27, after a close reading of
+instant-translate #1: its existing tests did not compile against its own
+change, so the suite had never been run, and its language filter broke
+detection for any language outside the two the contributor used (IDs such as
+`zh` and `en-GB` that the recognizer does not know silently match nothing —
+measured).
 
 ## Consequences
 

@@ -817,8 +817,9 @@ documentation move.
 Contributors see [`CONTRIBUTING.md`](CONTRIBUTING.md) and
 [`PULL_REQUEST_TEMPLATE.md`](PULL_REQUEST_TEMPLATE.md), which this repository
 serves as the organization's default community health files (ADR-024): issues
-first, one change per pull request, no agent working files, no CI workflows,
-no third-party dependencies — and outside pull requests are re-implemented by
+first, one change per pull request, the whole test suite run and passing, a
+note on how it was checked, no agent working files, no CI workflows, no
+third-party dependencies — and outside pull requests are re-implemented by
 the maintainers, not merged as they are.
 
 When one arrives anyway:

@@ -38,6 +38,14 @@ mean. If you send one:
 - **One change per pull request**, linked to its issue. Do not bundle
   unrelated changes.
 - **Tests** for new behaviour.
+- **Run the repository's whole test suite before sending** (usually `make test`;
+  otherwise what its README says), and make sure every test passes — not only
+  the ones you added. A pull request whose existing tests do not even compile
+  has not been tested.
+- **Say how you checked it** in the pull request: the OS and version, the
+  settings and inputs you tried (languages, file types, sizes…), and what you
+  did not try. Please check beyond your own everyday use — for example, other
+  languages or options than the ones you use yourself.
 - **Documentation**: update `README.md` and `README.ja.md` together.
 - **No AI-agent working files** (`.claude/`, `.kilo/`, `.cursor/`, plan or note
   files). Changes prepared with AI tools are fine; please review them yourself
