@@ -85,6 +85,24 @@ detection for any language outside the two the contributor used (IDs such as
 `zh` and `en-GB` that the recognizer does not know silently match nothing —
 measured).
 
+### 5. Forks and redistribution (added 2026-09-28)
+
+Forks are welcome under each repository's license; only releases in nlink-jp
+repositories and the nlink-jp Homebrew tap are official builds. A fork that
+publishes builds is asked to say in its README that it is unofficial and what it
+changes, to change the app name and bundle identifier, to use version numbers that
+cannot be mistaken for ours, and to take bug reports for its own changes.
+
+Triggered by a fork of instant-translate publishing binaries tagged v0.3.1.1,
+v0.4.1.1 and v0.4.1.2 with the upstream README unchanged (still stating nlink-jp's
+signing, notarization and Homebrew install) and the upstream app name and bundle
+identifier (`jp.nlink.instant-translate`). The license notice was kept, so this is
+not a licence question; it is about users telling the builds apart. With the same
+bundle identifier macOS treats both as one app — shared settings, and the
+single-instance guard lets only one run — and bug reports for the fork's own
+features could arrive upstream. Written into CONTRIBUTING.md (+ .ja), which GitHub
+shows for every repository without its own guide.
+
 ## Consequences
 
 - A contributor sees the policy on the "contribute" link and in the pull

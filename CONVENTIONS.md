@@ -87,7 +87,7 @@ redirect behind, because release notes and changelogs already link to it.
 | [021](adr/021-work-dir-contract.md) | Accepted | The work-directory contract for file-mediated MCP servers — one argument name `work_dir` meaning a directory the **caller** can read back, resolved argument → `_meta["jp.nlink/work_dir"]` → error with no server-owned default; operator allowlists replaced by a fixed credential blacklist; a server whose product is data returns it in the response, capped and counted (the test is what the product is, not how big a response happens to be). §4, §7, §10 amended by 022 |
 | [022](adr/022-pathguard.md) | Accepted | One path judgement for the fleet — `nlink-jp/pathguard` (lib-series) holds the list and the comparison (file identity plus disk-style case folding, every link hop), Local vs Outbound policies (uploads refuse secret and credential names anywhere), `CheckBeneath` for the workspace directory; transplanting retired; `check-org.sh` checks consumers are on the latest tag, hold no copy, and the runtimes' list matches |
 | [023](adr/023-documentation-not-conjecture.md) | Accepted | Design from the documentation, never from conjecture — read the API's or standard's documentation before designing and observe what it leaves open; a tool that is a protocol endpoint or an OS-facing device writes its state machine against the specifications in Phase 1; machine state (local or remote) is changed only with an announced, working removal — a Security-section rule; learned from the m5-notify-deck withdrawal |
-| [024](adr/024-external-contributions.md) | Accepted | Outside contributions — issues first; outside pull requests are read as proposals and the wanted changes re-implemented by the maintainers with credit, not merged as they are; one change per PR, no agent working files, no CI workflows, no third-party dependencies; published as the organization's default `CONTRIBUTING.md` (+ `.ja`) and `PULL_REQUEST_TEMPLATE.md` |
+| [024](adr/024-external-contributions.md) | Accepted | Outside contributions — issues first; outside pull requests are read as proposals and the wanted changes re-implemented by the maintainers with credit, not merged as they are; one change per PR, no agent working files, no CI workflows, no third-party dependencies; published as the organization's default `CONTRIBUTING.md` (+ `.ja`) and `PULL_REQUEST_TEMPLATE.md`; forks that publish builds are asked to say they are unofficial, change the app name and bundle identifier, and use distinct versions (added 2026-09-28) |
 
 ---
 
@@ -836,6 +836,10 @@ When one arrives anyway:
 - A repository with its own `CONTRIBUTING.md` (a developer guide, say) keeps a
   link to the organization's one; the default is not shown where a repository
   has its own.
+- A fork that publishes builds under our app name and bundle identifier, or with
+  our README's claims about signing and Homebrew, is pointed to CONTRIBUTING's
+  "Forks and redistribution" (ADR-024 §5): `jp.nlink.*` identifiers belong to the
+  official builds.
 
 ---
 

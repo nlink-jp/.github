@@ -59,3 +59,19 @@ mean. If you send one:
 
 When your report or proposal leads to a change, the commit message and the
 changelog name you. We follow up on the issue or pull request when it ships.
+
+## Forks and redistribution
+
+Forks are welcome under each repository's license. The official builds are only
+the releases published in nlink-jp repositories and the nlink-jp Homebrew tap.
+If you publish builds of a fork, please:
+
+- **Say at the top of its README that it is an unofficial fork**, and what it
+  changes. Remove statements that describe our builds (signing, notarization,
+  Homebrew installation).
+- **Change the app name and the bundle identifier.** `jp.nlink.*` identifiers
+  belong to the official builds. With the same identifier, macOS treats your
+  build and ours as one app: they share settings, and only one of them can run at
+  a time.
+- **Use version numbers that cannot be mistaken for ours.**
+- Send bug reports about your fork's own changes to your fork, not to us.
