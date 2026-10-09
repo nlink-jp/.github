@@ -123,8 +123,8 @@ Small, local-first CLI tools for LLM interaction, retrieval, and classification.
 ### skills-series — Claude Code Skills
 
 Claude Code Skills packaging the organization's workflows — development
-process, research, meeting minutes, security analysis, and news
-collection. One repository per skill; each releases a skill zip
+process, research, meeting minutes, security analysis, news collection,
+and weather forecasts. One repository per skill; each releases a skill zip
 installable into `~/.claude/skills/`
 or uploadable to claude.ai (Settings → Skills).
 
@@ -138,6 +138,7 @@ or uploadable to claude.ai (Settings → Skills).
 | [news-digest](https://github.com/nlink-jp/news-digest) | `/news-digest --repo <corpus>` | Claude Code Skill that collects your own feeds, decides what is worth reading, and compiles a digest of only that — significance and your own relationship to it are scored separately, continuing stories are tracked, and a topic that resurfaced with no new facts is named as stale |
 | [rfp](https://github.com/nlink-jp/rfp) | `/rfp [tool-name]` | Claude Code Skill that facilitates the RFP planning stage for a new nlink-jp project — collects requirements through interactive Q&A, validates completeness against the organization’s CONVENTIONS.md Phase 1, and emits a structured RFP document covering problem statement, features, constraints and non-goals |
 | [service-research](https://github.com/nlink-jp/service-research) | `/service-research <name>` | Claude Code Skill that researches a product or service — overview, pricing, terms of service, privacy policy, data security and AI-agent behavior — into a schema-validated JSON report with a three-tier risk rating and a Markdown summary. The agent opens and reads the actual policy pages itself |
+| [weather-forecast](https://github.com/nlink-jp/weather-forecast) | `/weather-forecast <place>` | Claude Code Skill that answers weather-forecast questions for places in Japan from the Japan Meteorological Agency’s latest forecast — today to the day after tomorrow, the 7-day forecast and the written overview. A bundled script does all the reading; each answer cites the area, release time and source |
 
 ### util-series — General-purpose data utilities
 
