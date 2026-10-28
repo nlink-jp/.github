@@ -55,6 +55,16 @@ mean. If you send one:
 - **No new third-party dependencies.** We use the standard library, the
   platform's first-party SDKs, or a service's REST API directly.
 
+## Changes that span repositories
+
+A change to a repository is made in that repository, by its owner. If your work
+on one nlink-jp repository needs something from another — a new field in its
+output, a fix in its code, a change to its documents — **open an issue on that
+other repository** describing what you need and why, and keep your pull
+request to the first repository free of it. Whether and how the other
+repository changes is decided there. The maintainers hold themselves to the same
+rule (ADR-025).
+
 ## Credit
 
 When your report or proposal leads to a change, the commit message and the

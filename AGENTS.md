@@ -93,6 +93,19 @@ Full details: [`CONVENTIONS.md` → Machine state is borrowed](CONVENTIONS.md#ma
 
 Full details: [`CONVENTIONS.md` → Design from the documentation, not from conjecture](CONVENTIONS.md#design-from-the-documentation-not-from-conjecture) (ADR-023)
 
+### Change a project only from inside it
+
+- A repository is changed only by work done in that repository. Work on another
+  project that needs something from it opens an issue there — it does not edit
+  files, commit, write or number an ADR, edit an existing ADR, or rebuild
+  `dist/` there, however close the checkout is.
+- A plan names such a dependency as an open issue, never as a phase of its own.
+- A session delegated by another carries the same boundary. A measuring tool
+  never changes what it measures: what the subject does not record is "not
+  recorded".
+
+Full details: [`CONVENTIONS.md` → Change a project only from inside it](CONVENTIONS.md#change-a-project-only-from-inside-it) (ADR-025)
+
 ### Commits must be small and typed
 
 Format: `<type>: <short imperative description>`

@@ -88,6 +88,7 @@ redirect behind, because release notes and changelogs already link to it.
 | [022](adr/022-pathguard.md) | Accepted | One path judgement for the fleet — `nlink-jp/pathguard` (lib-series) holds the list and the comparison (file identity plus disk-style case folding, every link hop), Local vs Outbound policies (uploads refuse secret and credential names anywhere), `CheckBeneath` for the workspace directory; transplanting retired; `check-org.sh` checks consumers are on the latest tag, hold no copy, and the runtimes' list matches |
 | [023](adr/023-documentation-not-conjecture.md) | Accepted | Design from the documentation, never from conjecture — read the API's or standard's documentation before designing and observe what it leaves open; a tool that is a protocol endpoint or an OS-facing device writes its state machine against the specifications in Phase 1; machine state (local or remote) is changed only with an announced, working removal — a Security-section rule; learned from the m5-notify-deck withdrawal |
 | [024](adr/024-external-contributions.md) | Accepted | Outside contributions — issues first; outside pull requests are read as proposals and the wanted changes re-implemented by the maintainers with credit, not merged as they are; one change per PR, no agent working files, no CI workflows, no third-party dependencies; published as the organization's default `CONTRIBUTING.md` (+ `.ja`) and `PULL_REQUEST_TEMPLATE.md`; forks that publish builds are asked to say they are unofficial, change the app name and bundle identifier, and use distinct versions (added 2026-09-28) |
+| [025](adr/025-change-a-project-only-from-inside-it.md) | Accepted | A project is changed only from inside it — work on another project opens an issue instead of editing, committing, writing or numbering an ADR, or rebuilding artifacts there; a plan names such a dependency as an open issue, never as a phase; binds agent sessions (and the sessions they delegate to) as much as people; a measuring tool never changes what it measures; organization decisions are carried out in each project as its own change |
 
 ---
 
@@ -690,6 +691,39 @@ the refusal because the PIN was never displayed and unencrypted links were
 dropped after 10 s — another defence producing the same observation. The
 Bluetooth specifications were read only after the maintainer asked for them
 (ADR-023).
+
+### Change a project only from inside it
+
+A repository is changed only by work done in that repository — its own session
+or working context, under its own conventions, ADR log, tests and release
+cadence, decided by its owner (ADR-025). Work whose purpose is another project
+does not change it, however close the checkouts are:
+
+- **From outside, a need is an issue.** Work on one project that needs
+  something from another repository opens an issue there — what is needed,
+  why, the evidence, optionally a proposed change — and stays within its own
+  boundary: it designs around the absence or waits. Its plan names the
+  dependency as an open issue, **never as a phase of its own plan**.
+- **Changing a project** means code, documentation, ADRs (a new record, a
+  number taken, an existing record's text), record and output formats,
+  configuration, `dist/` artifacts, branches, tags and commits. Reading another
+  project to understand it remains fine.
+- **People and agent sessions alike.** A session delegated by another carries
+  the delegating work's project boundary; being handed a task does not widen
+  what it may change.
+- **A measuring tool never changes what it measures.** What the subject does
+  not record is reported as not recorded; wanting it to record more is an issue
+  on the subject.
+- **Organization decisions are carried out inside each project** — one
+  repository at a time, with its own commit and release. The umbrella pointer
+  update after a release is part of the release process and is unchanged.
+
+Why (2026-10-29): the plan for a new tool, agent-activity-lens, contained a
+"Phase 0" that added a transcript record to gem-agent and lagent. Once the plan
+was approved, the sessions building the tool wrote and numbered ADRs in both
+projects' logs, edited existing ADRs, changed code and documentation, committed
+on `main` minutes after the owner's releases and rebuilt their `dist/`. Both
+repositories were reset, and the tool was cancelled.
 
 ### Verify with an independent pass
 
