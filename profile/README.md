@@ -111,6 +111,7 @@ Shared libraries for nlink-jp projects. Zero external dependencies where possibl
 | [nlk](https://github.com/nlink-jp/nlk) | Go | Go toolkit for the code that surrounds an LLM call, not the call itself — guard wraps user text in a nonce-tagged XML envelope against prompt injection, jsonfix repairs what a model actually emits, strip removes thinking tags, backoff and validate cover the rest. Zero external dependencies |
 | [nlk-py](https://github.com/nlink-jp/nlk-py) | Python | Python edition of nlk — the same five modules (guard, jsonfix, strip, backoff, validate) with the same API design, for the code around an LLM call rather than the call itself. Zero external dependencies, so it drops into any project without pulling a tree behind it |
 | [pathguard](https://github.com/nlink-jp/pathguard) | Go | Go library that judges whether a path may be touched — system locations, credential stores, agent configuration and a server’s own directories are compared by file identity as well as by folded name, so no case variant, link or firmlink walks past them, even before they exist |
+| [toml](https://github.com/nlink-jp/toml) | Go | Go library that decodes TOML 1.1.0 with the standard library only — strict by default, so a key the config struct does not know is an error, never silently dropped. Passes the toml-test suite; replaces BurntSushi/toml across nlink-jp's tools |
 
 ### lite-series — Lightweight LLM and pipeline tools
 
