@@ -84,6 +84,7 @@ of Apple-Silicon-only prebuilt binaries, generated per-repo at release time.**
 
 ## References
 
+- **Amended by [ADR-028](028-release-kit-instead-of-copies.md)** (2026-11-04) — the vendoring of the tap assets into each repository is superseded by one release kit pinned by version; generating the formula and cask at release time stands
 - `.github/templates/gen-brew.sh`, `formula.rb.tmpl`, `cask.rb.tmpl`, `release-brew.mk`
 - `.github/tests/gen-brew.test.sh`
 - CONVENTIONS.md §Homebrew Tap Distribution
