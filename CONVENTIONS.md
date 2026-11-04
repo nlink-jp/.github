@@ -89,6 +89,7 @@ redirect behind, because release notes and changelogs already link to it.
 | [023](adr/023-documentation-not-conjecture.md) | Accepted | Design from the documentation, never from conjecture — read the API's or standard's documentation before designing and observe what it leaves open; a tool that is a protocol endpoint or an OS-facing device writes its state machine against the specifications in Phase 1; machine state (local or remote) is changed only with an announced, working removal — a Security-section rule; learned from the m5-notify-deck withdrawal |
 | [024](adr/024-external-contributions.md) | Accepted | Outside contributions — issues first; outside pull requests are read as proposals and the wanted changes re-implemented by the maintainers with credit, not merged as they are; one change per PR, no agent working files, no CI workflows, no third-party dependencies; published as the organization's default `CONTRIBUTING.md` (+ `.ja`) and `PULL_REQUEST_TEMPLATE.md`; forks that publish builds are asked to say they are unofficial, change the app name and bundle identifier, and use distinct versions (added 2026-09-28) |
 | [025](adr/025-change-a-project-only-from-inside-it.md) | Accepted | A project is changed only from inside it — work on another project opens an issue instead of editing, committing, writing or numbering an ADR, or rebuilding artifacts there; a plan names such a dependency as an open issue, never as a phase; binds agent sessions (and the sessions they delegate to) as much as people; a measuring tool never changes what it measures; organization decisions are carried out in each project as its own change |
+| [026](adr/026-toml-with-nlink-jp-toml.md) | Accepted | TOML is read with `nlink-jp/toml` (lib-series, standard library only, TOML 1.1.0, decode only) in Go and `tomllib` in Python; hand-written config is read strictly — an unknown key is an error naming it, an unknown table is listed with every key beneath it, a removed key is refused by name with its replacement, `AllowUnknownKeys` only for a file shared with other readers; a config error is never a quiet fallback to defaults; `check-org.sh` fails a module requiring BurntSushi/toml or pelletier/go-toml; 27 consumers migrated 2026-11-04 |
 
 ---
 
@@ -759,6 +760,10 @@ verifier whose only job is cross-checking has no design to be attached to.
 - Never store credentials in source code.
 - Validate inputs at system boundaries (user input, external APIs, file I/O).
 - Keep dependencies up to date; run vulnerability scanners as part of the quality gate.
+- Read TOML with `github.com/nlink-jp/toml` in Go and `tomllib` in Python, and
+  read hand-written config strictly: an unknown key is an error that names it,
+  a removed key is refused by name with what replaces it, and a config error is
+  never a quiet fallback to defaults (ADR-026).
 - Never change a machine's state — registrations, permissions, system settings,
   on this machine or a borrowed one — without announcing it and a checked
   removal; see [Machine state is borrowed](#machine-state-is-borrowed).
