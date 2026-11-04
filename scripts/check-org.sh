@@ -519,6 +519,36 @@ bundled_cli_pin() {
   printf '%s %s\n' "$cli" "${pin:--}"
 }
 
+# --- TOML decoding (organization ADR-026) --------------------------------------
+# The organization's Go code reads TOML with github.com/nlink-jp/toml. A module
+# that requires BurntSushi/toml or pelletier/go-toml itself is how the 27
+# consumers migrated on 2026-11-04 began. One that receives it only through
+# another third-party dependency (markdown-viewer, through viper) cannot drop
+# it by changing an import, and is reported rather than failed.
+
+# toml_third_party GOMOD -> one line per third-party TOML module the module
+# requires: "fail <module>" when go.mod requires it directly or the module's
+# own Go code imports it (a `// indirect` mark does not excuse an import: one
+# consumer carried exactly that wrong mark), "indirect <module>" when go.mod
+# marks it indirect and none of the module's own Go files imports it. Vendored
+# trees, a repository-local module cache (`.go/`) and `third_party/` are not
+# the module's own code. Nothing when the module requires neither.
+toml_third_party() {
+  local gm="$1" dir line mod
+  [ -f "$gm" ] || return 0
+  dir=$(dirname "$gm")
+  while IFS= read -r line; do
+    mod=$(printf '%s\n' "$line" | grep -o -E 'github\.com/(BurntSushi/toml|pelletier/go-toml(/v2)?)' | head -1)
+    [ -n "$mod" ] || continue
+    if printf '%s\n' "$line" | grep -q '// indirect' \
+      && ! grep -rqF --include='*.go' --exclude-dir=vendor --exclude-dir=.go --exclude-dir=third_party "\"$mod" "$dir"; then
+      printf 'indirect %s\n' "$mod"
+    else
+      printf 'fail %s\n' "$mod"
+    fi
+  done < <(grep -E 'github\.com/(BurntSushi/toml|pelletier/go-toml)' "$gm" | grep -v -E '^[[:space:]]*//' || true)
+}
+
 # --- tap currency --------------------------------------------------------------
 # A release is not delivered until the tap points at it: `brew upgrade` reads the
 # formula, so a formula left on the previous version means the release exists and
@@ -1401,6 +1431,31 @@ else
   else
     errors=$((errors + 1))
   fi
+fi
+echo ""
+
+# TOML decoding (organization ADR-026): no module requires a third-party TOML
+# decoder itself; one that receives it through another dependency is named.
+echo "==> TOML decoding (nlink-jp/toml, ADR-026)"
+tmerr=0 tmcount=0
+for gm in "$DEST"/*/*/go.mod; do
+  [ -f "$gm" ] || continue
+  cname=$(dirname "$gm"); cname="${cname#"$DEST"/}"
+  grep -q 'github.com/nlink-jp/toml v' "$gm" && tmcount=$((tmcount + 1))
+  while read -r kind mod; do
+    case "$kind" in
+      fail)
+        echo "    $FAIL $cname requires $mod (read TOML with github.com/nlink-jp/toml)"
+        tmerr=1 ;;
+      indirect)
+        echo "    $WARN $cname receives $mod only through another dependency (reported, not failed)" ;;
+    esac
+  done < <(toml_third_party "$gm")
+done
+if [ "$tmerr" -eq 0 ]; then
+  echo "    $PASS toml: $tmcount module(s) on nlink-jp/toml, none requires BurntSushi/toml or pelletier/go-toml itself"
+else
+  errors=$((errors + 1))
 fi
 echo ""
 

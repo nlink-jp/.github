@@ -810,5 +810,35 @@ is 'a series without submodules runs no loop iteration (not one empty one)' "$_n
 unset GIT_CONFIG_COUNT GIT_CONFIG_KEY_0 GIT_CONFIG_VALUE_0 GIT_CONFIG_KEY_1 GIT_CONFIG_VALUE_1 \
   GIT_CONFIG_KEY_2 GIT_CONFIG_VALUE_2 GIT_CONFIG_KEY_3 GIT_CONFIG_VALUE_3 GIT_CONFIG_KEY_4 GIT_CONFIG_VALUE_4
 
+# ---- toml_third_party: ADR-026 -----------------------------------------------
+# toml_case LABEL WANT GO.MOD-BODY [FILE CONTENT]... — a module under $TMP/tomlmod
+toml_case() {
+  _label="$1"; _want="$2"; _body="$3"; shift 3
+  _d="$TMP/tomlmod-$pass-$fail"; mkdir -p "$_d"
+  printf '%s\n' "$_body" > "$_d/go.mod"
+  while [ $# -ge 2 ]; do mkdir -p "$_d/$(dirname "$1")"; printf '%s\n' "$2" > "$_d/$1"; shift 2; done
+  _got=$(toml_third_party "$_d/go.mod" | paste -sd'|' -)
+  is "$_label" "$_got" "$_want"
+}
+toml_case 'a direct BurntSushi requirement fails' 'fail github.com/BurntSushi/toml' \
+  $'module x\n\ngo 1.23\n\nrequire github.com/BurntSushi/toml v1.6.0\n' \
+  config.go $'package x\nimport "github.com/BurntSushi/toml"'
+toml_case 'an indirect requirement nobody imports is reported, not failed' 'indirect github.com/pelletier/go-toml/v2' \
+  $'module x\n\nrequire (\n\tgithub.com/spf13/viper v1.20.1\n\tgithub.com/pelletier/go-toml/v2 v2.2.4 // indirect\n)\n' \
+  config.go $'package x\nimport "github.com/spf13/viper"'
+toml_case 'an "indirect" mark does not excuse an import of it' 'fail github.com/BurntSushi/toml' \
+  $'module x\n\nrequire github.com/BurntSushi/toml v1.6.0 // indirect\n' \
+  core/config/config.go $'package config\nimport "github.com/BurntSushi/toml"'
+toml_case 'an import inside a repository-local module cache is not the module'"'"'s own' 'indirect github.com/BurntSushi/toml' \
+  $'module x\n\nrequire github.com/BurntSushi/toml v1.6.0 // indirect\n' \
+  .go/pkg/mod/y/z.go $'package z\nimport "github.com/BurntSushi/toml"'
+toml_case 'nlink-jp/toml alone is nothing to report' '' \
+  $'module x\n\nrequire github.com/nlink-jp/toml v0.1.1\n' \
+  config.go $'package x\nimport "github.com/nlink-jp/toml"'
+toml_case 'a commented-out requirement is not one' '' \
+  $'module x\n\n// require github.com/BurntSushi/toml v1.6.0\nrequire github.com/nlink-jp/toml v0.1.1\n'
+toml_case 'pelletier v1 required directly fails' 'fail github.com/pelletier/go-toml' \
+  $'module x\n\nrequire github.com/pelletier/go-toml v1.9.5\n'
+
 echo "passed: $pass   failed: $fail"
 [ "$fail" -eq 0 ]
