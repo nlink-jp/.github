@@ -8,7 +8,7 @@ This setup is required if you use any of the following tools.
 
 | Tool | Series | Language | Description |
 |------|--------|----------|-------------|
-| gem-cli | cli-series | Go | Gemini chat CLI |
+| gem-agent | cli-series | Go | CLI agent runtime |
 | gem-query | util-series | Go | Natural language DB analysis |
 | gem-search | util-series | Go | AI web search |
 | gem-image | util-series | Go | AI image generation |

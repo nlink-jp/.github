@@ -30,7 +30,7 @@ brew install --cask nlink-jp/tap/<name>   # GUI アプリ
 |------|----------------|-------------|
 | **認証情報なし・オフライン** | 追加準備不要 | json-to-table, json-filter, csv-to-json, rex, sdate, jstats, jviz, lookup, eml-to-jsonl, msg-to-jsonl, markdown-viewer, instant-translate と、lookup 系の大半（tor-exit-lookup, icloud-relay-lookup, mac-lookup, whois-lookup, doh-lookup, rdns-lookup） |
 | **サードパーティのAPIキー/トークン** | 各サービスでキーを取得（手順は各README） | abuse-lookup（AbuseIPDB キー）, urlscan-lookup（urlscan.io キー）, asn-lookup（IPinfo トークン。DB取得時のみ、照合はオフライン）, malware-lookup（abuse.ch キーは任意） |
-| **Vertex AI (Gemini)** | [Vertex AI セットアップ](setup-vertex-ai.ja.md) | gem-cli, gem-query, gem-search, gem-image, gem-rag, gem-summary, gem-transcribe, mail-analyzer, news-collector, ask-gemini-mcp 等 |
+| **Vertex AI (Gemini)** | [Vertex AI セットアップ](setup-vertex-ai.ja.md) | gem-agent, gem-query, gem-search, gem-image, gem-rag, gem-summary, gem-transcribe, mail-analyzer, news-collector, ask-gemini-mcp 等 |
 | **ローカルLLM (LM Studio / Ollama)** | [ローカルLLM セットアップ](setup-local-llm.ja.md) | llm-cli, data-analyzer, lite-rag, lite-switch, mail-analyzer-local, slack-monitor, ask-llm-mcp 等 |
 | **Slack / Confluence / Splunk API** | 各ツールのREADMEを参照 | scat, stail, swrite, slack-router, md-to-slack, slack-mcp-extender, scli, confl-cli / splunk-cli, splunk-mcp |
 | **コンテナ (Podman)** | 各READMEのコンテナ手順 | data-toolbox-mcp, pcap-analyzer-mcp（解析サンドボックス）, shell-agent-v2（サンドボックス実行）, cclaude |

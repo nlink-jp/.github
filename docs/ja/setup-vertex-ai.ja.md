@@ -8,7 +8,7 @@ Google Cloud の Vertex AI を使うツールのための環境構築手順で�
 
 | ツール | シリーズ | 言語 | 説明 |
 |-------|--------|------|------|
-| gem-cli | cli-series | Go | Gemini チャットCLI |
+| gem-agent | cli-series | Go | CLI エージェントランタイム |
 | gem-query | util-series | Go | 自然言語DB分析 |
 | gem-search | util-series | Go | AI Web検索 |
 | gem-image | util-series | Go | AI画像生成 |
