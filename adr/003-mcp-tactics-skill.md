@@ -105,6 +105,11 @@ Skill; a separate CLI tactics artifact can follow if the need proves real.
   three tiers below become four, tier 1 is widened from "local cache" to "no
   external observer", and the "every server ships `get_usage`" instruction
   becomes conditional
+- **Amended by [ADR-027](027-mcp-tactics-scope-and-bundled-skills.md)**
+  (2026-11-04) — the Scope below ("MCP servers only") is replaced: the skill
+  covers the servers whose choice or call order changes who can observe an
+  investigation or where its material goes; production servers leave, and
+  one tool's craft ships as a skill bundled with that tool
 - [CONVENTIONS.md](../CONVENTIONS.md) — documentation structure, ADR process
 - [skills-series](https://github.com/nlink-jp/skills-series) — implementation
 - [mcp-guardian](https://github.com/nlink-jp/mcp-guardian) — runtime governance, the enforcement counterpart

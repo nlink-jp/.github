@@ -90,6 +90,7 @@ redirect behind, because release notes and changelogs already link to it.
 | [024](adr/024-external-contributions.md) | Accepted | Outside contributions — issues first; outside pull requests are read as proposals and the wanted changes re-implemented by the maintainers with credit, not merged as they are; one change per PR, no agent working files, no CI workflows, no third-party dependencies; published as the organization's default `CONTRIBUTING.md` (+ `.ja`) and `PULL_REQUEST_TEMPLATE.md`; forks that publish builds are asked to say they are unofficial, change the app name and bundle identifier, and use distinct versions (added 2026-09-28) |
 | [025](adr/025-change-a-project-only-from-inside-it.md) | Accepted | A project is changed only from inside it — work on another project opens an issue instead of editing, committing, writing or numbering an ADR, or rebuilding artifacts there; a plan names such a dependency as an open issue, never as a phase; binds agent sessions (and the sessions they delegate to) as much as people; a measuring tool never changes what it measures; organization decisions are carried out in each project as its own change |
 | [026](adr/026-toml-with-nlink-jp-toml.md) | Accepted | TOML is read with `nlink-jp/toml` (lib-series, standard library only, TOML 1.1.0, decode only) in Go and `tomllib` in Python; hand-written config is read strictly — an unknown key is an error naming it, an unknown table is listed with every key beneath it, a removed key is refused by name with its replacement, `AllowUnknownKeys` only for a file shared with other readers; a config error is never a quiet fallback to defaults; `check-org.sh` fails a module requiring BurntSushi/toml or pelletier/go-toml; 27 consumers migrated 2026-11-04 |
+| [027](adr/027-mcp-tactics-scope-and-bundled-skills.md) | Accepted | `mcp-tactics` covers the servers its doctrine governs — those where choosing them or ordering their calls changes who can observe an investigation or where its material goes — replacing ADR-003's "MCP servers only" scope; the production servers (voice-studio, video-studio, image-forge) leave and report-studio is not added. A tool's own craft ships as a skill bundled in the tool's repository (skills-series layout, tests pinning it to the server both ways, separate release asset); skills-series holds skills not tied to one tool; placement is decided per piece of content |
 
 ---
 
@@ -122,6 +123,9 @@ Before any code is written, produce and get sign-off on the following:
      behaviour for that role — automatic reconnection, setup assistants,
      system lists, the role's own specification. List what comes with the role
      and decide whether the main purpose needs it (ADR-023).
+   - **Does it need guidance beyond its `get_usage`?** A tool's own craft is a
+     skill bundled with the tool, planned as part of it — not a separate
+     skills-series project (ADR-027, §Skill bundled with a tool).
 
 4. **Development plan** — Break the work into phases with milestones:
    - Phase 1: core functionality + tests
@@ -408,6 +412,48 @@ clean:
 Repo-specific tests are appended to the `check` recipe as extra lines
 (e.g. `@python3 tests/run-script-tests.py`). If the skill bundles Python
 scripts, also exclude `-x '*__pycache__*'` in the `package` recipe.
+
+#### Skill bundled with a tool
+
+A skill whose content is **one tool's craft** — how to prepare input for it,
+choose among its options, act on what it reports, and hand work into and out
+of it — lives in that tool's repository, not in skills-series (ADR-027).
+`get_usage` stays the call contract and keeps the minimum a client without
+the skill needs; the skill builds on it and does not restate it. Add one
+only when the tool has craft beyond its `get_usage`.
+
+Decide placement per piece of content, not per request: what is this tool's
+craft goes with the tool; what is not (writing a report in general, say) is a
+skills-series question. Whether the tool belongs in `mcp-tactics` is a
+separate test — only when choosing it, or the order of its calls, changes who
+can observe an investigation or where its material goes.
+
+The skill sits where a skills-series repository keeps its own, so one layout
+holds for every repository that ships a skill:
+
+```
+<tool>/
+├── <skill-name>/SKILL.md       ← frontmatter `name:` equals the directory
+├── tests/validate-skill.sh     ← the organization's skill validator (ADR-006)
+└── ...                         ← the tool, and its tests that pin the skill
+```
+
+- **The tool's tests hold the skill to the server in both directions.** Every
+  tool, error or warning code and directive the skill names exists in the
+  server — taken from the server's own registrations where it has them, not
+  from a hand-copied list — and every retired name is held absent. A
+  presence-only test let a retired argument survive in eight files of
+  voice-studio-mcp's skill.
+- **`make test` runs `tests/validate-skill.sh`** (frontmatter, links, the
+  1,024-character description limit); check 10b keeps the copy
+  byte-identical, as in skill repositories. Do not move the copy elsewhere:
+  it takes the parent of its `tests/` as the repository root.
+- **Ship it as a separate release asset**, not inside the binary's zip. The
+  README's Installation section tells each caller the tool declares how to
+  install the skill: the app's skill registration for Claude, the runtime's
+  own skill directory for gem-agent and lagent. A `make install-skill`
+  installs the built package, never a copy of the source tree.
+- The organization catalog lists the skill as part of its tool.
 
 #### Makefile template (Go)
 
