@@ -48,7 +48,7 @@ retrofitted.
 
 | Field | Value |
 |-------|-------|
-| Status | Proposed / **Accepted** / Superseded / Moved |
+| Status | Proposed / **Accepted** / Superseded / Moved / Withdrawn |
 | Date | YYYY-MM-DD |
 | Binds | organization — or the project name, in a project log |
 | Decision makers | nlink-jp maintainers |
@@ -65,11 +65,11 @@ redirect behind, because release notes and changelogs already link to it.
 | ADR | Status | Summary |
 |-----|--------|---------|
 | [001](adr/001-gemini3-migration.md) | Accepted | Gemini 2.5 → 3 migration plan (defer until GA) |
-| [002](adr/002-homebrew-tap-automation.md) | Accepted | Homebrew tap distribution — install notarized release assets, generate formula/cask at release time (vendoring of the assets superseded by 028) |
+| [002](adr/002-homebrew-tap-automation.md) | Accepted | Homebrew tap distribution — install notarized release assets, generate formula/cask at release time |
 | [003](adr/003-mcp-tactics-skill.md) | Accepted | `mcp-tactics` Skill — cross-cutting selection layer for our MCP servers (selection/ordering only; `get_usage` owns parameters) |
 | [004](adr/004-skills-series-umbrella.md) | Accepted | skills-series umbrella restructure — one repository per skill, released as GitHub Release skill zips |
 | [005](adr/005-umbrella-standardization.md) | Accepted | Umbrella standardization — one file set (README/CLAUDE/AGENTS/.gitignore), README as the only catalog, enforced by check-org.sh |
-| [006](adr/006-skill-validator-vendoring.md) | Superseded | Skill validator vendoring — per-repo copies of `validate-skill.sh` with a canonical in `.github/templates/`, byte-equality enforced by check-org.sh |
+| [006](adr/006-skill-validator-vendoring.md) | Accepted | Skill validator vendoring — per-repo copies of `validate-skill.sh` with a canonical in `.github/templates/`, byte-equality enforced by check-org.sh |
 | [007](adr/007-service-research-skill.md) | Moved | `service-research` skill design — **moved** to [`service-research` ADR-0001](https://github.com/nlink-jp/service-research/blob/main/docs/en/adr/0001-agentic-research.md) (project-scoped; retires the `product-research` CLI) |
 | [008](adr/008-incident-research-skill.md) | Moved | `incident-research` skill design — **moved** to [`incident-research` ADR-0001](https://github.com/nlink-jp/incident-research/blob/main/docs/en/adr/0001-deep-dive-research.md) (project-scoped) |
 | [009](adr/009-incident-review-skill.md) | Moved | `incident-review` skill design — **moved** to [`incident-review` ADR-0001](https://github.com/nlink-jp/incident-review/blob/main/docs/en/adr/0001-retrospective-analysis.md) (project-scoped; retires the `ai-ir` / `ai-ir2` CLIs) |
@@ -91,7 +91,7 @@ redirect behind, because release notes and changelogs already link to it.
 | [025](adr/025-change-a-project-only-from-inside-it.md) | Accepted | A project is changed only from inside it — work on another project opens an issue instead of editing, committing, writing or numbering an ADR, or rebuilding artifacts there; a plan names such a dependency as an open issue, never as a phase; binds agent sessions (and the sessions they delegate to) as much as people; a measuring tool never changes what it measures; organization decisions are carried out in each project as its own change |
 | [026](adr/026-toml-with-nlink-jp-toml.md) | Accepted | TOML is read with `nlink-jp/toml` (lib-series, standard library only, TOML 1.1.0, decode only) in Go and `tomllib` in Python; hand-written config is read strictly — an unknown key is an error naming it, an unknown table is listed with every key beneath it, a removed key is refused by name with its replacement, `AllowUnknownKeys` only for a file shared with other readers; a config error is never a quiet fallback to defaults; `check-org.sh` fails a module requiring BurntSushi/toml or pelletier/go-toml; 27 consumers migrated 2026-11-04 |
 | [027](adr/027-mcp-tactics-scope-and-bundled-skills.md) | Accepted | `mcp-tactics` covers the servers its doctrine governs — those where choosing them or ordering their calls changes who can observe an investigation or where its material goes — replacing ADR-003's "MCP servers only" scope; the production servers (voice-studio, video-studio, image-forge) leave and report-studio is not added. A tool's own craft ships as a skill bundled in the tool's repository (skills-series layout, tests pinning it to the server both ways, separate release asset); skills-series holds skills not tied to one tool; placement is decided per piece of content |
-| [028](adr/028-release-kit-instead-of-copies.md) | Accepted | One release kit instead of copies — every `.github/templates/` file and the Makefile recipes CONVENTIONS prescribes (skill validation, signing, notarization, app-zip check, Homebrew generation, packaging, `verify-release`) become one standard-library Go module in lib-series, pinned per repository in a module of its own (`go -C <dir> tool`, product `go.mod` untouched); check-org checks a floor version, no copies, and that gate calls do not swallow exit status; supersedes 006, amends 002; migration per repository after the kit's RFP and release, each move proven mechanically |
+| [028](adr/028-release-kit-instead-of-copies.md) | Withdrawn | One release kit instead of copies of `.github/templates/` and the Makefile recipes — withdrawn the day it was accepted as an escalation beyond the task that raised it; ADR-006 and ADR-002 stand; the measurements stay as a record
 
 ---
 

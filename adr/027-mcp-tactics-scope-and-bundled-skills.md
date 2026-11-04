@@ -77,7 +77,9 @@ that tool's repository, changed in the same commits and releases:
 - It ships as a separate release asset, and the tool's README tells each
   caller it declares how to install it.
 
-A tool gets one only when it has craft beyond its `get_usage`.
+A tool gets one only when it has craft beyond its `get_usage`. These rules
+apply when a bundled skill is created or reworked; voice-studio-mcp's existing
+skill, which predates them, is not asked to move.
 
 **3. skills-series holds skills that are not one tool's craft** — work over
 many tools or none. When a tool's RFP first mentions a skill, the placement
@@ -95,8 +97,6 @@ The rest are issues in their own repositories:
   investigation → manuscript → `render` hand-off.
 - `skills-series` — skills-series#1 narrowed to what is not report-studio's
   craft, or closed; that series' decision.
-- `voice-studio-mcp` — move its skill to the root layout and derive its
-  tests from the server.
 
 ## Consequences
 

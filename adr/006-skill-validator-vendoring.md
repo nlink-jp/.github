@@ -2,7 +2,7 @@
 
 | Field | Value |
 |-------|-------|
-| Status | Superseded by [ADR-028](028-release-kit-instead-of-copies.md) |
+| Status | **Accepted** |
 | Date | 2026-07-31 |
 | Decision makers | nlink-jp maintainers |
 | Triggered by | `meeting-notes` becoming the third skill repository — the trigger ADR-004 set for revisiting the per-repo copies of `tests/validate-skill.sh` |
@@ -81,7 +81,6 @@ byte-equality — the same vendoring pattern as the tap-generation assets.**
 
 ## References
 
-- **Superseded by [ADR-028](028-release-kit-instead-of-copies.md)** (2026-11-04) — the validator becomes part of one release kit pinned by version; copies are retired. Check 10b keeps applying to a repository until it has moved to the kit
 - [ADR-004](004-skills-series-umbrella.md) — the restructure whose Consequences this ADR supersedes in part
 - [ADR-002](002-homebrew-tap-automation.md) — the tap-asset vendoring pattern this ADR reuses
 - [CONVENTIONS.md](../CONVENTIONS.md) — Skill project scaffold, `check-org.sh` check table

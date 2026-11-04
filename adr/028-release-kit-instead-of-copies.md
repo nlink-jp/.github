@@ -2,11 +2,17 @@
 
 | Field | Value |
 |-------|-------|
-| Status | **Accepted** |
+| Status | Withdrawn (2026-11-04) |
 | Date | 2026-11-04 |
 | Binds | organization |
 | Decision makers | nlink-jp maintainers |
 | Triggered by | The owner's judgement, while settling ADR-027, that maintaining copies is a loss in itself — the skill validator first, then every vendored release script and recipe — and measurements taken the same day of what is copied, how the copies differ, and how a pinned Go tool behaves |
+
+> **Withdrawn the day it was accepted.** The question it answers came up as a side issue of
+> skills-series#1, whose resolution (ADR-027) needed none of it: with bundled skills at the
+> repository root, the existing validator and check 10b work unchanged. The owner judged it an
+> escalation beyond the task. ADR-006 and ADR-002 stand as they were. The measurements below
+> remain a record, not a plan.
 
 ## Context
 
