@@ -151,6 +151,9 @@ where an omission would show early.
 
 - mail-dissect `_wip` (unpublished): `docs/ja/mail-dissect-rfp.ja.md` (first
   version 75781c0) and `docs/ja/mail-dissect-phase1-plan.ja.md` (8b2038d).
+  Note (2026-11-08): the maintainer withdrew mail-dissect the same day; its
+  `_wip` repository, never pushed, was deleted. The facts above are as recorded
+  here; its measured x/net/html costs went to `nlink-jp/knowledge` security.md.
 - `util-series/gem-image` `docs/{en,ja}/`: architecture, design,
   development-plan (2026-04) — the practice this record writes down.
 - `nlink-jp/knowledge` development-process.md: "An independent pass converges
