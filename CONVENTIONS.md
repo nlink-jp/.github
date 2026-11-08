@@ -92,18 +92,22 @@ redirect behind, because release notes and changelogs already link to it.
 | [026](adr/026-toml-with-nlink-jp-toml.md) | Accepted | TOML is read with `nlink-jp/toml` (lib-series, standard library only, TOML 1.1.0, decode only) in Go and `tomllib` in Python; hand-written config is read strictly — an unknown key is an error naming it, an unknown table is listed with every key beneath it, a removed key is refused by name with its replacement, `AllowUnknownKeys` only for a file shared with other readers; a config error is never a quiet fallback to defaults; `check-org.sh` fails a module requiring BurntSushi/toml or pelletier/go-toml; 27 consumers migrated 2026-11-04 |
 | [027](adr/027-mcp-tactics-scope-and-bundled-skills.md) | Accepted | `mcp-tactics` covers the servers its doctrine governs — those where choosing them or ordering their calls changes who can observe an investigation or where its material goes — replacing ADR-003's "MCP servers only" scope; the production servers (voice-studio, video-studio, image-forge) leave and report-studio is not added. A tool's own craft ships as a skill bundled in the tool's repository (skills-series layout, tests pinning it to the server both ways, separate release asset); skills-series holds skills not tied to one tool; placement is decided per piece of content |
 | [028](adr/028-release-kit-instead-of-copies.md) | Withdrawn | One release kit instead of copies of `.github/templates/` and the Makefile recipes — withdrawn the day it was accepted as an escalation beyond the task that raised it; ADR-006 and ADR-002 stand; the measurements stay as a record
+| [029](adr/029-design-before-implementation.md) | Accepted | Design before implementation — planning is requirements (the RFP) then design: architecture, detailed design and a development plan whose Phase 1 is design, in the repository in both languages, checked against the requirements by an independent pass and approved before any production code; implementation follows the design and a finding outside it is a design change request; every independent pass is bounded before it starts (reference, count, stop; default one pass plus one over the fix diff); applies to new and in-flight `_wip` projects; learned from mail-dissect |
 
 ---
 
 ## Starting a New Project
 
 A new project must go through three phases before writing production code:
-**Plan → Scaffold → Develop**. Skipping the planning phase leads to rework,
-inconsistent structure, and integration issues that are expensive to fix later.
+**Plan → Scaffold → Develop**. Planning has two parts, **requirements** (the
+RFP, items 1–7 below) and **design** (three documents, verified and approved —
+ADR-029). Skipping either leads to rework, inconsistent structure, and
+integration issues that are expensive to fix later.
 
 ### Phase 1: Planning
 
-Before any code is written, produce and get sign-off on the following:
+Before any code is written, produce and get sign-off on the requirements
+below, then on the design ([Design](#design)).
 
 1. **Problem statement** — What problem does this tool solve? Who is the user?
    One paragraph is enough. If the scope cannot be explained concisely, it is
@@ -129,9 +133,11 @@ Before any code is written, produce and get sign-off on the following:
      skills-series project (ADR-027, §Skill bundled with a tool).
 
 4. **Development plan** — Break the work into phases with milestones:
-   - Phase 1: core functionality + tests
-   - Phase 2: additional features
-   - Phase 3: documentation, polish, release
+   - Phase 1: design — architecture, detailed design, development plan;
+     verified and approved ([Design](#design))
+   - Phase 2: core functionality + tests
+   - Phase 3: additional features
+   - Phase 4: documentation, polish, release
    - Identify which phases can be reviewed independently.
 
 5. **Required API scopes / permissions** — For tools that integrate with
@@ -198,9 +204,41 @@ Before any code is written, produce and get sign-off on the following:
    state machine written against the specifications came 30 hours in and
    showed the deviations within hours (ADR-023).
 
-The planning artifacts can be lightweight (a GitHub issue, a markdown file in
-`docs/design/`, or a conversation summary) — the format matters less than the
-content.
+The requirements can be lightweight (a GitHub issue, a markdown file, or a
+conversation summary) — the format matters less than the content. The design
+is not a summary: it is three documents in the repository.
+
+#### Design
+
+After the requirements are signed off, and before scaffolding or any
+production code, write three documents in the repository, mirrored in
+`docs/en/` and `docs/ja/` (ADR-029):
+
+- **Architecture (conceptual design)** — the components and how data flows
+  between them; which component carries each requirement; each component's
+  contract (what it returns and what it does not); what is out of scope; the
+  non-obvious decisions with their alternatives.
+- **Detailed design** — per component: inputs, outputs, the procedure,
+  bounds, error and hostile-input handling, and the test design, including
+  what decides a test's expected result.
+- **Development plan** — the order of work and each step's completion
+  criteria. Its Phase 1 is this design; core implementation is Phase 2.
+
+The documents are proportional to the tool — a page each for a small one —
+but never absent. A measurement the design rests on (Phase 0) comes before the
+design, not instead of it.
+
+The design is checked by an independent pass against the requirements
+([Verify with an independent pass](#verify-with-an-independent-pass)) and
+approved by the maintainer. Implementation starts after that approval.
+
+Why (2026-11-08): mail-dissect went from its RFP to code seven minutes after
+a "plan" that was a table of build steps. What to read and how far was then
+decided in the triage of review rounds, each finding becoming a design change
+and each change bringing the next round's regressions; six rounds did not
+converge and the project was judged unrecoverable. In 2026-04 the organization
+wrote architecture, detailed design and a development plan before the code;
+the step was never in these rules, and it disappeared by 2026-10 (ADR-029).
 
 ### Phase 2: Scaffolding
 
@@ -668,9 +706,15 @@ htmlcov/
 
 ### Phase 3: Development
 
-Only after planning is complete and the scaffold passes `check-org.sh`, begin
-writing production code. Follow the [Development Policy](#development-policy)
-below for all implementation work.
+Only after the requirements and the design are approved and the scaffold
+passes `check-org.sh`, begin writing production code. Follow the
+[Development Policy](#development-policy) below for all implementation work.
+
+**Implementation follows the design.** A change of design is made in the
+design documents and approved before the code changes. A review finding that
+asks for behaviour the design does not define is a design change request, not
+a defect: it goes to the maintainer, and by default it is recorded as out of
+scope (ADR-029).
 
 ---
 
@@ -781,18 +825,31 @@ Once a design is fixed, and once an implementation is complete (at the
 latest before its release), have an **independent reviewer with fresh
 context** check it:
 
-- **Design verification**: a reviewer (typically a sub-agent) whose *only*
-  task is to cross-check the design against the knowledge base, the
-  workspace memory, and the reference projects' `CLAUDE.md`/`AGENTS.md` —
-  "which recorded lesson does this violate?" — reporting each violation with
-  the entry cited and the affected location.
+- **Design verification**: a reviewer (typically a sub-agent) checks the
+  design against the requirements with fixed questions — does every
+  requirement map to a component, and every component to a requirement,
+  nothing missing and nothing beyond? For each component, are its inputs,
+  outputs, bounds, failure and hostile-input handling, and test oracles
+  decided? — and cross-checks it against the knowledge base, the workspace
+  memory, and the reference projects' `CLAUDE.md`/`AGENTS.md` ("which recorded
+  lesson does this violate?"), reporting each finding with the requirement or
+  entry cited and the affected location.
 - **Specification verification**: a design that implements a protocol role
   or builds on an external API is also checked against the fetched
   specification or reference and the platform's guidelines. The knowledge base
   cannot contain a premise nobody has tested (ADR-023).
 - **Implementation verification**: a review pass over the change (the
-  code-review tooling or a reviewer agent) before release. Findings are
-  triaged by the author, never auto-applied.
+  code-review tooling or a reviewer agent) before release, checking the
+  implementation against the detailed design. A reviewer may attack the work,
+  but against the contract the design states. Findings are triaged by the
+  author, never auto-applied: non-conformance (fix), design gap (a design
+  change request — [Phase 3](#phase-3-development)), out of scope (record).
+- **Every pass is bounded before it starts** (ADR-029). The brief states what
+  is checked against what, how many passes there will be, and when to stop.
+  The default for an implementation is one pass before release and one pass
+  over the fix diff only. A third pass needs the maintainer's go-ahead with a
+  reason. A high finding in the fix-diff pass sends the work back to the
+  design, not into another round of patches.
 - Checks that only a human can perform stay human: GUI panel contents are
   verified on real hardware by a person, as before.
 

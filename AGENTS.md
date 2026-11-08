@@ -152,13 +152,24 @@ git push
 
 **Never jump straight to coding.** New projects must follow three phases:
 
-1. **Plan** — Problem statement, functional spec (commands/flags/I/O),
-   design decisions, development plan with phases, required API scopes.
-   Get sign-off before writing code.
+1. **Plan** — Requirements first: problem statement, functional spec
+   (commands/flags/I/O), design decisions, development plan with phases,
+   required API scopes. Then the **design**, as three documents in the repo
+   (`docs/en/` + `docs/ja/`): architecture (components, which carries each
+   requirement, each one's contract, out of scope), detailed design (inputs,
+   outputs, procedure, bounds, error and hostile-input handling, test
+   design), development plan (Phase 1 is design; completion criteria per
+   step). An independent pass checks the design against the requirements and
+   the maintainer approves it before any code (ADR-029).
 2. **Scaffold** — Create repo with correct structure (`main.go` at root,
    `Makefile` outputting to `dist/`, `.gitignore` with `dist/`). Run
    `check-org.sh` to verify. See CONVENTIONS.md for templates.
-3. **Develop** — Write code following the development policy below.
+3. **Develop** — Write code following the design and the development policy
+   below. A design change is made in the design documents and approved first;
+   a review finding outside the design is a design change request, recorded as
+   out of scope by default. Every independent pass is bounded before it
+   starts: what against what, how many passes (default: one before release
+   plus one over the fix diff), when to stop (ADR-029).
 
 Full details and templates: [`CONVENTIONS.md` → Starting a New Project](CONVENTIONS.md#starting-a-new-project)
 
