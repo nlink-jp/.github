@@ -127,13 +127,14 @@ Small, local-first CLI tools for LLM interaction, retrieval, and classification.
 ### skills-series — Claude Code Skills
 
 Claude Code Skills packaging the organization's workflows — development
-process, research, meeting minutes, security analysis, news collection,
-and weather forecasts. One repository per skill; each releases a skill zip
+process, research, meeting minutes, security analysis and code audits, news
+collection, and weather forecasts. One repository per skill; each releases a skill zip
 installable into `~/.claude/skills/`
 or uploadable to claude.ai (Settings → Skills).
 
 | Skill | Command | Description |
 |-------|---------|-------------|
+| [code-audit](https://github.com/nlink-jp/code-audit) | `/code-audit <target-dir>` | Claude Code Skill that audits one repository of your own code for vulnerabilities behind a coverage ledger — read-only reconnaissance, coverage-led hunting by isolated sub-agents, adversarial verification by a fresh agent per candidate, schema-validated confirmed / needs_validation / rejected records with independent re-verification, and a Japanese/English report derived from the records. Hunting classes come from the organization’s own recorded defects beside the generic ones |
 | [compliance-review](https://github.com/nlink-jp/compliance-review) | `/compliance-review compile \| review` | Two-phase regulation-compliance review — compiles your regulation documents into a versioned domain-expert set (full clause text, no RAG, deterministic coverage check), then reviews applications with parallel independent experts behind drift and nonce-isolation gates; successor to the virtual-reviewer PoC |
 | [incident-research](https://github.com/nlink-jp/incident-research) | `/incident-research <incident>` | Security incident deep-dive research — collects and reads news and primary sources on one public incident into a timeline-centric, source-tiered JSON report plus a STIX 2.1 bundle of extracted IoCs; companion to service-research, successor to the ioc-collector CLI |
 | [incident-review](https://github.com/nlink-jp/incident-review) | `/incident-review <record>` | Claude Code Skill that reviews your own organization’s IR communication record — a Slack export, a plain-text log or a live channel — into a schema-validated JSON report with per-participant activity, role inference and a process-quality review. Every IoC is defanged before the agent reads a line |
