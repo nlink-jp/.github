@@ -291,10 +291,14 @@ uncommitted work. Developing in `_wip/` eliminates this dangerous step entirely.
    git push
    ```
    This clones a fresh copy from the remote — no file conflicts.
-5. Remove the `_wip/` working copy after confirming the submodule works:
+5. After confirming the submodule works, check that the `_wip/` copy holds
+   nothing unpushed:
    ```bash
-   rm -rf _wip/<tool-name>
+   git -C _wip/<tool-name> status --short
+   git -C _wip/<tool-name> log --oneline origin/main..HEAD
    ```
+   Then the maintainer removes `_wip/<tool-name>` (see
+   [Deleting files](#deleting-files)).
 
 > **Rule:** Never develop new projects directly inside an umbrella series
 > directory. Always use `_wip/` as the staging area.
@@ -1066,6 +1070,25 @@ both incidents produced a workspace full of unreviewed changes.
    same rewrite from inside a script or program it launches is not covered.
    Narrowing writable paths (`sandbox.filesystem.denyWrite`, or a tighter set
    of `additionalDirectories`) is the stronger control where that matters.
+
+### Deleting files
+
+Deletion on a machine that holds real data — the development Mac included — is
+written out in full:
+
+- **Full paths, one file at a time.** Check the target with `ls` first, and
+  delete only files this piece of work is known to have created.
+- **No wildcards.** A glob cannot tell your files from anyone else's.
+- **No recursion.** Do not run `rm -r` / `rm -rf`. When a directory tree has to
+  go, report its path and contents and leave the removal to the maintainer.
+
+A build recipe that removes a fixed path it generates itself (`rm -rf dist` in
+a Makefile) is outside this rule: the path is reviewed with the recipe and does
+not depend on what a command happens to match.
+
+Why (2026-08-20): cleaning up after an E2E run, `rm -f <state dir>/sessions/2026*`
+matched every real session transcript in a shared state directory, because
+they all begin with the date. Recovery from a local snapshot was luck.
 
 ### Build output directory
 
