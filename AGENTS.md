@@ -136,15 +136,30 @@ contains. It is not duplicated here. The table above once carried a `Tools`
 column and it drifted — it named two projects that had moved series, four that
 had been archived, and omitted two series entirely.
 
-**After releasing a submodule project, always update the umbrella pointer:**
+**After releasing a submodule project, always update the umbrella pointer** to
+the published commit, without touching the submodule's working tree:
 
 ```sh
 cd <umbrella-repo>
-git submodule update --remote <project>
-git add <project>
+git -C <project> fetch origin
+git -C <project> log --oneline origin/main..HEAD   # listed = someone's unpushed work
+sha=$(git -C <project> rev-parse origin/main)
+git update-index --cacheinfo 160000,"$sha",<project>
 git commit -m "chore: update <project> submodule pointer to vX.Y.Z"
 git push
 ```
+
+Another session may be working in the same checkout. `git add <project>`
+records whatever the submodule's HEAD is, which can be a commit that exists
+nowhere else, and `git submodule update --remote` moves that session's checkout
+to a detached HEAD. After `update-index`, run `git commit` with no path and no
+`-a`: both take the pointer from the working tree and undo it. While the other
+session's work is in progress the umbrella shows ` M <project>`, and
+`check-org.sh` reports its working tree as dirty; that is its state, not a
+failed update.
+
+Skipping the pointer update leaves the umbrella repo pointing at a stale commit.
+Run `check-org.sh` after the update to verify.
 
 ---
 
