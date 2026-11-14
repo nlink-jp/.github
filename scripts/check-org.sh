@@ -504,9 +504,10 @@ app_zip_metadata() {
 # what keeps a new repository, or a rewritten Makefile, from leaving it out.
 #
 # Limits, stated. It reads the Makefile; it does not run govulncheck, so it says
-# the gate is wired, not that the tree is clean today. The gate itself judges
-# the build for the host's OS only. And a library has no release target, so
-# nothing here reaches it: its consumers' gates see what they link.
+# the gate is wired, not that the tree is clean today. It does not judge which
+# platforms the gate scans either: a recipe that scans the host's build alone
+# passes here. And a library has no release target, so nothing here reaches it:
+# its consumers' gates see what they link.
 
 # go_makefiles DIR — the Makefiles that build Go in a repository: each one that
 # sits beside a go.mod, at the root or one directory down (a Wails project
@@ -530,10 +531,13 @@ go_makefiles() {
 # releases through `release`, lite-rag through `dist-darwin`. A target reaches
 # govulncheck when it, or anything it depends on however indirectly, has a
 # recipe line whose command is `govulncheck` or `$(GOVULNCHECK)` — after the
-# `@`, `-` and `+` prefixes, nothing else. A mention is not a run: an `echo`
-# naming it and the `go install` that fetches it do not count, and neither does
-# a call hidden behind another command (`cd app && govulncheck`), which is
-# reported so that it gets written plainly.
+# `@`, `-` and `+` prefixes and any `NAME=value` words that set its environment
+# (`CGO_ENABLED=0 GOOS=$$os GOARCH=$$arch govulncheck ./...`, the line of the
+# per-platform loop), nothing else. A continued recipe is read line by line, so
+# that loop's own line counts. A mention is not a run: an `echo` naming it and
+# the `go install` that fetches it do not count, and neither does a call hidden
+# behind another command (`cd app && govulncheck`), which is reported so that
+# it gets written plainly.
 #
 # Compared on 2026-11-14 with `make -n <target> | grep govulncheck` over all 79
 # Makefiles this applies to: the two agreed on every one.
@@ -573,9 +577,10 @@ ungated_release_targets() {
       line = $0; sub(/^\t[ \t]*/, "", line); sub(/^[-@+]+[ \t]*/, "", line)
       if (line ~ /^#/) next
       split(line, w, /[ \t]+/)
+      c = 1; while (w[c] ~ /^[A-Za-z_][A-Za-z0-9_]*=/) c++
       for (i = 1; i <= ncur; i++) {
         if (cur[i] == "") continue
-        if (w[1] == "govulncheck" || w[1] == "$(GOVULNCHECK)") runs[cur[i]] = 1
+        if (w[c] == "govulncheck" || w[c] == "$(GOVULNCHECK)") runs[cur[i]] = 1
         if (line ~ /notarize-darwin|notarytool/) notar[cur[i]] = 1
       }
       next

@@ -894,6 +894,33 @@ setup:
 package: setup build-all
 	@zip -q dist/x.zip dist/x'
 
+# The per-platform form: the run is one line of a continued loop, behind the
+# environment the build uses.
+gate_is 'the per-platform loop is a run' '' '
+vuln:
+	@for p in $(PLATFORMS); do os=$${p%/*}; arch=$${p#*/}; \
+		echo "govulncheck $$os/$$arch"; \
+		CGO_ENABLED=0 GOOS=$$os GOARCH=$$arch govulncheck ./... || exit 1; \
+	done
+
+package: vuln build-all
+	@zip -q dist/x.zip dist/x'
+
+gate_is 'environment words before govulncheck are part of the run' '' '
+vuln:
+	CGO_ENABLED=1 GOOS=darwin  GOARCH=arm64 govulncheck ./...
+	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 govulncheck ./...
+
+package: vuln'
+
+gate_is 'a loop that only echoes the name is not a run' 'package' '
+vuln:
+	@for p in $(PLATFORMS); do \
+		echo "govulncheck $$p"; \
+	done
+
+package: vuln'
+
 gate_is 'a commented-out govulncheck line is not a run' 'package' '
 vuln:
 	# govulncheck ./...
