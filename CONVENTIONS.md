@@ -1358,11 +1358,18 @@ build-all:
 	done
 	@scripts/codesign-darwin.sh dist/$(BINARY)-darwin-arm64 "$(CODESIGN_IDENTITY)" "$(BINARY)"
 
+## vuln: known vulnerabilities in the modules and the standard library this
+## build uses (govulncheck). `package` depends on it, so a release cannot be
+## built past a finding. It needs the network, and its database changes under
+## an unchanged tree: a finding can appear without a commit.
+vuln:
+	govulncheck ./...
+
 # Archive: <name>-v<version>-<os>-<arch>.<ext>  (darwin/windows = zip, linux = tar.gz)
 # The in-archive binary is the canonical <name>; README.md + LICENSE are bundled.
 # linux tar needs both settings: COPYFILE_DISABLE=1 stops ._ AppleDouble members,
 # --no-xattrs stops extended attributes written as pax headers.
-package: build-all
+package: vuln build-all
 	@cd dist && for p in $(PLATFORMS); do os=$${p%/*}; arch=$${p#*/}; \
 		ext=""; [ "$$os" = windows ] && ext=".exe"; \
 		stage=_pkg; rm -rf $$stage; mkdir -p $$stage; \
@@ -1423,6 +1430,31 @@ verify-release:
 	done
 	@echo "verify-release: OK ($(VERSION), notarized, unpacks, runs, reports its version, clean linux archives)"
 ```
+
+**`package` depends on `vuln`.** A Go release is built past `govulncheck`: the
+target that makes the release depends on one whose recipe runs it, so a known
+vulnerability stops the build instead of being a step someone has to remember.
+A sweep on 2026-11-14 found released binaries carrying reachable advisories the
+source had already fixed, and others built with a toolchain several patch
+releases behind; every Go repository with a release target carries the gate
+since that day, and `check-org.sh` (check 20) keeps a new one from leaving it
+out. Three things about it:
+
+- **Scan the build the release makes.** `./...` is right for most tools. A cgo
+  tool released under a build tag scans with that tag and its own package list
+  (`govulncheck -tags "$(TAGS)" $(PKGS)`); without them the cgo bridge is not
+  scanned, and a vendored tree with stray Go files stops the load.
+- **It judges the build for the host's OS.** An advisory in an OS-only package
+  is a module-level line on macOS and does not stop the gate
+  (`GOOS=<os> govulncheck ./...` shows what it would say for another target).
+- **Its database moves under an unchanged tree.** A release that built
+  yesterday can stop today. That is the gate working: update the module (or the
+  `go` line, when the standard library carries the fix) and release that.
+
+A repository that releases through another target wires the same dependency
+there: the target whose recipe notarizes is the release target, whatever it is
+called. A library has no release target and no gate; its consumers' gates see
+what they link.
 
 Two scripts in `.github/scripts/` exist for this recipe.
 `close-verify-release-gate.py --check|--apply <Makefile>...` converts the open
@@ -1666,7 +1698,12 @@ build:
         rm -rf dist/$(APP).app
         ditto build/bin/$(APP).app dist/$(APP).app
 
-package: build
+# The Go half of the app is a Go release like any other: see `vuln` in
+# §Per-project Makefile integration.
+vuln:
+        govulncheck ./...
+
+package: vuln build
         @$(NOTARIZE_SCRIPT) dist/$(APP).app "$(NOTARY_PROFILE)"
         cd dist && /usr/bin/ditto --norsrc --noextattr -c -k --keepParent \
                 $(APP).app $(APP)-$(VERSION)-darwin-arm64.zip
@@ -2504,6 +2541,9 @@ Before tagging a release, verify every item:
      notarized, and **stapled**, then shipped as a zipped `.app` (no
      `.dmg`). See §Code Signing → GUI app (`.app`) signing for framework
      specifics
+   - Go projects: `package` runs `govulncheck` first (`make vuln`) and stops
+     on a finding — nothing is built. Fix the finding and release that; do
+     not build around the gate
    - On a machine without credentials, the script falls back to
      ad-hoc + un-notarized — do not proceed past this step in that
      case
@@ -2606,6 +2646,7 @@ have.
 | 17 | Linux archive metadata | A Makefile line that creates a tar archive without both `COPYFILE_DISABLE=1` (stops `._` AppleDouble members) and `--no-xattrs` (stops xattr pax headers), or a Makefile that creates one while its `verify-release` never lists with `--options 'tar:!mac-ext'` — a plain macOS listing folds `._` members away, so a `._` check over it cannot fire — or never reads the archives' pax headers (`pax_headers`, Python's `tarfile`): a grep of the decompressed stream also matches a bundled file that names the keywords. All 61 repositories archiving Linux builds were converted on 2026-09-23; this catches a pasted copy. Archived repositories are skipped |
 | 18 | App zip gate | A Makefile that builds an `.app` (it runs `stapler validate`) whose `verify-release` recipe does not call `verify-app-zip.sh` on the release zip, or that has no `verify-release` at all. All 19 GUI repositories were given the call on 2026-09-27; this is what makes a new GUI carry it — m5-system-panel shipped iconless as a new repository, which a sweep of existing ones cannot reach. Read from the recipe alone, as in 15. Archived repositories are skipped |
 | 19 | App zip metadata | A non-comment line of an `.app`-building Makefile that zips with `ditto` (`-c` and `-k`) without both `--norsrc` and `--noextattr`: the zip then carries `._` entries that break the bundle's seal under a plain `unzip` (18 of 19 GUI releases did; converted 2026-09-27). The producing-side counterpart of 18, as 17 is for tar. The temporary zip `notarize-darwin-app.sh` sends to Apple is not shipped and not checked. Archived repositories are skipped |
+| 20 | Vulnerability gate | A Makefile beside a `go.mod` (at the repository root or one directory down — a Wails project keeps both under `app/`) whose release target does not reach `govulncheck`. A release target is `package`, and any other target whose recipe notarizes (`notarize-darwin*.sh`, `notarytool`): slack-router releases through `release`, lite-rag through `dist-darwin`. It reaches `govulncheck` when it, or anything it depends on however indirectly, has a recipe line whose command is `govulncheck` or `$(GOVULNCHECK)`; an `echo` naming it, the `go install` that fetches it and a call hidden behind another command (`cd app && govulncheck`) do not count. All 79 such Makefiles carry the gate since 2026-11-14, when the reading was compared with `make -n <target>` on every one and agreed; this is what makes a new repository, or a rewritten Makefile, carry it. It says the gate is wired, not that the tree is clean today — it does not run `govulncheck`. A library has no release target and is not reported. Archived repositories are skipped |
 
 **Org-level checks (outside the series loop):**
 

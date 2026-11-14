@@ -840,5 +840,175 @@ toml_case 'a commented-out requirement is not one' '' \
 toml_case 'pelletier v1 required directly fails' 'fail github.com/pelletier/go-toml' \
   $'module x\n\nrequire github.com/pelletier/go-toml v1.9.5\n'
 
+# ---- ungated_release_targets: a Go release is built past govulncheck -----------
+# gate_is LABEL EXPECTED MAKEFILE-BODY — EXPECTED is the ungated targets, space-joined.
+gate_is() {
+  _label="$1"; _want="$2"
+  printf '%s\n' "$3" > "$TMP/gate.mk"
+  _got=$(ungated_release_targets "$TMP/gate.mk" | paste -sd' ' -)
+  if [ "$_got" = "$_want" ]; then ok "$_label"; else
+    no "$_label"
+    printf '        want: [%s]\n        got:  [%s]\n' "$_want" "$_got" >&2
+  fi
+}
+
+gate_is 'package depending on a target that runs govulncheck is silent' '' '
+vuln:
+	govulncheck ./...
+
+package: vuln build-all
+	@scripts/notarize-darwin.sh dist/x.zip "$(NOTARY_PROFILE)"'
+
+# agent-report as it was found: the target existed and nothing on the way to a
+# release ran it.
+gate_is 'a vuln target that package does not depend on is reported' 'package' '
+package: build-all
+	@scripts/notarize-darwin.sh dist/x.zip "$(NOTARY_PROFILE)"
+
+vuln:
+	govulncheck ./...'
+
+gate_is 'a package with no govulncheck anywhere is reported' 'package' '
+build-all:
+	go build -o dist/x .
+
+package: build-all
+	@zip -q dist/x.zip dist/x'
+
+gate_is 'govulncheck reached through another target counts' '' '
+check: vet lint vuln
+
+vuln:
+	@govulncheck -tags "$(TAGS)" $(PKGS)
+
+package: check build-all
+	@zip -q dist/x.zip dist/x'
+
+# A mention is not a run: lite-rag installs the tool in one target and echoes
+# its name in another.
+gate_is 'an echo naming govulncheck and the go install that fetches it are not a run' 'package' '
+setup:
+	@echo "Installing govulncheck..."
+	GOPATH=$(GOPATH) go install golang.org/x/vuln/cmd/govulncheck@latest
+
+package: setup build-all
+	@zip -q dist/x.zip dist/x'
+
+gate_is 'a commented-out govulncheck line is not a run' 'package' '
+vuln:
+	# govulncheck ./...
+	@true
+
+package: vuln'
+
+gate_is 'a call hidden behind another command is reported, to be written plainly' 'package' '
+vuln:
+	cd app && govulncheck ./...
+
+package: vuln'
+
+# lite-rag: no package target; the target that notarizes is the release.
+gate_is 'a notarizing target other than package is a release target' 'dist-darwin' '
+vuln: $(GOVULNCHECK)
+	$(GOVULNCHECK) ./...
+
+dist-darwin: cross-build-darwin
+	@scripts/notarize-darwin.sh $(DIST_DIR)/x.zip "$(NOTARY_PROFILE)"
+
+dist-linux: cross-build-linux
+	@tar -czf x.tar.gz x'
+
+gate_is 'the same target depending on vuln, run through $(GOVULNCHECK), is silent' '' '
+vuln: $(GOVULNCHECK)
+	$(GOVULNCHECK) ./...
+
+dist-darwin: vuln cross-build-darwin
+	@scripts/notarize-darwin.sh $(DIST_DIR)/x.zip "$(NOTARY_PROFILE)"'
+
+# slack-router: `release` notarizes; its rule line carries a help comment.
+gate_is 'a rule line with a trailing help comment is read' '' '
+vuln: ## Scan for known vulnerabilities
+	govulncheck ./...
+
+release: vuln ## Cross-compile, sign, package, notarize
+	@scripts/notarize-darwin.sh dist/x.zip "$(NOTARY_PROFILE)"'
+
+gate_is 'each release target is judged on its own' 'release' '
+vuln:
+	govulncheck ./...
+
+package: vuln build-all
+	@zip -q dist/x.zip dist/x
+
+release: build-all
+	@xcrun notarytool submit dist/x.zip --wait'
+
+gate_is 'prerequisites continued over a line, and order-only ones, are followed' '' '
+vuln:
+	govulncheck ./...
+
+package: build-all \
+	| vuln
+	@zip -q dist/x.zip dist/x'
+
+# verify-release talks about notarization and builds nothing: it must not be
+# taken for a release target. (Its real message names no script.)
+gate_is 'a gate that only mentions notarization is not a release target' '' '
+vuln:
+	govulncheck ./...
+
+package: vuln build-all
+	@scripts/notarize-darwin.sh dist/x.zip "$(NOTARY_PROFILE)"
+
+verify-release:
+	@test -f dist/x.zip.notarized || { echo "make package must end with [notarize] ...: Accepted"; exit 1; }'
+
+gate_is 'a Makefile with no release target is silent (a library)' '' '
+test:
+	go test ./...
+lint:
+	golangci-lint run ./...'
+
+is 'a missing Makefile is silent' "$(ungated_release_targets "$TMP/absent.mk")" ''
+
+# Variable assignments are not rules, whatever colons they hold.
+gate_is 'assignments holding colons are not read as rules' '' '
+VERSION := $(shell git describe --tags)
+ORT_HASH = $(shell grep -m1 HASH x.cmake | cut -d: -f2)
+LDFLAGS ?= -X main.version=$(VERSION)
+
+vuln:
+	govulncheck ./...
+
+package: vuln'
+
+# The templates, as the document states them, must pass: the Go CLI one (the
+# block that holds verify-release) and the Wails one (the block that runs
+# `wails build`).
+awk '/^```makefile$/{buf=""; on=1; next} on && /^```$/{if (buf ~ /verify-release:/) {printf "%s", buf; exit} on=0; next} on{buf=buf $0 "\n"}' \
+  "$HERE/../CONVENTIONS.md" > "$TMP/template-cli.mk"
+grep -q '^package:' "$TMP/template-cli.mk" \
+  && is 'the CONVENTIONS.md Go CLI template is gated' "$(ungated_release_targets "$TMP/template-cli.mk")" '' \
+  || no 'the CONVENTIONS.md Go CLI template could be extracted'
+# The document indents this block's recipes with spaces; make wants tabs.
+awk '/^```makefile$/{buf=""; on=1; next} on && /^```$/{if (buf ~ /wails build/) {printf "%s", buf; exit} on=0; next} on{buf=buf $0 "\n"}' \
+  "$HERE/../CONVENTIONS.md" | sed -E 's/^ {8}/	/' > "$TMP/template-wails.mk"
+grep -q '^package:' "$TMP/template-wails.mk" \
+  && is 'the CONVENTIONS.md Wails template is gated' "$(ungated_release_targets "$TMP/template-wails.mk")" '' \
+  || no 'the CONVENTIONS.md Wails template could be extracted'
+
+# ---- go_makefiles: where a repository builds Go --------------------------------
+_g="$TMP/gomk"; mkdir -p "$_g/root" "$_g/wails/app" "$_g/swift" "$_g/vendored/third_party" "$_g/lib"
+touch "$_g/root/go.mod" "$_g/root/Makefile"
+touch "$_g/wails/app/go.mod" "$_g/wails/app/Makefile"
+touch "$_g/swift/Makefile"
+touch "$_g/vendored/go.mod" "$_g/vendored/Makefile" "$_g/vendored/third_party/go.mod" "$_g/vendored/third_party/Makefile"
+touch "$_g/lib/go.mod"
+is 'a Makefile beside go.mod at the root is found' "$(go_makefiles "$_g/root")" "$_g/root/Makefile"
+is 'a Wails project is found one directory down' "$(go_makefiles "$_g/wails")" "$_g/wails/app/Makefile"
+is 'a Makefile without a go.mod beside it is not a Go build' "$(go_makefiles "$_g/swift")" ''
+is 'a third_party tree is not the repository own build' "$(go_makefiles "$_g/vendored")" "$_g/vendored/Makefile"
+is 'a module without a Makefile has nothing to gate' "$(go_makefiles "$_g/lib")" ''
+
 echo "passed: $pass   failed: $fail"
 [ "$fail" -eq 0 ]

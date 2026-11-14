@@ -494,6 +494,106 @@ app_zip_metadata() {
   ' "$f"
 }
 
+# --- vulnerability gate --------------------------------------------------------
+# A Go release is built past `govulncheck`: the target that makes the release
+# depends on one that runs it, so a known vulnerability stops the build instead
+# of being a step someone has to remember. A sweep on 2026-11-14 found released
+# binaries carrying reachable advisories that the source had long since fixed,
+# and others built with a toolchain several patch releases behind; every Go
+# repository with a release target was given the gate that day. This check is
+# what keeps a new repository, or a rewritten Makefile, from leaving it out.
+#
+# Limits, stated. It reads the Makefile; it does not run govulncheck, so it says
+# the gate is wired, not that the tree is clean today. The gate itself judges
+# the build for the host's OS only. And a library has no release target, so
+# nothing here reaches it: its consumers' gates see what they link.
+
+# go_makefiles DIR — the Makefiles that build Go in a repository: each one that
+# sits beside a go.mod, at the root or one directory down (a Wails project
+# keeps both under app/). Vendored and third-party trees are not the
+# repository's own build.
+go_makefiles() {
+  local d="$1" sub
+  [ -f "$d/go.mod" ] && [ -f "$d/Makefile" ] && echo "$d/Makefile"
+  for sub in "$d"/*/; do
+    sub="${sub%/}"
+    case "${sub##*/}" in third_party|vendor|node_modules|testdata) continue ;; esac
+    [ -f "$sub/go.mod" ] && [ -f "$sub/Makefile" ] && echo "$sub/Makefile"
+  done
+  return 0
+}
+
+# ungated_release_targets MAKEFILE — the release targets of the Makefile that
+# do not reach govulncheck, one per line; nothing when every one does, or when
+# there is none. A release target is `package`, and any other target whose
+# recipe notarizes (it names notarize-darwin*.sh or notarytool): slack-router
+# releases through `release`, lite-rag through `dist-darwin`. A target reaches
+# govulncheck when it, or anything it depends on however indirectly, has a
+# recipe line whose command is `govulncheck` or `$(GOVULNCHECK)` — after the
+# `@`, `-` and `+` prefixes, nothing else. A mention is not a run: an `echo`
+# naming it and the `go install` that fetches it do not count, and neither does
+# a call hidden behind another command (`cd app && govulncheck`), which is
+# reported so that it gets written plainly.
+#
+# Compared on 2026-11-14 with `make -n <target> | grep govulncheck` over all 79
+# Makefiles this applies to: the two agreed on every one.
+ungated_release_targets() {
+  local f="$1"
+  [ -f "$f" ] || return 0
+  awk '
+    # A rule line is held in `pending` until its continuations are joined.
+    function close_rule(   i, head, rest) {
+      if (pending == "") return
+      head = pending; pending = ""
+      rest = head; sub(/^[^:]*:/, "", rest); sub(/^:/, "", rest)
+      sub(/[ \t]*#.*$/, "", rest); gsub(/\|/, " ", rest)
+      sub(/:.*$/, "", head)
+      ncur = split(head, cur, /[ \t]+/)
+      for (i = 1; i <= ncur; i++) {
+        if (cur[i] == "") continue
+        if (!(cur[i] in seen)) { seen[cur[i]] = 1; order[++norder] = cur[i] }
+        prereq[cur[i]] = prereq[cur[i]] " " rest
+      }
+    }
+    function reaches(t,   n, i, p) {
+      if (t in visiting) return 0
+      visiting[t] = 1
+      if (t in runs) return 1
+      n = split(prereq[t], p, /[ \t]+/)
+      for (i = 1; i <= n; i++) if (p[i] != "" && reaches(p[i])) return 1
+      return 0
+    }
+    pending != "" && cont {
+      sub(/\\$/, "", pending); pending = pending " " $0
+      cont = /\\$/; if (!cont) close_rule()
+      next
+    }
+    /^\t/ {
+      if (ncur == 0) next
+      line = $0; sub(/^\t[ \t]*/, "", line); sub(/^[-@+]+[ \t]*/, "", line)
+      if (line ~ /^#/) next
+      split(line, w, /[ \t]+/)
+      for (i = 1; i <= ncur; i++) {
+        if (cur[i] == "") continue
+        if (w[1] == "govulncheck" || w[1] == "$(GOVULNCHECK)") runs[cur[i]] = 1
+        if (line ~ /notarize-darwin|notarytool/) notar[cur[i]] = 1
+      }
+      next
+    }
+    /^[^\t#=:]+:([^=]|$)/ { pending = $0; cont = /\\$/; if (!cont) close_rule(); next }
+    /^[ \t]*(#|$)/ { next }
+    { ncur = 0 }
+    END {
+      for (k = 1; k <= norder; k++) {
+        t = order[k]
+        if (t != "package" && !(t in notar)) continue
+        split("", visiting)
+        if (!reaches(t)) print t
+      }
+    }
+  ' "$f"
+}
+
 # --- running images (this machine) is NOT here; see scripts/stale-running-images.sh
 # --- bundled CLI (GUI apps that ship a sibling CLI inside them) ----------------
 # Six GUIs copy a sibling CLI into Contents/Resources, and a release build
@@ -1224,6 +1324,23 @@ check_series() {
       printf '%s\n' "$lines" | sed 's/^[[:space:]]*/             /'
       errors=$((errors + 1))
     fi
+  done < <(each_submodule)
+
+  # 20. A Go release is built past govulncheck (see ungated_release_targets above).
+  echo "    vulnerability gate:"
+  while IFS= read -r subpath; do
+    subpath="${subpath#        }"
+    name=$(basename "$subpath")
+    is_archived "$name" "$dir" && continue
+    while IFS= read -r makefile; do
+      [ -n "$makefile" ] || continue
+      why=$(ungated_release_targets "$makefile" | paste -sd' ' -)
+      [ -n "$why" ] || continue
+      echo "        $FAIL $name: ${makefile#"$dir/$subpath/"} builds a release without running govulncheck: $why"
+      echo "             make the target depend on one whose recipe runs \`govulncheck\`"
+      echo "             (CONVENTIONS.md §Code Signing → Per-project Makefile integration)"
+      errors=$((errors + 1))
+    done < <(go_makefiles "$dir/$subpath")
   done < <(each_submodule)
 
   # 14. Document references resolve (CONVENTIONS.md §Documentation structure)
