@@ -1459,11 +1459,17 @@ out. Three things about it:
   scans each on its own line. All 62 Makefiles that ship a Linux or Windows
   build from the host were converted on 2026-11-14, after every one of their
   247 builds was scanned and found clean.
-- **A cgo build for another OS cannot be scanned from the host.** gem-query,
+- **A cgo build for another OS is scanned where it is built.** gem-query,
   json-to-sqlite and lite-rag build their Linux (and Windows) binaries with cgo
   inside a container; `govulncheck` on macOS cannot load that build, and with
-  `CGO_ENABLED=0` it loads a different one or none. Their gate scans the
-  host's build only. This is a stated gap, not an oversight.
+  `CGO_ENABLED=0` it loads a different one or none. So the container recipe
+  runs a scan target right before the build target (`make vuln-linux-native
+  build-linux-native`), with the build's own environment — `GOOS`, `GOARCH`,
+  `CGO_ENABLED=1`, the cross `CC` — and a finding ends the run there. The
+  container installs `govulncheck` by version (`GOVULNCHECK_VERSION`), as a
+  file target outside `GOPATH/bin`: where the repository directory is the
+  GOPATH, that directory already holds the host's macOS binary. `make vuln` on
+  the host judges the darwin build.
 - **Its database moves under an unchanged tree.** A release that built
   yesterday can stop today. That is the gate working: update the module (or the
   `go` line, when the standard library carries the fix) and release that.
